@@ -185,4 +185,204 @@ class SchoolQueries {
       'user_id': paiement.userId,
     });
   }
+
+  // Marque une année scolaire comme en cours et désactive les autres
+  static Future<void> setCurrentSchoolYear(int yearId) async {
+    final db = await DatabaseService.database;
+    // Désactive toutes les années scolaires
+    await db.update('annees_scolaires', {'en_cours': 0});
+    // Active l'année sélectionnée
+    await db.update(
+      'annees_scolaires',
+      {'en_cours': 1},
+      where: 'id = ?',
+      whereArgs: [yearId],
+    );
+  }
+
+  // Récupère tous les frais scolaires associés à une classe
+  static Future<List<FraisScolaire>> getAllFraisByClasse(int classeId) async {
+    final db = await DatabaseService.database;
+    final result = await db.rawQuery(
+      '''
+      SELECT fs.*
+      FROM frais_scolaires fs
+      INNER JOIN frais_classes fc ON fs.id = fc.frais_id
+      WHERE fc.classe_id = ?
+      ORDER BY fs.nom
+      ''',
+      [classeId],
+    );
+    return result.map((e) => FraisScolaire.fromMap(e)).toList();
+  }
+
+  // Calcule les statistiques du tableau de bord pour un frais spécifique
+  static Future<Map<String, dynamic>> getDashboardDataForFrais(
+    int classeId,
+    int fraisId,
+  ) async {
+    final db = await DatabaseService.database;
+
+    // Nombre total d'élèves dans la classe
+    final elevesResult = await db.query(
+      'eleves',
+      where: 'classe_id = ?',
+      whereArgs: [classeId],
+    );
+    final totalEleves = elevesResult.length;
+
+    // Récupère le frais
+    final fraisResult = await db.query(
+      'frais_scolaires',
+      where: 'id = ?',
+      whereArgs: [fraisId],
+    );
+    if (fraisResult.isEmpty) {
+      return {
+        'totalEleves': totalEleves,
+        'enOrdre': 0,
+        'pasEnOrdre': totalEleves,
+        'totalAttendu': 0.0,
+        'totalRecu': 0.0,
+        'fraisNom': 'Aucun frais',
+      };
+    }
+
+    final frais = FraisScolaire.fromMap(fraisResult.first);
+    final montantFrais = frais.montant;
+
+    // Calcule les paiements pour ce frais et cette classe
+    final paiementResult = await db.rawQuery(
+      '''
+      SELECT e.id as eleve_id, 
+             COALESCE(SUM(pf.montant_paye), 0) as total_paye
+      FROM eleves e
+      LEFT JOIN paiement_frais pf ON e.id = pf.eleve_id AND pf.frais_scolaire_id = ?
+      WHERE e.classe_id = ?
+      GROUP BY e.id
+      ''',
+      [fraisId, classeId],
+    );
+
+    int enOrdre = 0;
+    int pasEnOrdre = 0;
+    double totalAttendu = totalEleves * montantFrais;
+    double totalRecu = 0.0;
+
+    for (final row in paiementResult) {
+      final paye = row['total_paye'];
+      final payeDouble = (paye is int
+          ? paye.toDouble()
+          : (paye is double ? paye : 0.0));
+      totalRecu += payeDouble;
+
+      if (payeDouble >= montantFrais) {
+        enOrdre++;
+      } else {
+        pasEnOrdre++;
+      }
+    }
+
+    return {
+      'totalEleves': totalEleves,
+      'enOrdre': enOrdre,
+      'pasEnOrdre': pasEnOrdre,
+      'totalAttendu': totalAttendu,
+      'totalRecu': totalRecu,
+      'fraisNom': frais.nom,
+    };
+  }
+
+  // Récupère les détails complets d'un élève avec tous ses frais
+  static Future<EleveFraisDetails> getEleveFraisDetails(int eleveId) async {
+    final db = await DatabaseService.database;
+
+    // Récupère l'élève
+    final eleveResult = await db.query(
+      'eleves',
+      where: 'id = ?',
+      whereArgs: [eleveId],
+    );
+    if (eleveResult.isEmpty) throw Exception('Élève non trouvé');
+    final eleve = Eleve.fromMap(eleveResult.first);
+
+    // Récupère tous les frais de la classe de l'élève
+    final fraisList = await getAllFraisByClasse(eleve.classeId!);
+
+    List<FraisDetails> fraisDetailsList = [];
+
+    for (final frais in fraisList) {
+      // Récupère l'historique des paiements pour ce frais
+      final paiements = await getPaiementsByEleveAndFrais(eleveId, frais.id);
+
+      // Calcule le montant total payé
+      final montantPaye = paiements.fold<double>(
+        0.0,
+        (sum, p) => sum + p.montantPaye,
+      );
+      final resteAPayer = frais.montant - montantPaye;
+
+      // Détermine le statut
+      String statut;
+      if (resteAPayer <= 0) {
+        statut = 'en_ordre';
+      } else if (montantPaye > 0) {
+        statut = 'partiellement_paye';
+      } else {
+        statut = 'pas_en_ordre';
+      }
+
+      fraisDetailsList.add(
+        FraisDetails(
+          frais: frais,
+          montantPaye: montantPaye,
+          resteAPayer: resteAPayer,
+          historiquePaiements: paiements,
+          statut: statut,
+        ),
+      );
+    }
+
+    return EleveFraisDetails(eleve: eleve, fraisDetails: fraisDetailsList);
+  }
+
+  // Enregistre un nouveau paiement
+  static Future<int> enregistrerPaiement({
+    required int eleveId,
+    required int fraisId,
+    required double montant,
+    String? statut,
+    int? userId,
+  }) async {
+    final db = await DatabaseService.database;
+
+    // Calcule le reste à payer
+    final fraisResult = await db.query(
+      'frais_scolaires',
+      where: 'id = ?',
+      whereArgs: [fraisId],
+    );
+    if (fraisResult.isEmpty) throw Exception('Frais non trouvé');
+
+    final frais = FraisScolaire.fromMap(fraisResult.first);
+    final paiementsExistants = await getPaiementsByEleveAndFrais(
+      eleveId,
+      fraisId,
+    );
+    final montantDejaPaye = paiementsExistants.fold<double>(
+      0.0,
+      (sum, p) => sum + p.montantPaye,
+    );
+    final resteAPayer = frais.montant - montantDejaPaye - montant;
+
+    return await db.insert('paiement_frais', {
+      'eleve_id': eleveId,
+      'frais_scolaire_id': fraisId,
+      'montant_paye': montant,
+      'date_paiement': DateTime.now().toIso8601String().split('T')[0],
+      'reste_a_payer': resteAPayer > 0 ? resteAPayer : 0,
+      'statut': statut ?? (resteAPayer <= 0 ? 'complet' : 'partiel'),
+      'user_id': userId,
+    });
+  }
 }

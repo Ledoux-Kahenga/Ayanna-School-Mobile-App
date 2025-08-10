@@ -41,6 +41,15 @@ class AnneeScolaire {
       enCours: map['en_cours'],
     );
   }
+
+  @override
+  bool operator ==(Object other) {
+    if (identical(this, other)) return true;
+    return other is AnneeScolaire && other.id == id;
+  }
+
+  @override
+  int get hashCode => id.hashCode;
 }
 
 class Classe {
@@ -195,4 +204,30 @@ class PaiementFrais {
       userId: map['user_id'],
     );
   }
+}
+
+class EleveFraisDetails {
+  final Eleve eleve;
+  final List<FraisDetails> fraisDetails;
+
+  EleveFraisDetails({required this.eleve, required this.fraisDetails});
+}
+
+class FraisDetails {
+  final FraisScolaire frais;
+  final double montantPaye;
+  final double resteAPayer;
+  final List<PaiementFrais> historiquePaiements;
+  final String statut; // 'en_ordre', 'pas_en_ordre', 'partiellement_paye'
+
+  FraisDetails({
+    required this.frais,
+    required this.montantPaye,
+    required this.resteAPayer,
+    required this.historiquePaiements,
+    required this.statut,
+  });
+
+  bool get isEnOrdre => resteAPayer <= 0;
+  bool get isPartiellementPaye => montantPaye > 0 && resteAPayer > 0;
 }

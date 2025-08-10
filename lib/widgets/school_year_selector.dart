@@ -12,7 +12,7 @@ class SchoolYearSelector extends StatefulWidget {
 
 class _SchoolYearSelectorState extends State<SchoolYearSelector> {
   List<AnneeScolaire> _annees = [];
-  AnneeScolaire? _selected;
+  int? _selectedId;
   bool _loading = true;
 
   @override
@@ -22,39 +22,75 @@ class _SchoolYearSelectorState extends State<SchoolYearSelector> {
   }
 
   Future<void> _fetchAnnees() async {
-    final annees = await SchoolQueries.getAllAnneesScolaires();
-    final current = await SchoolQueries.getCurrentAnneeScolaire();
-    setState(() {
-      _annees = annees;
-      _selected = current ?? (annees.isNotEmpty ? annees.first : null);
-      _loading = false;
-    });
-    if (_selected != null) widget.onSelected(_selected!);
+    try {
+      final annees = await SchoolQueries.getAllAnneesScolaires();
+      final current = await SchoolQueries.getCurrentAnneeScolaire();
+
+      setState(() {
+        _annees = annees;
+        _selectedId =
+            current?.id ?? (annees.isNotEmpty ? annees.first.id : null);
+        _loading = false;
+      });
+
+      if (_selectedId != null) {
+        final selectedAnnee = _annees.firstWhere((a) => a.id == _selectedId);
+        widget.onSelected(selectedAnnee);
+      }
+    } catch (e) {
+      setState(() {
+        _loading = false;
+      });
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur lors du chargement des années: $e')),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    if (_loading) return const Center(child: CircularProgressIndicator());
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Année scolaire en cours',
-          style: TextStyle(fontWeight: FontWeight.bold),
+    if (_loading) {
+      return const Center(
+        child: SizedBox(
+          height: 20,
+          width: 20,
+          child: CircularProgressIndicator(strokeWidth: 2),
         ),
-        const SizedBox(height: 8),
-        DropdownButton<AnneeScolaire>(
-          value: _selected,
-          isExpanded: true,
-          items: _annees
-              .map((a) => DropdownMenuItem(value: a, child: Text(a.nom)))
-              .toList(),
-          onChanged: (a) {
-            setState(() => _selected = a);
-            if (a != null) widget.onSelected(a);
-          },
-        ),
-      ],
+      );
+    }
+
+    if (_annees.isEmpty) {
+      return const Text('Aucune année trouvée');
+    }
+
+    return DropdownButtonFormField<int>(
+      value: _selectedId,
+      isExpanded: true,
+      decoration: const InputDecoration(
+        labelText: 'Année scolaire',
+        border: OutlineInputBorder(),
+        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        isDense: true,
+      ),
+      items: _annees
+          .map(
+            (annee) => DropdownMenuItem<int>(
+              value: annee.id,
+              child: Text(annee.nom, style: const TextStyle(fontSize: 14)),
+            ),
+          )
+          .toList(),
+      onChanged: (int? newId) {
+        if (newId != null) {
+          setState(() {
+            _selectedId = newId;
+          });
+          final selectedAnnee = _annees.firstWhere((a) => a.id == newId);
+          widget.onSelected(selectedAnnee);
+        }
+      },
     );
   }
 }

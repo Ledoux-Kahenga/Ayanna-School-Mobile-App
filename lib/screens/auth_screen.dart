@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
 import '../widgets/ayanna_widgets.dart';
+import '../services/app_preferences.dart';
+import 'configuration_screen.dart';
+import 'classes_screen.dart';
 
 class AuthScreen extends StatefulWidget {
-  const AuthScreen({super.key});
+  final bool navigateToClasses;
+  const AuthScreen({this.navigateToClasses = false, super.key});
 
   @override
   State<AuthScreen> createState() => _AuthScreenState();
@@ -25,8 +29,18 @@ class _AuthScreenState extends State<AuthScreen> {
       _loading = false;
       if (_usernameController.text == 'admin' &&
           _passwordController.text == 'admin') {
-        // Naviguer vers la page suivante
-        Navigator.of(context).pushReplacementNamed('/home');
+        // Navigation intelligente selon la configuration
+        if (widget.navigateToClasses) {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(builder: (_) => const ClassesScreen()),
+          );
+        } else {
+          Navigator.of(context).pushReplacement(
+            MaterialPageRoute(
+              builder: (_) => const ConfigurationScreen(isFirstSetup: true),
+            ),
+          );
+        }
       } else {
         _error = 'Identifiants invalides';
       }

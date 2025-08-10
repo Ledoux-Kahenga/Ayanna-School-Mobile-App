@@ -23,6 +23,7 @@ class _ElevesScreenState extends State<ElevesScreen> {
   int _pasEnOrdre = 0;
   double _totalAttendu = 0;
   double _totalRecu = 0;
+  String _fraisNom = '';
 
   @override
   void initState() {
@@ -71,6 +72,7 @@ class _ElevesScreenState extends State<ElevesScreen> {
       _pasEnOrdre = dashboardData['pasEnOrdre'];
       _totalAttendu = dashboardData['totalAttendu'];
       _totalRecu = dashboardData['totalRecu'];
+      _fraisNom = dashboardData['fraisNom'];
     });
   }
 

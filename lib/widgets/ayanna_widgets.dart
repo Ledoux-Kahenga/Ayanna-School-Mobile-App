@@ -41,7 +41,7 @@ class AyannaTextField extends StatelessWidget {
 
 class AyannaButton extends StatelessWidget {
   final String text;
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed;
   final bool filled;
 
   const AyannaButton({

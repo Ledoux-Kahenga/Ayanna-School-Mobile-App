@@ -18,7 +18,7 @@ class DashboardCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Card(
-      color: color ?? AyannaTheme.light,
+      color: color ?? AyannaTheme.surface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       elevation: 2,
       child: Padding(
@@ -34,7 +34,7 @@ class DashboardCard extends StatelessWidget {
                   label,
                   style: const TextStyle(
                     fontSize: 14,
-                    color: AyannaTheme.textDark,
+                    color: AyannaTheme.textSecondary,
                   ),
                 ),
                 Text(
