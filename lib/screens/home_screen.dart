@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../widgets/ayanna_appbar.dart';
 import '../widgets/ayanna_widgets.dart';
+import '../widgets/ayanna_drawer.dart';
 import 'classes_screen.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -10,6 +11,7 @@ class HomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: const AyannaAppBar(title: 'Accueil'),
+      drawer: const AyannaDrawer(),
       body: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
