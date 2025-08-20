@@ -33,7 +33,6 @@ class AyannaTheme {
     colorScheme: ColorScheme.fromSwatch().copyWith(
       primary: primary,
       secondary: accent,
-      background: background,
       surface: surface,
       error: error,
     ),

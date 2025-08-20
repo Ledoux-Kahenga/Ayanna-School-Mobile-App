@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import '../widgets/ayanna_widgets.dart';
-import '../services/app_preferences.dart';
 import 'configuration_screen.dart';
 import 'classes_screen.dart';
 

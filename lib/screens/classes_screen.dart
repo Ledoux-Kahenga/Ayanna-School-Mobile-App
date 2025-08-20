@@ -47,7 +47,7 @@ class _ClassesScreenState extends State<ClassesScreen> {
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(12.0),
-          child: Column(
+          child: Column( 
             children: [
               // En-tête compact
               Row(
