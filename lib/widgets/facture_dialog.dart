@@ -98,11 +98,14 @@ class FactureDialog extends StatelessWidget {
                     size: 20,
                   ),
                   const SizedBox(width: 6),
-                  Text(
-                    'Montant total : ',
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w500,
-                      color: AyannaColors.darkGrey,
+                  Expanded(
+                    child: Text(
+                      'Montant total : ',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w500,
+                        color: AyannaColors.darkGrey,
+                      ),
+                      overflow: TextOverflow.ellipsis,
                     ),
                   ),
                   Text(

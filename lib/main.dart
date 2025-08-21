@@ -1,7 +1,7 @@
+import 'package:ayanna_school/screens/eleve_global_screen.dart';
 import 'package:flutter/material.dart';
 import 'theme/ayanna_theme.dart';
 import 'screens/auth_screen.dart';
-import 'screens/home_screen.dart';
 import 'screens/classes_screen.dart';
 import 'screens/configuration_screen.dart';
 import 'services/app_preferences.dart';
@@ -13,15 +13,29 @@ void main() {
 class MainApp extends StatelessWidget {
   const MainApp({super.key});
 
+  Future<bool> _isFirstLaunch() async {
+    return !(await AppPreferences.isConfigured());
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Ayanna School',
       theme: ayannaTheme,
-      home: const StartupScreen(),
+      home: FutureBuilder<bool>(
+        future: _isFirstLaunch(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+          final isFirstLaunch = snapshot.data!;
+          return AuthScreen(navigateToClasses: !isFirstLaunch);
+        },
+      ),
       routes: {
-        '/home': (context) => const HomeScreen(),
-        '/classes': (context) => const ClassesScreen(),
+        '/classes': (context) => const EleveGlobalScreen(),
         '/configuration': (context) =>
             const ConfigurationScreen(isFirstSetup: false),
       },

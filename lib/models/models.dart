@@ -85,6 +85,28 @@ class Classe {
 }
 
 class Eleve {
+  /// Returns prenom with first letter uppercase, rest lowercase
+  String get prenomCapitalized {
+    if (prenom.isEmpty) return '';
+    return prenom[0].toUpperCase() + prenom.substring(1).toLowerCase();
+  }
+
+  /// Returns NOM and POSTNOM in uppercase, separated by a space
+  String get nomPostnomMaj {
+    final nomMaj = nom.toUpperCase();
+    final postnomMaj = (postnom ?? '').toUpperCase();
+    return postnomMaj.isNotEmpty ? '$nomMaj $postnomMaj' : nomMaj;
+  }
+
+  /// Returns the formatted name: NOM (uppercase) + Prenom (first letter uppercase, rest lowercase)
+  String get formattedNomPrenom {
+    final nomMaj = nom.toUpperCase();
+    final prenomFormatted = prenom.isNotEmpty
+        ? prenom[0].toUpperCase() + prenom.substring(1).toLowerCase()
+        : '';
+    return '$nomMaj $prenomFormatted';
+  }
+
   final int id;
   final String nom;
   final String prenom;
@@ -97,6 +119,7 @@ class Eleve {
   final String? matricule;
   final String? postnom;
   final String? statut;
+  final String? classeNom;
 
   Eleve({
     required this.id,
@@ -111,6 +134,7 @@ class Eleve {
     this.matricule,
     this.postnom,
     this.statut,
+    this.classeNom,
   });
 
   factory Eleve.fromMap(Map<String, dynamic> map) {
@@ -127,6 +151,7 @@ class Eleve {
       matricule: map['matricule'],
       postnom: map['postnom'],
       statut: map['statut'],
+      classeNom: map['classe_nom'],
     );
   }
 }
@@ -220,12 +245,15 @@ class FraisDetails {
   final List<PaiementFrais> historiquePaiements;
   final String statut; // 'en_ordre', 'pas_en_ordre', 'partiellement_paye'
 
+  bool showRecu = false;
+
   FraisDetails({
     required this.frais,
     required this.montantPaye,
     required this.resteAPayer,
     required this.historiquePaiements,
     required this.statut,
+    this.showRecu = false,
   });
 
   bool get isEnOrdre => resteAPayer <= 0;

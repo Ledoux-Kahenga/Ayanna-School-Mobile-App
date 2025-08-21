@@ -44,6 +44,7 @@ class _EleveDetailsScreenState extends State<EleveDetailsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AyannaColors.lightGrey,
       appBar: AyannaAppBar(title: '${widget.eleve.prenom} ${widget.eleve.nom}'),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
@@ -54,19 +55,16 @@ class _EleveDetailsScreenState extends State<EleveDetailsScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  // Informations personnelles
                   _buildInfoCard(),
                   const SizedBox(height: 16),
-
-                  // Liste des frais
                   Text(
                     'Frais scolaires',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
+                      color: AyannaColors.orange,
                     ),
                   ),
                   const SizedBox(height: 8),
-
                   ..._eleveDetails!.fraisDetails.map(
                     (fraisDetail) => _buildFraisCard(fraisDetail),
                   ),
@@ -79,6 +77,9 @@ class _EleveDetailsScreenState extends State<EleveDetailsScreen> {
   Widget _buildInfoCard() {
     final eleve = _eleveDetails!.eleve;
     return Card(
+      color: AyannaColors.white,
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -88,12 +89,13 @@ class _EleveDetailsScreenState extends State<EleveDetailsScreen> {
               children: [
                 CircleAvatar(
                   radius: 30,
-                  backgroundColor: Colors.blue.shade100,
+                  backgroundColor: AyannaColors.orange.withOpacity(0.15),
                   child: Text(
                     '${eleve.prenom[0]}${eleve.nom[0]}',
                     style: const TextStyle(
                       fontSize: 24,
                       fontWeight: FontWeight.bold,
+                      color: AyannaColors.orange,
                     ),
                   ),
                 ),
@@ -106,6 +108,7 @@ class _EleveDetailsScreenState extends State<EleveDetailsScreen> {
                         '${eleve.prenom} ${eleve.nom}',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w600,
+                          color: AyannaColors.darkGrey,
                         ),
                       ),
                       if (eleve.matricule != null)
@@ -153,13 +156,15 @@ class _EleveDetailsScreenState extends State<EleveDetailsScreen> {
     }
 
     return Card(
+      color: AyannaColors.white,
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       margin: const EdgeInsets.only(bottom: 12),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // En-tête du frais
             Row(
               children: [
                 Expanded(
@@ -167,6 +172,7 @@ class _EleveDetailsScreenState extends State<EleveDetailsScreen> {
                     frais.nom,
                     style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
+                      color: AyannaColors.orange,
                     ),
                   ),
                 ),
@@ -194,8 +200,6 @@ class _EleveDetailsScreenState extends State<EleveDetailsScreen> {
               ],
             ),
             const SizedBox(height: 12),
-
-            // Informations financières
             Row(
               children: [
                 Expanded(
@@ -221,7 +225,6 @@ class _EleveDetailsScreenState extends State<EleveDetailsScreen> {
                 ),
               ],
             ),
-
             if (fraisDetail.historiquePaiements.isNotEmpty) ...[
               const SizedBox(height: 12),
               const Divider(),
@@ -237,8 +240,6 @@ class _EleveDetailsScreenState extends State<EleveDetailsScreen> {
                 (paiement) => _buildPaiementHistoryItem(paiement),
               ),
             ],
-
-            // Bouton de paiement
             if (!isEnOrdre) ...[
               const SizedBox(height: 16),
               SizedBox(
@@ -252,8 +253,12 @@ class _EleveDetailsScreenState extends State<EleveDetailsScreen> {
                         : 'Effectuer un paiement',
                   ),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: Theme.of(context).primaryColor,
-                    foregroundColor: Colors.white,
+                    backgroundColor: AyannaColors.orange,
+                    foregroundColor: AyannaColors.white,
+                    textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
                   ),
                 ),
               ),
@@ -267,15 +272,19 @@ class _EleveDetailsScreenState extends State<EleveDetailsScreen> {
   Widget _buildFinanceInfo(String label, String value, IconData icon) {
     return Column(
       children: [
-        Icon(icon, size: 24, color: Colors.grey.shade600),
+        Icon(icon, size: 24, color: AyannaColors.orange),
         const SizedBox(height: 4),
         Text(
           value,
-          style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+          style: const TextStyle(
+            fontSize: 16,
+            fontWeight: FontWeight.bold,
+            color: AyannaColors.darkGrey,
+          ),
         ),
         Text(
           label,
-          style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+          style: const TextStyle(fontSize: 12, color: AyannaColors.darkGrey),
           textAlign: TextAlign.center,
         ),
       ],
@@ -287,16 +296,19 @@ class _EleveDetailsScreenState extends State<EleveDetailsScreen> {
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
         children: [
-          Icon(Icons.receipt, size: 16, color: Colors.grey.shade600),
+          const Icon(Icons.receipt, size: 16, color: AyannaColors.orange),
           const SizedBox(width: 8),
-          Text(paiement.datePaiement, style: const TextStyle(fontSize: 12)),
+          Text(
+            paiement.datePaiement,
+            style: const TextStyle(fontSize: 12, color: AyannaColors.darkGrey),
+          ),
           const Spacer(),
           Text(
             '+${paiement.montantPaye.toStringAsFixed(0)}',
             style: const TextStyle(
               fontSize: 12,
               fontWeight: FontWeight.w500,
-              color: Colors.green,
+              color: AyannaColors.successGreen,
             ),
           ),
         ],

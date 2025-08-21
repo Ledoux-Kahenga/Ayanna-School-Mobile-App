@@ -1,3 +1,4 @@
+import 'package:ayanna_school/widgets/facture_recu_widget.dart';
 import 'package:flutter/material.dart';
 import '../theme/ayanna_theme.dart';
 import '../widgets/ayanna_appbar.dart';
@@ -7,6 +8,8 @@ import '../models/models.dart';
 import '../ayanna_theme.dart';
 import '../services/app_preferences.dart';
 import '../widgets/facture_dialog.dart';
+import 'package:printing/printing.dart';
+import 'package:pdf/widgets.dart' as pw;
 
 class EleveGlobalScreen extends StatefulWidget {
   const EleveGlobalScreen({super.key});
@@ -57,10 +60,32 @@ class _EleveGlobalScreenState extends State<EleveGlobalScreen> {
         return;
       }
       final classes = await SchoolQueries.getClassesByAnnee(yearId);
+      // Create a map of classeId to class name
+      final classeIdToNom = {for (var c in classes) c.id: c.nom};
       List<Eleve> allEleves = [];
       for (final classe in classes) {
         final eleves = await SchoolQueries.getElevesByClasse(classe.id);
-        allEleves.addAll(eleves);
+        // For each eleve, set classeNom
+        final elevesWithClasseNom = eleves
+            .map(
+              (e) => Eleve(
+                id: e.id,
+                nom: e.nom,
+                prenom: e.prenom,
+                sexe: e.sexe,
+                dateNaissance: e.dateNaissance,
+                lieuNaissance: e.lieuNaissance,
+                numeroPermanent: e.numeroPermanent,
+                classeId: e.classeId,
+                responsableId: e.responsableId,
+                matricule: e.matricule,
+                postnom: e.postnom,
+                statut: e.statut,
+                classeNom: classe.nom,
+              ),
+            )
+            .toList();
+        allEleves.addAll(elevesWithClasseNom);
       }
       // Tri alphabétique par nom puis prénom
       allEleves.sort((a, b) {
@@ -131,22 +156,71 @@ class _EleveGlobalScreenState extends State<EleveGlobalScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const AyannaAppBar(title: 'Recherche Élève'),
+      appBar: AppBar(
+        backgroundColor: AyannaColors.orange,
+        foregroundColor: AyannaColors.white,
+        title: const Text(
+          'Paiement frais',
+          style: TextStyle(color: AyannaColors.white),
+        ),
+        iconTheme: const IconThemeData(color: AyannaColors.white),
+      ),
       drawer: const AyannaDrawer(),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(12.0),
           child: Column(
             children: [
-              TextField(
-                controller: _searchController,
-                decoration: const InputDecoration(
-                  labelText: 'Rechercher un élève (nom, prénom, matricule)',
-                  prefixIcon: Icon(Icons.search),
-                  border: OutlineInputBorder(),
-                  isDense: true,
+              if (_selectedEleve == null)
+                Container(
+                  height: 60,
+                  decoration: BoxDecoration(
+                    color: AyannaColors.white,
+                    borderRadius: BorderRadius.circular(10),
+                    boxShadow: [
+                      BoxShadow(
+                        color: AyannaColors.lightGrey.withOpacity(0.5),
+                        blurRadius: 6,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: TextField(
+                    controller: _searchController,
+                    style: const TextStyle(
+                      color: AyannaColors.darkGrey,
+                      fontSize: 16,
+                    ),
+                    decoration: InputDecoration(
+                      hintText: 'Rechercher un élève (nom, prénom, matricule)',
+                      hintStyle: const TextStyle(color: Color(0xFF666666)),
+                      prefixIcon: const Icon(
+                        Icons.search,
+                        color: AyannaColors.orange,
+                      ),
+                      filled: true,
+                      fillColor: AyannaColors.white,
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 20,
+                        horizontal: 16,
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(
+                          color: AyannaColors.lightGrey,
+                          width: 2,
+                        ),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(10),
+                        borderSide: const BorderSide(
+                          color: AyannaColors.orange,
+                          width: 2,
+                        ),
+                      ),
+                    ),
+                  ),
                 ),
-              ),
               const SizedBox(height: 16),
               if (_loading)
                 const Expanded(
@@ -167,41 +241,75 @@ class _EleveGlobalScreenState extends State<EleveGlobalScreen> {
                       ? const Center(child: Text('Aucun élève trouvé.'))
                       : ListView.separated(
                           itemCount: _filteredEleves.length,
-                          separatorBuilder: (_, __) =>
-                              const SizedBox(height: 4),
+                          separatorBuilder: (_, __) => Divider(
+                            height: 1,
+                            thickness: 0.7,
+                            color: AyannaColors.lightGrey,
+                            indent: 16,
+                            endIndent: 16,
+                          ),
                           itemBuilder: (context, i) {
                             final e = _filteredEleves[i];
                             return Card(
                               margin: EdgeInsets.zero,
+                              elevation: 0,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              color: AyannaColors.white,
                               child: ListTile(
                                 dense: true,
                                 leading: CircleAvatar(
                                   radius: 20,
-                                  backgroundColor: Colors.blue.shade100,
+                                  backgroundColor: AyannaColors.orange
+                                      .withOpacity(0.15),
                                   child: Text(
                                     '${e.prenom[0]}${e.nom[0]}',
                                     style: const TextStyle(
                                       fontSize: 14,
                                       fontWeight: FontWeight.bold,
+                                      color: AyannaColors.orange,
                                     ),
                                   ),
                                 ),
                                 title: Text(
-                                  '${e.prenom} ${e.nom}',
+                                  '${e.nom.toUpperCase()}${e.postnom != null && e.postnom!.isNotEmpty ? ' ' + e.postnom!.toUpperCase() : ''} ${e.prenomCapitalized}',
                                   style: const TextStyle(
                                     fontSize: 15,
                                     fontWeight: FontWeight.w500,
+                                    color: AyannaColors.darkGrey,
                                   ),
                                 ),
-                                subtitle: e.matricule != null
-                                    ? Text(
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    if (e.matricule != null)
+                                      Text(
                                         'Mat: ${e.matricule}',
-                                        style: const TextStyle(fontSize: 12),
-                                      )
-                                    : null,
-                                trailing: const Icon(
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Color(0xFF666666),
+                                          fontWeight: FontWeight.normal,
+                                        ),
+                                      ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      'Classe : ${e.classeNom ?? "-"}',
+                                      style: const TextStyle(
+                                        fontSize: 13,
+                                        color: AyannaColors.orange,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                trailing: Icon(
                                   Icons.arrow_forward_ios,
                                   size: 16,
+                                  color: AyannaColors.orange,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(10),
                                 ),
                                 onTap: () => _loadFraisForEleve(e),
                               ),
@@ -211,19 +319,49 @@ class _EleveGlobalScreenState extends State<EleveGlobalScreen> {
                 )
               else ...[
                 Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 12.0),
+                  padding: const EdgeInsets.only(top: 4.0, bottom: 2.0),
                   child: Text(
-                    '${_selectedEleve!.prenom} ${_selectedEleve!.nom}',
+                    _selectedEleve!.prenomCapitalized,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w500,
+                      color: AyannaColors.darkGrey,
+                      fontSize: 22,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 8.0),
+                  child: Text(
+                    _selectedEleve!.nomPostnomMaj,
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: AyannaTheme.primary,
+                      fontSize: 26,
                     ),
+                    textAlign: TextAlign.center,
                   ),
                 ),
                 if (_selectedEleve!.matricule != null)
-                  Text(
-                    'Matricule : ${_selectedEleve!.matricule!}',
-                    style: Theme.of(context).textTheme.bodyMedium,
+                  Column(
+                    children: [
+                      Text(
+                        'Matricule : ${_selectedEleve!.matricule!}',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Classe : ${_selectedEleve!.classeNom ?? "-"}',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: AyannaColors.orange,
+                          fontWeight: FontWeight.bold,
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 8),
+                    ],
                   ),
                 const SizedBox(height: 8),
                 Expanded(
@@ -275,14 +413,23 @@ class _EleveGlobalScreenState extends State<EleveGlobalScreen> {
                                       ],
                                     ),
                                     const SizedBox(height: 8),
-                                    Text(
-                                      'Montant : ${fd.frais.montant.toStringAsFixed(0)}',
+                                    FutureBuilder<String>(
+                                      future: formatAmount(fd.frais.montant),
+                                      builder: (context, snapshot) => Text(
+                                        'Montant : ${snapshot.data ?? fd.frais.montant.toStringAsFixed(0)}',
+                                      ),
                                     ),
-                                    Text(
-                                      'Payé : ${fd.montantPaye.toStringAsFixed(0)}',
+                                    FutureBuilder<String>(
+                                      future: formatAmount(fd.montantPaye),
+                                      builder: (context, snapshot) => Text(
+                                        'Payé : ${snapshot.data ?? fd.montantPaye.toStringAsFixed(0)}',
+                                      ),
                                     ),
-                                    Text(
-                                      'Reste : ${fd.resteAPayer.toStringAsFixed(0)}',
+                                    FutureBuilder<String>(
+                                      future: formatAmount(fd.resteAPayer),
+                                      builder: (context, snapshot) => Text(
+                                        'Reste : ${snapshot.data ?? fd.resteAPayer.toStringAsFixed(0)}',
+                                      ),
                                     ),
                                     if (fd.historiquePaiements.isNotEmpty) ...[
                                       const SizedBox(height: 8),
@@ -390,22 +537,165 @@ class _EleveGlobalScreenState extends State<EleveGlobalScreen> {
                                           const SizedBox(width: 8),
                                         if (fd.montantPaye > 0)
                                           ElevatedButton.icon(
-                                            icon: const Icon(
-                                              Icons.receipt_long,
+                                            icon: fd.showRecu
+                                                ? const Icon(Icons.print)
+                                                : const Icon(
+                                                    Icons.receipt_long,
+                                                  ),
+                                            label: Text(
+                                              fd.showRecu
+                                                  ? 'Imprimer'
+                                                  : 'Facture',
                                             ),
-                                            label: const Text('Facture'),
                                             onPressed: () async {
-                                              await showDialog(
-                                                context: context,
-                                                builder: (ctx) => FactureDialog(
-                                                  eleve: _selectedEleve!,
-                                                  fraisDetails: fd,
-                                                ),
-                                              );
+                                              if (!fd.showRecu) {
+                                                setState(() {
+                                                  fd.showRecu = true;
+                                                });
+                                              } else {
+                                                // Impression PDF avec le package printing
+                                                await Printing.layoutPdf(
+                                                  onLayout: (format) async {
+                                                    final doc = pw.Document();
+                                                    doc.addPage(
+                                                      pw.Page(
+                                                        build: (pw.Context context) {
+                                                          return pw.Column(
+                                                            crossAxisAlignment: pw
+                                                                .CrossAxisAlignment
+                                                                .start,
+                                                            children: [
+                                                              pw.Text(
+                                                                'Généré par Ayanna School - ${DateTime.now()}',
+                                                              ),
+                                                              pw.Text(
+                                                                'Default School',
+                                                              ),
+                                                              pw.Text(
+                                                                '14 Av. Bunduki, Q. Plateau, C. Annexe',
+                                                              ),
+                                                              pw.Text(
+                                                                'Tél : +243997554905',
+                                                              ),
+                                                              pw.Text(
+                                                                'Email : comtact@school.com',
+                                                              ),
+                                                              pw.Divider(),
+                                                              pw.Text(
+                                                                'REÇU FRAIS',
+                                                                style: pw.TextStyle(
+                                                                  fontSize: 20,
+                                                                  fontWeight: pw
+                                                                      .FontWeight
+                                                                      .bold,
+                                                                ),
+                                                              ),
+                                                              pw.Text(
+                                                                'Élève : ${_selectedEleve!.prenomCapitalized} ${_selectedEleve!.nomPostnomMaj}',
+                                                              ),
+                                                              pw.Text(
+                                                                'Classe : ${_selectedEleve!.classeNom ?? "-"}',
+                                                              ),
+                                                              pw.Text(
+                                                                'Frais : ${fd.frais.nom}',
+                                                              ),
+                                                              pw.Text(
+                                                                'Paiements :',
+                                                              ),
+                                                              pw.Table.fromTextArray(
+                                                                headers: [
+                                                                  'Date',
+                                                                  'Montant',
+                                                                  'Caissier',
+                                                                ],
+                                                                data: fd
+                                                                    .historiquePaiements
+                                                                    .map(
+                                                                      (p) => [
+                                                                        p.datePaiement,
+                                                                        p.montantPaye
+                                                                            .toStringAsFixed(
+                                                                              0,
+                                                                            ),
+                                                                        'Admin',
+                                                                      ],
+                                                                    )
+                                                                    .toList(),
+                                                              ),
+                                                              pw.Text(
+                                                                'Total payé : ${fd.montantPaye.toInt()} Fc',
+                                                              ),
+                                                              pw.Text(
+                                                                'Reste : ${fd.resteAPayer.toInt()} Fc',
+                                                              ),
+                                                              pw.Text(
+                                                                'Statut : ${fd.statut == 'en_ordre'
+                                                                    ? 'En ordre'
+                                                                    : fd.statut == 'partiellement_paye'
+                                                                    ? 'Partiel'
+                                                                    : 'Pas en ordre'}',
+                                                              ),
+                                                              pw.SizedBox(
+                                                                height: 16,
+                                                              ),
+                                                              pw.Text(
+                                                                'Merci pour votre paiement.',
+                                                                style: pw.TextStyle(
+                                                                  fontStyle: pw
+                                                                      .FontStyle
+                                                                      .italic,
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          );
+                                                        },
+                                                      ),
+                                                    );
+                                                    return doc.save();
+                                                  },
+                                                );
+                                                setState(() {
+                                                  fd.showRecu = false;
+                                                });
+                                              }
                                             },
                                           ),
                                       ],
                                     ),
+                                    if (fd.showRecu ?? false)
+                                      Padding(
+                                        padding: const EdgeInsets.symmetric(
+                                          vertical: 8.0,
+                                        ),
+                                        child: FactureRecuWidget(
+                                          eleve:
+                                              _selectedEleve!
+                                                  .prenomCapitalized +
+                                              ' ' +
+                                              _selectedEleve!.nomPostnomMaj,
+                                          classe:
+                                              _selectedEleve!.classeNom ?? '-',
+                                          frais: fd.frais.nom,
+                                          paiements: fd.historiquePaiements
+                                              .map(
+                                                (p) => {
+                                                  'date': p.datePaiement,
+                                                  'montant': p.montantPaye
+                                                      .toStringAsFixed(0),
+                                                  'caissier': 'Admin',
+                                                },
+                                              )
+                                              .toList(),
+                                          totalPaye: fd.montantPaye.toInt(),
+                                          reste: fd.resteAPayer.toInt(),
+                                          statut: fd.statut == 'en_ordre'
+                                              ? 'En ordre'
+                                              : fd.statut ==
+                                                    'partiellement_paye'
+                                              ? 'Partiel'
+                                              : 'Pas en ordre',
+                                        ),
+                                      ),
                                   ],
                                 ),
                               ),

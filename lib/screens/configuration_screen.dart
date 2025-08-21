@@ -16,6 +16,9 @@ class ConfigurationScreen extends StatefulWidget {
 }
 
 class _ConfigurationScreenState extends State<ConfigurationScreen> {
+  String _selectedCurrency = 'CDF';
+  final TextEditingController _exchangeRateController = TextEditingController();
+  bool _currencyLoading = true;
   List<AnneeScolaire> _annees = [];
   AnneeScolaire? _selectedYear;
   bool _loading = true;
@@ -25,6 +28,7 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
   void initState() {
     super.initState();
     _loadData();
+    _loadCurrencyConfig();
   }
 
   Future<void> _loadData() async {
@@ -51,6 +55,17 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
     });
   }
 
+  // Load currency and exchange rate from preferences
+  Future<void> _loadCurrencyConfig() async {
+    final currency = await getAppCurrency();
+    final rate = getExchangeRate();
+    setState(() {
+      _selectedCurrency = currency;
+      _exchangeRateController.text = rate.toString();
+      _currencyLoading = false;
+    });
+  }
+
   Future<void> _saveConfiguration() async {
     if (_selectedYear == null) return;
 
@@ -62,6 +77,13 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
 
       // Sauvegarde dans les préférences
       await AppPreferences.setCurrentSchoolYearId(_selectedYear!.id);
+
+      // Save currency config
+      await setAppCurrency(_selectedCurrency);
+      final rate = double.tryParse(_exchangeRateController.text);
+      if (rate != null && rate > 0) {
+        await setExchangeRate(rate);
+      }
 
       if (widget.isFirstSetup) {
         await AppPreferences.setFirstLaunchCompleted();
@@ -90,37 +112,20 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
     return Scaffold(
       appBar: widget.isFirstSetup
           ? null
-          : const AyannaAppBar(title: 'Configuration'),
+          : AppBar(
+              title: const Text('Configuration'),
+              backgroundColor: AyannaColors.orange,
+              leading: IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: _saving ? null : _saveConfiguration,
+              ),
+            ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (widget.isFirstSetup) ...[
-                const SizedBox(height: 40),
-                const Center(child: AyannaLogo(size: 100)),
-                const SizedBox(height: 40),
-                Text(
-                  'Configuration initiale',
-                  style: Theme.of(context).textTheme.headlineSmall,
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 16),
-                Text(
-                  'Bienvenue sur Ayanna School ! Veuillez sélectionner l\'année scolaire en cours pour commencer.',
-                  style: Theme.of(context).textTheme.bodyLarge,
-                  textAlign: TextAlign.center,
-                ),
-              ] else ...[
-                const SizedBox(height: 20),
-                Text(
-                  'Paramètres de l\'application',
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-              ],
-              const SizedBox(height: 40),
-
               // Section année scolaire
               Card(
                 child: Padding(
@@ -145,13 +150,13 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
                         const Center(
                           child: Text('Aucune année scolaire disponible'),
                         )
-                      else
+                      else ...[
                         DropdownButtonFormField<AnneeScolaire>(
                           value: _annees.any((a) => a.id == _selectedYear?.id)
                               ? _selectedYear
                               : null,
                           decoration: const InputDecoration(
-                            labelText: 'Sélectionner l\'année scolaire',
+                            labelText: "Sélectionner l'année scolaire",
                             prefixIcon: Icon(Icons.calendar_today),
                           ),
                           items: _annees.map((annee) {
@@ -172,43 +177,89 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
                             return null;
                           },
                         ),
-                      if (_selectedYear != null) ...[
-                        const SizedBox(height: 12),
-                        Text(
-                          'Période: ${_selectedYear!.dateDebut} - ${_selectedYear!.dateFin}',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
+                        if (_selectedYear != null) ...[
+                          const SizedBox(height: 12),
+                          Text(
+                            'Période: ${_selectedYear!.dateDebut} - ${_selectedYear!.dateFin}',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
                       ],
                     ],
                   ),
                 ),
               ),
 
-              SizedBox(height: MediaQuery.of(context).size.height * 0.2),
-
-              // Bouton de validation
-              _saving
-                  ? const Center(child: CircularProgressIndicator())
-                  : AyannaButton(
-                      text: widget.isFirstSetup ? 'Commencer' : 'Sauvegarder',
-                      onPressed: _selectedYear != null
-                          ? () => _saveConfiguration()
-                          : null,
-                    ),
-
-              if (!widget.isFirstSetup) ...[
-                const SizedBox(height: 16),
-                OutlinedButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: AyannaColors.orange,
-                    side: BorderSide(color: AyannaColors.orange),
+              // Section configuration monnaie
+              Card(
+                margin: const EdgeInsets.only(top: 24),
+                child: Padding(
+                  padding: const EdgeInsets.all(20.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(Icons.attach_money, color: AyannaColors.orange),
+                          const SizedBox(width: 12),
+                          Text(
+                            'Configuration de la monnaie',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: RadioListTile<String>(
+                              title: const Text('Franc Congolais (CDF)'),
+                              value: 'CDF',
+                              groupValue: _selectedCurrency,
+                              onChanged: (val) {
+                                setState(() => _selectedCurrency = val!);
+                              },
+                            ),
+                          ),
+                          Expanded(
+                            child: RadioListTile<String>(
+                              title: const Text('Dollar américain (USD)'),
+                              value: 'USD',
+                              groupValue: _selectedCurrency,
+                              onChanged: (val) {
+                                setState(() => _selectedCurrency = val!);
+                              },
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+                      TextFormField(
+                        controller: _exchangeRateController,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          labelText: 'Taux de change (1 USD = ... CDF)',
+                          prefixIcon: Icon(Icons.swap_horiz),
+                        ),
+                      ),
+                    ],
                   ),
-                  child: const Text('Annuler'),
                 ),
-              ],
+              ),
 
-              const SizedBox(height: 24), // Padding bottom
+              // Bouton Sauvegarder
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 32.0),
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.save),
+                  label: const Text('Sauvegarder'),
+                  style: ElevatedButton.styleFrom(
+                    minimumSize: const Size.fromHeight(48),
+                    backgroundColor: AyannaColors.orange,
+                  ),
+                  onPressed: _saving ? null : _saveConfiguration,
+                ),
+              ),
             ],
           ),
         ),

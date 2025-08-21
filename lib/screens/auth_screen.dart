@@ -3,6 +3,7 @@ import '../theme/ayanna_theme.dart';
 import '../widgets/ayanna_widgets.dart';
 import 'configuration_screen.dart';
 import 'classes_screen.dart';
+import 'eleve_global_screen.dart';
 
 class AuthScreen extends StatefulWidget {
   final bool navigateToClasses;
@@ -32,7 +33,7 @@ class _AuthScreenState extends State<AuthScreen> {
         // Navigation intelligente selon la configuration
         if (widget.navigateToClasses) {
           Navigator.of(context).pushReplacement(
-            MaterialPageRoute(builder: (_) => const ClassesScreen()),
+            MaterialPageRoute(builder: (_) => const EleveGlobalScreen()),
           );
         } else {
           Navigator.of(context).pushReplacement(
@@ -50,6 +51,7 @@ class _AuthScreenState extends State<AuthScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AyannaColors.lightGrey,
       body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 24),
@@ -60,23 +62,106 @@ class _AuthScreenState extends State<AuthScreen> {
               const SizedBox(height: 24),
               Text('Connexion', style: Theme.of(context).textTheme.titleLarge),
               const SizedBox(height: 16),
-              AyannaTextField(
-                label: 'Nom d’utilisateur',
+              TextField(
                 controller: _usernameController,
+                decoration: InputDecoration(
+                  labelText: 'Nom d\'utilisateur',
+                  labelStyle: const TextStyle(color: AyannaColors.darkGrey),
+                  filled: true,
+                  fillColor: AyannaColors.white,
+                  prefixIcon: const Icon(
+                    Icons.person,
+                    color: AyannaColors.orange,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: AyannaColors.orange),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(
+                      color: AyannaColors.orange,
+                      width: 2,
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(
+                      color: AyannaColors.lightGrey,
+                      width: 2,
+                    ),
+                  ),
+                ),
+                style: const TextStyle(color: AyannaColors.darkGrey),
               ),
-              AyannaTextField(
-                label: 'Mot de passe',
+              const SizedBox(height: 12),
+              TextField(
                 controller: _passwordController,
                 obscureText: true,
+                decoration: InputDecoration(
+                  labelText: 'Mot de passe',
+                  labelStyle: const TextStyle(color: AyannaColors.darkGrey),
+                  filled: true,
+                  fillColor: AyannaColors.white,
+                  prefixIcon: const Icon(
+                    Icons.lock,
+                    color: AyannaColors.orange,
+                  ),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(color: AyannaColors.orange),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(
+                      color: AyannaColors.orange,
+                      width: 2,
+                    ),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: const BorderSide(
+                      color: AyannaColors.lightGrey,
+                      width: 2,
+                    ),
+                  ),
+                ),
+                style: const TextStyle(color: AyannaColors.darkGrey),
               ),
-              if (_error != null) ...[
-                const SizedBox(height: 8),
-                Text(_error!, style: TextStyle(color: Colors.red)),
-              ],
               const SizedBox(height: 24),
-              _loading
-                  ? const CircularProgressIndicator()
-                  : AyannaButton(text: 'Se connecter', onPressed: _login),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  icon: const Icon(Icons.login, color: AyannaColors.white),
+                  label: const Text('Se connecter'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AyannaColors.orange,
+                    foregroundColor: AyannaColors.white,
+                    textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                    minimumSize: const Size.fromHeight(48),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                  ),
+                  onPressed: _loading ? null : _login,
+                ),
+              ),
+              if (_error != null)
+                Padding(
+                  padding: const EdgeInsets.only(top: 16.0),
+                  child: Text(
+                    _error!,
+                    style: const TextStyle(
+                      color: Colors.red,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              if (_loading)
+                const Padding(
+                  padding: EdgeInsets.only(top: 16.0),
+                  child: CircularProgressIndicator(color: AyannaColors.orange),
+                ),
             ],
           ),
         ),

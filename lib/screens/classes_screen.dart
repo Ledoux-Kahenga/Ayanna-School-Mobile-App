@@ -99,16 +99,25 @@ class _ClassesScreenState extends State<ClassesScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: const AyannaAppBar(title: 'Classes'),
+      appBar: AppBar(
+        backgroundColor: AyannaColors.orange,
+        foregroundColor: AyannaColors.white,
+        title: const Text(
+          'Classes',
+          style: TextStyle(color: AyannaColors.white),
+        ),
+        iconTheme: const IconThemeData(color: AyannaColors.white),
+        elevation: 2,
+      ),
       drawer: const AyannaDrawer(),
+      backgroundColor: AyannaColors.lightGrey,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(12.0),
           child: Column(
             children: [
-              // En-tête simple
               Padding(
-                padding: const EdgeInsets.symmetric(vertical: 16.0),
+                padding: const EdgeInsets.symmetric(vertical: 10.0),
                 child: Text(
                   'Liste des classes',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
@@ -118,13 +127,53 @@ class _ClassesScreenState extends State<ClassesScreen> {
                   textAlign: TextAlign.center,
                 ),
               ),
-              TextField(
-                controller: _searchController,
-                decoration: const InputDecoration(
-                  labelText: 'Rechercher un élève (nom, prénom, matricule)',
-                  prefixIcon: Icon(Icons.search),
-                  border: OutlineInputBorder(),
-                  isDense: true,
+              Container(
+                height: 60,
+                decoration: BoxDecoration(
+                  color: AyannaColors.white,
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: AyannaColors.lightGrey.withOpacity(0.5),
+                      blurRadius: 6,
+                      offset: Offset(0, 2),
+                    ),
+                  ],
+                ),
+                child: TextField(
+                  controller: _searchController,
+                  style: const TextStyle(
+                    color: AyannaColors.darkGrey,
+                    fontSize: 16,
+                  ),
+                  decoration: InputDecoration(
+                    hintText: 'Rechercher un élève (nom, prénom, matricule)',
+                    hintStyle: const TextStyle(color: Color(0xFF666666)),
+                    prefixIcon: const Icon(
+                      Icons.search,
+                      color: AyannaColors.orange,
+                    ),
+                    filled: true,
+                    fillColor: AyannaColors.white,
+                    contentPadding: const EdgeInsets.symmetric(
+                      vertical: 20,
+                      horizontal: 16,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(
+                        color: AyannaColors.lightGrey,
+                        width: 2,
+                      ),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(10),
+                      borderSide: const BorderSide(
+                        color: AyannaColors.orange,
+                        width: 2,
+                      ),
+                    ),
+                  ),
                 ),
               ),
               const SizedBox(height: 16),
@@ -158,10 +207,11 @@ class _ClassesScreenState extends State<ClassesScreen> {
                         itemBuilder: (context, i) {
                           final c = _filteredClasses[i];
                           return Card(
-                            elevation: 3,
+                            elevation: 0,
                             shape: RoundedRectangleBorder(
                               borderRadius: BorderRadius.circular(16),
                             ),
+                            color: AyannaColors.white,
                             child: InkWell(
                               borderRadius: BorderRadius.circular(16),
                               onTap: () {
@@ -193,9 +243,12 @@ class _ClassesScreenState extends State<ClassesScreen> {
                                       const SizedBox(height: 8),
                                       Text(
                                         c.niveau!,
-                                        style: Theme.of(
-                                          context,
-                                        ).textTheme.bodyMedium,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodyMedium
+                                            ?.copyWith(
+                                              color: AyannaColors.darkGrey,
+                                            ),
                                         textAlign: TextAlign.center,
                                       ),
                                     ],
@@ -203,9 +256,13 @@ class _ClassesScreenState extends State<ClassesScreen> {
                                       const SizedBox(height: 8),
                                       Text(
                                         'Effectif : ${c.effectif}',
-                                        style: Theme.of(
-                                          context,
-                                        ).textTheme.bodySmall,
+                                        style: Theme.of(context)
+                                            .textTheme
+                                            .bodySmall
+                                            ?.copyWith(
+                                              color: AyannaColors.orange,
+                                              fontWeight: FontWeight.bold,
+                                            ),
                                         textAlign: TextAlign.center,
                                       ),
                                     ],

@@ -1,5 +1,48 @@
 import 'package:shared_preferences/shared_preferences.dart';
 
+double _exchangeRate = 2500; // Default: 1 USD = 2500 CDF
+
+/// Sets the exchange rate (1 USD = ? CDF)
+Future<void> setExchangeRate(double rate) async {
+  _exchangeRate = rate;
+  // Save to persistent storage if needed
+}
+
+/// Gets the current exchange rate (1 USD = ? CDF)
+double getExchangeRate() {
+  return _exchangeRate;
+}
+
+/// Converts an amount from USD to CDF
+double usdToCdf(double usd) => usd * _exchangeRate;
+
+/// Converts an amount from CDF to USD
+double cdfToUsd(double cdf) => cdf / _exchangeRate;
+
+/// Formats an amount with the selected currency
+Future<String> formatAmount(double amount, {bool isUsd = false}) async {
+  final currency = await getAppCurrency();
+  if (currency == 'USD') {
+    final value = isUsd ? amount : cdfToUsd(amount);
+    return '${value.toStringAsFixed(2)} USD';
+  } else {
+    final value = isUsd ? usdToCdf(amount) : amount;
+    return '${value.toStringAsFixed(0)} CDF';
+  }
+}
+
+/// Sets the currency to use in the app ('USD' for dollar, 'CDF' for franc)
+Future<void> setAppCurrency(String currencyCode) async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setString('app_currency', currencyCode);
+}
+
+/// Gets the currently selected currency code ('USD' or 'CDF')
+Future<String> getAppCurrency() async {
+  final prefs = await SharedPreferences.getInstance();
+  return prefs.getString('app_currency') ?? 'CDF';
+}
+
 class AppPreferences {
   static const String _keyIsFirstLaunch = 'is_first_launch';
   static const String _keyCurrentSchoolYearId = 'current_school_year_id';

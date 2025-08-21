@@ -1,3 +1,4 @@
+import 'package:ayanna_school/theme/ayanna_theme.dart';
 import 'package:flutter/material.dart';
 import '../ayanna_theme.dart';
 
@@ -7,7 +8,23 @@ class AyannaLogo extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Image.asset('assets/images/favicon.ico', width: size, height: size);
+    return Container(
+      decoration: BoxDecoration(
+        color: AyannaColors.orange,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: AyannaColors.orange.withOpacity(0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Icon(Icons.school, size: size * 0.6, color: AyannaColors.white),
+      ),
+    );
   }
 }
 
@@ -33,7 +50,28 @@ class AyannaTextField extends StatelessWidget {
         controller: controller,
         obscureText: obscureText,
         keyboardType: keyboardType,
-        decoration: InputDecoration(labelText: label),
+        decoration: InputDecoration(
+          labelText: label,
+          labelStyle: const TextStyle(color: AyannaColors.darkGrey),
+          filled: true,
+          fillColor: AyannaColors.white,
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: AyannaColors.orange),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(color: AyannaColors.orange, width: 2),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(10),
+            borderSide: const BorderSide(
+              color: AyannaColors.lightGrey,
+              width: 2,
+            ),
+          ),
+        ),
+        style: const TextStyle(color: AyannaColors.darkGrey),
       ),
     );
   }
@@ -57,12 +95,17 @@ class AyannaButton extends StatelessWidget {
       width: double.infinity,
       child: ElevatedButton(
         style: ElevatedButton.styleFrom(
-          backgroundColor: filled ? AyannaTheme.accent : Colors.transparent,
-          foregroundColor: filled ? AyannaTheme.primary : AyannaTheme.primary,
+          backgroundColor: filled ? AyannaColors.orange : AyannaColors.white,
+          foregroundColor: filled ? AyannaColors.white : AyannaColors.orange,
+          textStyle: const TextStyle(fontWeight: FontWeight.bold),
+          elevation: filled ? 2 : 0,
           side: filled
               ? null
-              : const BorderSide(color: AyannaTheme.primary, width: 2),
-          elevation: filled ? 2 : 0,
+              : const BorderSide(color: AyannaColors.orange, width: 2),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(10),
+          ),
+          minimumSize: const Size.fromHeight(48),
         ),
         onPressed: onPressed,
         child: Padding(
@@ -71,5 +114,20 @@ class AyannaButton extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class AyannaSchoolIcon extends StatelessWidget {
+  final double size;
+  final Color color;
+  const AyannaSchoolIcon({
+    this.size = 56,
+    this.color = Colors.white,
+    super.key,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Icon(Icons.school, size: size, color: color);
   }
 }

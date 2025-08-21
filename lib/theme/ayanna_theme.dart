@@ -47,7 +47,7 @@ final ThemeData ayannaTheme = ThemeData(
     showUnselectedLabels: true,
     type: BottomNavigationBarType.fixed,
   ),
-  cardTheme: const CardTheme(
+  cardTheme: const CardThemeData(
     color: AyannaColors.white,
     elevation: 2,
     margin: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
@@ -64,7 +64,9 @@ final ThemeData ayannaTheme = ThemeData(
     style: ButtonStyle(
       backgroundColor: MaterialStatePropertyAll(AyannaColors.orange),
       foregroundColor: MaterialStatePropertyAll(AyannaColors.white),
-      textStyle: MaterialStatePropertyAll(TextStyle(fontWeight: FontWeight.bold)),
+      textStyle: MaterialStatePropertyAll(
+        TextStyle(fontWeight: FontWeight.bold),
+      ),
       shape: MaterialStatePropertyAll(
         RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
@@ -75,7 +77,9 @@ final ThemeData ayannaTheme = ThemeData(
       backgroundColor: MaterialStatePropertyAll(AyannaColors.white),
       foregroundColor: MaterialStatePropertyAll(AyannaColors.orange),
       side: MaterialStatePropertyAll(BorderSide(color: AyannaColors.orange)),
-      textStyle: MaterialStatePropertyAll(TextStyle(fontWeight: FontWeight.bold)),
+      textStyle: MaterialStatePropertyAll(
+        TextStyle(fontWeight: FontWeight.bold),
+      ),
       shape: MaterialStatePropertyAll(
         RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
@@ -84,7 +88,10 @@ final ThemeData ayannaTheme = ThemeData(
   textTheme: const TextTheme(
     bodyLarge: TextStyle(color: AyannaColors.darkGrey),
     bodyMedium: TextStyle(color: AyannaColors.darkGrey),
-    titleLarge: TextStyle(color: AyannaColors.darkGrey, fontWeight: FontWeight.bold),
+    titleLarge: TextStyle(
+      color: AyannaColors.darkGrey,
+      fontWeight: FontWeight.bold,
+    ),
     titleMedium: TextStyle(color: AyannaColors.darkGrey),
     labelLarge: TextStyle(color: AyannaColors.orange),
     displaySmall: TextStyle(color: AyannaColors.darkGrey),
