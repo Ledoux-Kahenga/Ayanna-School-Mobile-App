@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/ayanna_theme.dart';
 import '../widgets/ayanna_appbar.dart';
 import '../widgets/ayanna_widgets.dart';
 import '../services/school_queries.dart';
@@ -141,37 +142,37 @@ class _ElevesScreenState extends State<ElevesScreen> {
                     'Total',
                     '$_totalEleves',
                     Icons.people,
-                    Colors.blue.shade100,
+                    AyannaColors.selectionBlue.withOpacity(0.1),
                   ),
                   _buildDashboardCard(
                     'En ordre',
                     '$_enOrdre',
                     Icons.check_circle,
-                    Colors.green.shade100,
+                    AyannaColors.successGreen.withOpacity(0.1),
                   ),
                   _buildDashboardCard(
                     'Pas en ordre',
                     '$_pasEnOrdre',
                     Icons.warning,
-                    Colors.red.shade100,
+                    Colors.red.withOpacity(0.1),
                   ),
                   _buildDashboardCard(
                     'Attendu',
                     _totalAttendu.toStringAsFixed(0),
                     Icons.attach_money,
-                    Colors.orange.shade100,
+                    AyannaColors.orange.withOpacity(0.1),
                   ),
                   _buildDashboardCard(
                     'Reçu',
                     _totalRecu.toStringAsFixed(0),
                     Icons.payments,
-                    Colors.purple.shade100,
+                    Colors.purple.withOpacity(0.1),
                   ),
                   _buildDashboardCard(
                     'Reste',
                     (_totalAttendu - _totalRecu).toStringAsFixed(0),
                     Icons.trending_down,
-                    Colors.grey.shade100,
+                    AyannaColors.lightGrey,
                   ),
                 ],
               ),

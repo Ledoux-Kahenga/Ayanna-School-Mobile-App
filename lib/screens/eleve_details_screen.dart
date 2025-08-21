@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/ayanna_theme.dart';
 import '../widgets/ayanna_appbar.dart';
 import '../services/school_queries.dart';
 import '../models/models.dart';
@@ -138,11 +139,11 @@ class _EleveDetailsScreenState extends State<EleveDetailsScreen> {
     String statusText;
 
     if (isEnOrdre) {
-      statusColor = Colors.green;
+      statusColor = AyannaColors.successGreen;
       statusIcon = Icons.check_circle;
       statusText = 'En ordre';
     } else if (isPartiellementPaye) {
-      statusColor = Colors.orange;
+      statusColor = AyannaColors.orange;
       statusIcon = Icons.schedule;
       statusText = 'Partiellement payé';
     } else {

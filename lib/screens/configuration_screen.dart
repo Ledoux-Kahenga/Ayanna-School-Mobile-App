@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/ayanna_theme.dart';
 import '../widgets/ayanna_appbar.dart';
 import '../widgets/ayanna_widgets.dart';
 import '../services/school_queries.dart';
@@ -129,7 +130,7 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
                     children: [
                       Row(
                         children: [
-                          Icon(Icons.school, color: AyannaTheme.primary),
+                          Icon(Icons.school, color: AyannaColors.orange),
                           const SizedBox(width: 12),
                           Text(
                             'Année scolaire en cours',
@@ -200,8 +201,8 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
                 OutlinedButton(
                   onPressed: () => Navigator.of(context).pop(),
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: AyannaTheme.primary,
-                    side: BorderSide(color: AyannaTheme.primary),
+                    foregroundColor: AyannaColors.orange,
+                    side: BorderSide(color: AyannaColors.orange),
                   ),
                   child: const Text('Annuler'),
                 ),

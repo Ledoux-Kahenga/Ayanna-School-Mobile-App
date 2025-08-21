@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/ayanna_theme.dart';
 import '../widgets/ayanna_widgets.dart';
 import 'configuration_screen.dart';
 import 'classes_screen.dart';
@@ -70,7 +71,7 @@ class _AuthScreenState extends State<AuthScreen> {
               ),
               if (_error != null) ...[
                 const SizedBox(height: 8),
-                Text(_error!, style: const TextStyle(color: Colors.red)),
+                Text(_error!, style: TextStyle(color: Colors.red)),
               ],
               const SizedBox(height: 24),
               _loading

@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'ayanna_theme.dart';
+import 'theme/ayanna_theme.dart';
 import 'screens/auth_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/classes_screen.dart';
@@ -17,7 +17,7 @@ class MainApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Ayanna School',
-      theme: AyannaTheme.themeData,
+      theme: ayannaTheme,
       home: const StartupScreen(),
       routes: {
         '/home': (context) => const HomeScreen(),
@@ -71,14 +71,17 @@ class _StartupScreenState extends State<StartupScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AyannaTheme.background,
+      backgroundColor: AyannaColors.lightGrey,
       body: const Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             CircularProgressIndicator(),
             SizedBox(height: 16),
-            Text('Chargement...'),
+            Text(
+              'Chargement...',
+              style: TextStyle(color: AyannaColors.darkGrey),
+            ),
           ],
         ),
       ),

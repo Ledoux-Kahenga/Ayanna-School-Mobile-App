@@ -12,6 +12,8 @@ dependencies:
   sqflite: ^2.3.0
   path_provider: ^2.1.2
   shared_preferences: ^2.5.3
+  printing: ^5.14.2
+  pdf: ^3.11.3
 
 dev_dependencies:
   flutter_test:

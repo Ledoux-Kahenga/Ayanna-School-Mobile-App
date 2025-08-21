@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import '../theme/ayanna_theme.dart';
 import '../widgets/ayanna_appbar.dart';
 import '../widgets/ayanna_drawer.dart';
 import '../services/school_queries.dart';
 import '../models/models.dart';
 import '../ayanna_theme.dart';
 import '../services/app_preferences.dart';
+import '../widgets/facture_dialog.dart';
 
 class EleveGlobalScreen extends StatefulWidget {
   const EleveGlobalScreen({super.key});
@@ -263,10 +265,10 @@ class _EleveGlobalScreenState extends State<EleveGlobalScreen> {
                                               : 'Pas en ordre',
                                           style: TextStyle(
                                             color: fd.statut == 'en_ordre'
-                                                ? Colors.green
+                                                ? AyannaColors.successGreen
                                                 : fd.statut ==
                                                       'partiellement_paye'
-                                                ? Colors.orange
+                                                ? AyannaColors.orange
                                                 : Colors.red,
                                           ),
                                         ),
@@ -296,98 +298,114 @@ class _EleveGlobalScreenState extends State<EleveGlobalScreen> {
                                         ),
                                       ),
                                     ],
-                                    if (fd.resteAPayer > 0) ...[
-                                      const SizedBox(height: 8),
-                                      Align(
-                                        alignment: Alignment.centerRight,
-                                        child: ElevatedButton.icon(
-                                          icon: const Icon(Icons.payment),
-                                          label: const Text('Régler'),
-                                          onPressed: () async {
-                                            final montantController =
-                                                TextEditingController();
-                                            final result = await showDialog<double>(
-                                              context: context,
-                                              builder: (ctx) {
-                                                return AlertDialog(
-                                                  title: const Text(
-                                                    'Effectuer un paiement',
-                                                  ),
-                                                  content: TextField(
-                                                    controller:
-                                                        montantController,
-                                                    keyboardType:
-                                                        TextInputType.number,
-                                                    decoration: InputDecoration(
-                                                      labelText:
-                                                          'Montant à payer (max ${fd.resteAPayer.toStringAsFixed(0)})',
+                                    Row(
+                                      mainAxisAlignment: MainAxisAlignment.end,
+                                      children: [
+                                        if (fd.resteAPayer > 0)
+                                          ElevatedButton.icon(
+                                            icon: const Icon(Icons.payment),
+                                            label: const Text('Régler'),
+                                            onPressed: () async {
+                                              final montantController =
+                                                  TextEditingController();
+                                              final result = await showDialog<double>(
+                                                context: context,
+                                                builder: (ctx) {
+                                                  return AlertDialog(
+                                                    title: const Text(
+                                                      'Effectuer un paiement',
                                                     ),
-                                                  ),
-                                                  actions: [
-                                                    TextButton(
-                                                      onPressed: () =>
-                                                          Navigator.of(
-                                                            ctx,
-                                                          ).pop(),
-                                                      child: const Text(
-                                                        'Annuler',
+                                                    content: TextField(
+                                                      controller:
+                                                          montantController,
+                                                      keyboardType:
+                                                          TextInputType.number,
+                                                      decoration: InputDecoration(
+                                                        labelText:
+                                                            'Montant à payer (max ${fd.resteAPayer.toStringAsFixed(0)})',
                                                       ),
                                                     ),
-                                                    ElevatedButton(
-                                                      onPressed: () {
-                                                        final value =
-                                                            double.tryParse(
-                                                              montantController
-                                                                  .text,
-                                                            );
-                                                        if (value != null &&
-                                                            value > 0 &&
-                                                            value <=
-                                                                fd.resteAPayer) {
-                                                          Navigator.of(
-                                                            ctx,
-                                                          ).pop(value);
-                                                        }
-                                                      },
-                                                      child: const Text(
-                                                        'Valider',
+                                                    actions: [
+                                                      TextButton(
+                                                        onPressed: () =>
+                                                            Navigator.of(
+                                                              ctx,
+                                                            ).pop(),
+                                                        child: const Text(
+                                                          'Annuler',
+                                                        ),
                                                       ),
-                                                    ),
-                                                  ],
+                                                      ElevatedButton(
+                                                        onPressed: () {
+                                                          final value =
+                                                              double.tryParse(
+                                                                montantController
+                                                                    .text,
+                                                              );
+                                                          if (value != null &&
+                                                              value > 0 &&
+                                                              value <=
+                                                                  fd.resteAPayer) {
+                                                            Navigator.of(
+                                                              ctx,
+                                                            ).pop(value);
+                                                          }
+                                                        },
+                                                        child: const Text(
+                                                          'Valider',
+                                                        ),
+                                                      ),
+                                                    ],
+                                                  );
+                                                },
+                                              );
+                                              if (result != null) {
+                                                final paiement = PaiementFrais(
+                                                  id: 0,
+                                                  eleveId: _selectedEleve!.id,
+                                                  fraisScolaireId: fd.frais.id,
+                                                  montantPaye: result,
+                                                  datePaiement: DateTime.now()
+                                                      .toIso8601String()
+                                                      .substring(0, 10),
+                                                  resteAPayer:
+                                                      fd.resteAPayer - result,
+                                                  statut:
+                                                      fd.resteAPayer - result <=
+                                                          0
+                                                      ? 'en_ordre'
+                                                      : 'partiellement_paye',
+                                                  userId: 1,
                                                 );
-                                              },
-                                            );
-                                            if (result != null) {
-                                              // Enregistre le paiement
-                                              final paiement = PaiementFrais(
-                                                id: 0,
-                                                eleveId: _selectedEleve!.id,
-                                                fraisScolaireId: fd.frais.id,
-                                                montantPaye: result,
-                                                datePaiement: DateTime.now()
-                                                    .toIso8601String()
-                                                    .substring(0, 10),
-                                                resteAPayer:
-                                                    fd.resteAPayer - result,
-                                                statut:
-                                                    fd.resteAPayer - result <= 0
-                                                    ? 'en_ordre'
-                                                    : 'partiellement_paye',
-                                                userId:
-                                                    1, // à adapter selon l'utilisateur connecté
+                                                await SchoolQueries.insertPaiement(
+                                                  paiement,
+                                                );
+                                                await _loadFraisForEleve(
+                                                  _selectedEleve!,
+                                                );
+                                              }
+                                            },
+                                          ),
+                                        if (fd.montantPaye > 0)
+                                          const SizedBox(width: 8),
+                                        if (fd.montantPaye > 0)
+                                          ElevatedButton.icon(
+                                            icon: const Icon(
+                                              Icons.receipt_long,
+                                            ),
+                                            label: const Text('Facture'),
+                                            onPressed: () async {
+                                              await showDialog(
+                                                context: context,
+                                                builder: (ctx) => FactureDialog(
+                                                  eleve: _selectedEleve!,
+                                                  fraisDetails: fd,
+                                                ),
                                               );
-                                              await SchoolQueries.insertPaiement(
-                                                paiement,
-                                              );
-                                              // Recharge les frais
-                                              await _loadFraisForEleve(
-                                                _selectedEleve!,
-                                              );
-                                            }
-                                          },
-                                        ),
-                                      ),
-                                    ],
+                                            },
+                                          ),
+                                      ],
+                                    ),
                                   ],
                                 ),
                               ),

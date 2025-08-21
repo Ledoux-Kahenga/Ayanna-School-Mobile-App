@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../theme/ayanna_theme.dart';
 import '../widgets/ayanna_appbar.dart';
 import '../widgets/ayanna_widgets.dart';
 import '../services/school_queries.dart';
@@ -112,7 +113,7 @@ class _ClassesScreenState extends State<ClassesScreen> {
                   'Liste des classes',
                   style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                     fontWeight: FontWeight.bold,
-                    color: AyannaTheme.primary,
+                    color: AyannaColors.orange,
                   ),
                   textAlign: TextAlign.center,
                 ),
@@ -133,12 +134,12 @@ class _ClassesScreenState extends State<ClassesScreen> {
                     : _errorMessage.isNotEmpty
                     ? Center(
                         child: Card(
-                          color: Colors.red.shade50,
+                          color: Colors.red.withOpacity(0.1),
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
                             child: Text(
                               _errorMessage,
-                              style: TextStyle(color: Colors.red.shade700),
+                              style: TextStyle(color: Colors.red),
                             ),
                           ),
                         ),
@@ -182,7 +183,7 @@ class _ClassesScreenState extends State<ClassesScreen> {
                                           .titleLarge
                                           ?.copyWith(
                                             fontWeight: FontWeight.bold,
-                                            color: AyannaTheme.primary,
+                                            color: AyannaColors.orange,
                                           ),
                                       textAlign: TextAlign.center,
                                       maxLines: 2,
