@@ -1,104 +1,73 @@
-import 'package:ayanna_school/screens/eleve_global_screen.dart';
-import 'package:flutter/material.dart';
-import 'theme/ayanna_theme.dart';
-import 'screens/auth_screen.dart';
-import 'screens/classes_screen.dart';
-import 'screens/configuration_screen.dart';
-import 'services/app_preferences.dart';
+import 'dart:convert';
 
-void main() {
-  runApp(const MainApp());
+import 'package:ayanna_school/database/database.dart';
+import 'package:ayanna_school/models/anneeScolaire.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import 'theme/ayanna_theme.dart';
+import 'vues/classes/auth_screen.dart';
+
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  final database = await $FloorMainDatabaseAppFloor
+      .databaseBuilder('ayanna_school_database.db')
+      .build();
+  await _insertionAnneeScolaire(database);
+
+  runApp(MainApp(database: database));
+}
+
+
+Future<void> _insertionAnneeScolaire(MainDatabaseAppFloor database) async {
+  final jsonString = await rootBundle.loadString('assets/annees_scolaires.json');
+  final List<dynamic> jsonList = json.decode(jsonString);
+  final List<AnneeScolaireModel> donnees = jsonList.map((item) => AnneeScolaireModel.fromJson(item)).toList();
+
+ try {
+  await database.anneeScolaireDao.insertAll(donnees);
+  } catch (e) {
+    print("Erreur lors de l'insertion : $e");
+  }
 }
 
 class MainApp extends StatelessWidget {
-  const MainApp({super.key});
-
-  Future<bool> _isFirstLaunch() async {
-    return !(await AppPreferences.isConfigured());
-  }
-
+  final MainDatabaseAppFloor database;
+  const MainApp({super.key, required this.database});
+  
+  Future<AnneeScolaireModel?> get defaultYear => database.anneeScolaireDao.getAnneescolaireEnCours();
+  
+  
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Ayanna School',
-      theme: ayannaTheme,
-      home: FutureBuilder<bool>(
-        future: _isFirstLaunch(),
-        builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
-          final isFirstLaunch = snapshot.data!;
-          return AuthScreen(navigateToClasses: !isFirstLaunch);
-        },
-      ),
-      routes: {
-        '/classes': (context) => const EleveGlobalScreen(),
-        '/configuration': (context) =>
-            const ConfigurationScreen(isFirstSetup: false),
-      },
+    return Provider<MainDatabaseAppFloor>(
+      create: (_) => database,
+      child: MaterialApp(
+            title: 'Ayanna School',
+            theme: ayannaTheme,
+            home: defaultYear == 1
+                ? AuthScreen()
+                : Error(),
+          ),
     );
   }
 }
 
-class StartupScreen extends StatefulWidget {
-  const StartupScreen({super.key});
+class Error extends StatelessWidget {
 
-  @override
-  State<StartupScreen> createState() => _StartupScreenState();
-}
-
-class _StartupScreenState extends State<StartupScreen> {
-  @override
-  void initState() {
-    super.initState();
-    _checkAppState();
-  }
-
-  Future<void> _checkAppState() async {
-    // Petite pause pour éviter le flash
-    await Future.delayed(const Duration(milliseconds: 500));
-
-    final isConfigured = await AppPreferences.isConfigured();
-
-    if (mounted) {
-      if (isConfigured) {
-        // Application déjà configurée, on authentifie puis on va aux classes
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (_) => const AuthScreen(navigateToClasses: true),
-          ),
-        );
-      } else {
-        // Premier lancement, on authentifie puis on configure
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(
-            builder: (_) => const AuthScreen(navigateToClasses: false),
-          ),
-        );
-      }
-    }
-  }
+  const Error({super.key});
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AyannaColors.lightGrey,
-      body: const Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text(
-              'Chargement...',
-              style: TextStyle(color: AyannaColors.darkGrey),
-            ),
-          ],
+      body: Center(
+        child: Text('Erreur : Année scolaire non trouvée',
+          style: TextStyle(color: AyannaColors.darkGrey),
         ),
       ),
     );
   }
 }
+

@@ -128,3 +128,121 @@ CREATE TABLE paiement_frais (
     FOREIGN KEY(eleve_id) REFERENCES eleves(id),
     FOREIGN KEY(frais_scolaire_id) REFERENCES frais_scolaires(id)
 );
+
+CREATE TABLE classes_comptables (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    code TEXT,
+    nom TEXT,
+    libelle TEXT,
+    type TEXT,
+    entreprise_id INTEGER,
+    actif INTEGER,
+    document TEXT,
+    date_creation DATETIME DEFAULT CURRENT_TIMESTAMP,
+    date_modification DATETIME DEFAULT CURRENT_TIMESTAMP
+)
+
+CREATE TABLE "comptes_comptables" (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    numero VARCHAR(20) NOT NULL,
+    nom VARCHAR(255) NOT NULL,
+    libelle VARCHAR(255) NOT NULL,
+    actif BOOLEAN DEFAULT 1,
+    classe_comptable_id INTEGER NOT NULL, date_creation DATETIME, date_modification DATETIME,
+    -- ajoutez ici les autres colonnes si besoin
+    -- ...
+    FOREIGN KEY(classe_comptable_id) REFERENCES "old_classe_comptable"(id)
+)
+
+CREATE TABLE comptes_config (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    entreprise_id INTEGER NOT NULL,
+    compte_caisse_id INTEGER NOT NULL,
+    compte_frais_id INTEGER NOT NULL,
+    compte_client_id INTEGER NOT NULL, date_creation DATETIME, date_modification DATETIME,
+    FOREIGN KEY(compte_caisse_id) REFERENCES comptes_comptables(id),
+    FOREIGN KEY(compte_frais_id) REFERENCES comptes_comptables(id),
+    FOREIGN KEY(compte_client_id) REFERENCES comptes_comptables(id)
+)
+
+CREATE TABLE creances (
+	id INTEGER NOT NULL, 
+	eleve_id INTEGER NOT NULL, 
+	frais_scolaire_id INTEGER NOT NULL, 
+	montant DECIMAL(15, 2) NOT NULL, 
+	date_echeance DATE NOT NULL, 
+	active BOOLEAN, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(eleve_id) REFERENCES eleves (id), 
+	FOREIGN KEY(frais_scolaire_id) REFERENCES frais_scolaires (id)
+)
+
+CREATE TABLE depenses (
+	libelle VARCHAR(255) NOT NULL, 
+	montant NUMERIC(15, 2) NOT NULL, 
+	date_depense DATETIME NOT NULL, 
+	entreprise_id INTEGER NOT NULL, 
+	id INTEGER NOT NULL, 
+	date_creation DATETIME NOT NULL, 
+	date_modification DATETIME NOT NULL, piece TEXT, observation TEXT, journal_id INTEGER REFERENCES journaux_comptables(id), user_id INTEGER REFERENCES utilisateurs(id), 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(entreprise_id) REFERENCES entreprises (id)
+)
+
+CREATE TABLE exercices_comptables (
+	libelle VARCHAR(100) NOT NULL, 
+	date_debut DATETIME NOT NULL, 
+	date_fin DATETIME NOT NULL, 
+	est_cloture BOOLEAN, 
+	date_cloture DATETIME, 
+	entreprise_id INTEGER NOT NULL, 
+	id INTEGER NOT NULL, 
+	date_creation DATETIME NOT NULL, 
+	date_modification DATETIME NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(entreprise_id) REFERENCES entreprises (id)
+)
+
+CREATE TABLE pieces_comptables (
+	numero VARCHAR(50) NOT NULL, 
+	date_piece DATETIME NOT NULL, 
+	type_piece VARCHAR(50) NOT NULL, 
+	montant_total NUMERIC(15, 2) NOT NULL, 
+	tiers VARCHAR(200), 
+	reference_externe VARCHAR(100), 
+	statut VARCHAR(20), 
+	entreprise_id INTEGER NOT NULL, 
+	id INTEGER NOT NULL, 
+	date_creation DATETIME NOT NULL, 
+	date_modification DATETIME NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(entreprise_id) REFERENCES entreprises (id)
+)
+
+CREATE TABLE journaux_comptables (
+	date_operation DATETIME NOT NULL, 
+	libelle VARCHAR(255) NOT NULL, 
+	montant NUMERIC(15, 2) NOT NULL, 
+	type_operation VARCHAR(20) NOT NULL, 
+	paiement_frais_id INTEGER, 
+	entreprise_id INTEGER NOT NULL, 
+	created_at DATETIME NOT NULL, 
+	id INTEGER NOT NULL, 
+	date_creation DATETIME NOT NULL, 
+	date_modification DATETIME NOT NULL, 
+	PRIMARY KEY (id), 
+	FOREIGN KEY(paiement_frais_id) REFERENCES paiement_frais (id), 
+	FOREIGN KEY(entreprise_id) REFERENCES entreprises (id)
+)
+
+CREATE TABLE ecritures_comptables (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    journal_id INTEGER NOT NULL,
+    compte_comptable_id INTEGER NOT NULL,
+    debit REAL DEFAULT 0,
+    credit REAL DEFAULT 0,
+    ordre INTEGER CHECK(ordre IN (1, 2)) NOT NULL, -- 1 pour débit, 2 pour crédit
+    created_at TEXT DEFAULT CURRENT_TIMESTAMP, piece_id INTEGER REFERENCES pieces_comptables(id), date_creation DATETIME DEFAULT CURRENT_TIMESTAMP, date_modification DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (journal_id) REFERENCES journaux_comptables(id),
+    FOREIGN KEY (compte_comptable_id) REFERENCES "comptes_comptables_old"(id)
+)

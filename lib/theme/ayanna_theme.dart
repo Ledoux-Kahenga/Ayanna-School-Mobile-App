@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 
 class AyannaColors {
-  static const Color orange = Color(0xFFFFA500); // Orange Principal
+  static const Color orange = Color(0xFFFF9800); // Orange Principal
   static const Color darkGrey = Color(0xFF333333); // Gris Foncé (Texte)
   static const Color lightGrey = Color(0xFFF4F4F4); // Gris Clair (Fond)
   static const Color white = Color(0xFFFFFFFF); // Blanc Pur
-  static const Color successGreen = Color(0xFF28A745); // Vert de Succès
-  static const Color selectionBlue = Color(0xFF3C8DBC); // Bleu de Sélection
+  static const Color successGreen = Color(0xFF4CAF50); // Vert de Succès
+  static const Color selectionBlue = Color(0xFF2196F3); // Bleu de Sélection
 }
 
 final ThemeData ayannaTheme = ThemeData(

@@ -1,0 +1,308 @@
+// GENERATED CODE - DO NOT MODIFY BY HAND
+
+part of 'database.dart';
+
+// **************************************************************************
+// FloorGenerator
+// **************************************************************************
+
+abstract class $MainDatabaseAppFloorBuilderContract {
+  /// Adds migrations to the builder.
+  $MainDatabaseAppFloorBuilderContract addMigrations(
+      List<Migration> migrations);
+
+  /// Adds a database [Callback] to the builder.
+  $MainDatabaseAppFloorBuilderContract addCallback(Callback callback);
+
+  /// Creates the database and initializes it.
+  Future<MainDatabaseAppFloor> build();
+}
+
+// ignore: avoid_classes_with_only_static_members
+class $FloorMainDatabaseAppFloor {
+  /// Creates a database builder for a persistent database.
+  /// Once a database is built, you should keep a reference to it and re-use it.
+  static $MainDatabaseAppFloorBuilderContract databaseBuilder(String name) =>
+      _$MainDatabaseAppFloorBuilder(name);
+
+  /// Creates a database builder for an in memory database.
+  /// Information stored in an in memory database disappears when the process is killed.
+  /// Once a database is built, you should keep a reference to it and re-use it.
+  static $MainDatabaseAppFloorBuilderContract inMemoryDatabaseBuilder() =>
+      _$MainDatabaseAppFloorBuilder(null);
+}
+
+class _$MainDatabaseAppFloorBuilder
+    implements $MainDatabaseAppFloorBuilderContract {
+  _$MainDatabaseAppFloorBuilder(this.name);
+
+  final String? name;
+
+  final List<Migration> _migrations = [];
+
+  Callback? _callback;
+
+  @override
+  $MainDatabaseAppFloorBuilderContract addMigrations(
+      List<Migration> migrations) {
+    _migrations.addAll(migrations);
+    return this;
+  }
+
+  @override
+  $MainDatabaseAppFloorBuilderContract addCallback(Callback callback) {
+    _callback = callback;
+    return this;
+  }
+
+  @override
+  Future<MainDatabaseAppFloor> build() async {
+    final path = name != null
+        ? await sqfliteDatabaseFactory.getDatabasePath(name!)
+        : ':memory:';
+    final database = _$MainDatabaseAppFloor();
+    database.database = await database.open(
+      path,
+      _migrations,
+      _callback,
+    );
+    return database;
+  }
+}
+
+class _$MainDatabaseAppFloor extends MainDatabaseAppFloor {
+  _$MainDatabaseAppFloor([StreamController<String>? listener]) {
+    changeListener = listener ?? StreamController<String>.broadcast();
+  }
+
+  AnneeScolaireDao? _anneeScolaireDaoInstance;
+
+  ClassesDao? _classDaosInstance;
+
+  ElevesDao? _elevesDaoInstance;
+
+  Future<sqflite.Database> open(
+    String path,
+    List<Migration> migrations, [
+    Callback? callback,
+  ]) async {
+    final databaseOptions = sqflite.OpenDatabaseOptions(
+      version: 1,
+      onConfigure: (database) async {
+        await database.execute('PRAGMA foreign_keys = ON');
+        await callback?.onConfigure?.call(database);
+      },
+      onOpen: (database) async {
+        await callback?.onOpen?.call(database);
+      },
+      onUpgrade: (database, startVersion, endVersion) async {
+        await MigrationAdapter.runMigrations(
+            database, startVersion, endVersion, migrations);
+
+        await callback?.onUpgrade?.call(database, startVersion, endVersion);
+      },
+      onCreate: (database, version) async {
+        await database.execute(
+            'CREATE TABLE IF NOT EXISTS `annees_scolaires` (`id` INTEGER NOT NULL, `nom` TEXT NOT NULL, `date_debut` TEXT NOT NULL, `date_fin` TEXT NOT NULL, `entreprise_id` INTEGER NOT NULL, `en_cours` INTEGER, FOREIGN KEY (`entreprise_id`) REFERENCES `entreprises` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE, PRIMARY KEY (`id`))');
+        await database.execute(
+            'CREATE TABLE IF NOT EXISTS `classes` (`id` INTEGER NOT NULL, `nom` TEXT NOT NULL, `annee_scolaire_id` INTEGER NOT NULL, `code` TEXT, `niveau` TEXT, `effectif` INTEGER, `enseignant_id` INTEGER, FOREIGN KEY (`annee_scolaire_id`) REFERENCES `annees_scolaires` (`id`) ON UPDATE NO ACTION ON DELETE CASCADE, FOREIGN KEY (`enseignant_id`) REFERENCES `enseignants` (`id`) ON UPDATE NO ACTION ON DELETE SET NULL, PRIMARY KEY (`id`))');
+        await database.execute(
+            'CREATE TABLE IF NOT EXISTS `eleves` (`id` INTEGER NOT NULL, `nom` TEXT NOT NULL, `prenom` TEXT NOT NULL, `postnom` TEXT, `sexe` TEXT, `statut` TEXT, `date_naissance` TEXT, `lieu_naissance` TEXT, `matricule` TEXT, `numero_permanent` TEXT, `classe_id` INTEGER, `responsable_id` INTEGER, FOREIGN KEY (`classe_id`) REFERENCES `classes` (`id`) ON UPDATE NO ACTION ON DELETE SET NULL, FOREIGN KEY (`responsable_id`) REFERENCES `responsables` (`id`) ON UPDATE NO ACTION ON DELETE SET NULL, PRIMARY KEY (`id`))');
+
+        await callback?.onCreate?.call(database, version);
+      },
+    );
+    return sqfliteDatabaseFactory.openDatabase(path, options: databaseOptions);
+  }
+
+  @override
+  AnneeScolaireDao get anneeScolaireDao {
+    return _anneeScolaireDaoInstance ??=
+        _$AnneeScolaireDao(database, changeListener);
+  }
+
+  @override
+  ClassesDao get classDaos {
+    return _classDaosInstance ??= _$ClassesDao(database, changeListener);
+  }
+
+  @override
+  ElevesDao get elevesDao {
+    return _elevesDaoInstance ??= _$ElevesDao(database, changeListener);
+  }
+}
+
+class _$AnneeScolaireDao extends AnneeScolaireDao {
+  _$AnneeScolaireDao(
+    this.database,
+    this.changeListener,
+  )   : _queryAdapter = QueryAdapter(database),
+        _anneeScolaireModelInsertionAdapter = InsertionAdapter(
+            database,
+            'annees_scolaires',
+            (AnneeScolaireModel item) => <String, Object?>{
+                  'id': item.id,
+                  'nom': item.nom,
+                  'date_debut': item.date_debut,
+                  'date_fin': item.date_fin,
+                  'entreprise_id': item.entreprise_id,
+                  'en_cours': item.en_cours
+                });
+
+  final sqflite.DatabaseExecutor database;
+
+  final StreamController<String> changeListener;
+
+  final QueryAdapter _queryAdapter;
+
+  final InsertionAdapter<AnneeScolaireModel>
+      _anneeScolaireModelInsertionAdapter;
+
+  @override
+  Future<AnneeScolaireModel?> getAnneescolaireEnCours() async {
+    return _queryAdapter.query(
+        'SELECT * FROM annees_scolaires WHERE en_cours = 1',
+        mapper: (Map<String, Object?> row) => AnneeScolaireModel(
+            id: row['id'] as int,
+            nom: row['nom'] as String,
+            date_debut: row['date_debut'] as String,
+            date_fin: row['date_fin'] as String,
+            entreprise_id: row['entreprise_id'] as int,
+            en_cours: row['en_cours'] as int?));
+  }
+
+  @override
+  Future<void> insertAll(List<AnneeScolaireModel> anneeScolaire) async {
+    await _anneeScolaireModelInsertionAdapter.insertList(
+        anneeScolaire, OnConflictStrategy.replace);
+  }
+}
+
+class _$ClassesDao extends ClassesDao {
+  _$ClassesDao(
+    this.database,
+    this.changeListener,
+  )   : _queryAdapter = QueryAdapter(database),
+        _classModelInsertionAdapter = InsertionAdapter(
+            database,
+            'classes',
+            (ClassModel item) => <String, Object?>{
+                  'id': item.id,
+                  'nom': item.nom,
+                  'annee_scolaire_id': item.annee_scolaire_id,
+                  'code': item.code,
+                  'niveau': item.niveau,
+                  'effectif': item.effectif,
+                  'enseignant_id': item.enseignant_id
+                });
+
+  final sqflite.DatabaseExecutor database;
+
+  final StreamController<String> changeListener;
+
+  final QueryAdapter _queryAdapter;
+
+  final InsertionAdapter<ClassModel> _classModelInsertionAdapter;
+
+  @override
+  Future<List<ClassModel>> getAllClasses() async {
+    return _queryAdapter.queryList('SELECT * FROM classes',
+        mapper: (Map<String, Object?> row) => ClassModel(
+            id: row['id'] as int,
+            nom: row['nom'] as String,
+            annee_scolaire_id: row['annee_scolaire_id'] as int,
+            code: row['code'] as String?,
+            niveau: row['niveau'] as String?,
+            effectif: row['effectif'] as int?,
+            enseignant_id: row['enseignant_id'] as int?));
+  }
+
+  @override
+  Future<int?> getClassesByAnnee(int anneeScolaireId) async {
+    return _queryAdapter.query(
+        'SELECT * FROM classes WHERE annee_scolaire_id = ?1',
+        mapper: (Map<String, Object?> row) => row.values.first as int,
+        arguments: [anneeScolaireId]);
+  }
+
+  @override
+  Future<void> insertAll(List<ClassModel> classes) async {
+    await _classModelInsertionAdapter.insertList(
+        classes, OnConflictStrategy.replace);
+  }
+}
+
+class _$ElevesDao extends ElevesDao {
+  _$ElevesDao(
+    this.database,
+    this.changeListener,
+  )   : _queryAdapter = QueryAdapter(database),
+        _eleveModelInsertionAdapter = InsertionAdapter(
+            database,
+            'eleves',
+            (EleveModel item) => <String, Object?>{
+                  'id': item.id,
+                  'nom': item.nom,
+                  'prenom': item.prenom,
+                  'postnom': item.postnom,
+                  'sexe': item.sexe,
+                  'statut': item.statut,
+                  'date_naissance': item.date_naissance,
+                  'lieu_naissance': item.lieu_naissance,
+                  'matricule': item.matricule,
+                  'numero_permanent': item.numero_permanent,
+                  'classe_id': item.classe_id,
+                  'responsable_id': item.responsable_id
+                });
+
+  final sqflite.DatabaseExecutor database;
+
+  final StreamController<String> changeListener;
+
+  final QueryAdapter _queryAdapter;
+
+  final InsertionAdapter<EleveModel> _eleveModelInsertionAdapter;
+
+  @override
+  Future<List<EleveModel>> getAllEleves() async {
+    return _queryAdapter.queryList('SELECT * FROM eleves',
+        mapper: (Map<String, Object?> row) => EleveModel(
+            id: row['id'] as int,
+            nom: row['nom'] as String,
+            prenom: row['prenom'] as String,
+            postnom: row['postnom'] as String?,
+            sexe: row['sexe'] as String?,
+            statut: row['statut'] as String?,
+            date_naissance: row['date_naissance'] as String?,
+            lieu_naissance: row['lieu_naissance'] as String?,
+            matricule: row['matricule'] as String?,
+            numero_permanent: row['numero_permanent'] as String?,
+            classe_id: row['classe_id'] as int?,
+            responsable_id: row['responsable_id'] as int?));
+  }
+
+  @override
+  Future<List<EleveModel>> getElevesByClasseId(int classeId) async {
+    return _queryAdapter.queryList('SELECT * FROM eleves WHERE classe_id = ?1',
+        mapper: (Map<String, Object?> row) => EleveModel(
+            id: row['id'] as int,
+            nom: row['nom'] as String,
+            prenom: row['prenom'] as String,
+            postnom: row['postnom'] as String?,
+            sexe: row['sexe'] as String?,
+            statut: row['statut'] as String?,
+            date_naissance: row['date_naissance'] as String?,
+            lieu_naissance: row['lieu_naissance'] as String?,
+            matricule: row['matricule'] as String?,
+            numero_permanent: row['numero_permanent'] as String?,
+            classe_id: row['classe_id'] as int?,
+            responsable_id: row['responsable_id'] as int?),
+        arguments: [classeId]);
+  }
+
+  @override
+  Future<void> insertAll(List<EleveModel> eleves) async {
+    await _eleveModelInsertionAdapter.insertList(
+        eleves, OnConflictStrategy.replace);
+  }
+}

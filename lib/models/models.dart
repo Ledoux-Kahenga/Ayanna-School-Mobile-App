@@ -120,6 +120,11 @@ class Eleve {
   final String? postnom;
   final String? statut;
   final String? classeNom;
+  // Ajout des champs responsable
+  final String? responsableNom;
+  final String? responsableTelephone;
+  final String? responsableEmail;
+  final String? responsableAdresse;
 
   Eleve({
     required this.id,
@@ -135,6 +140,10 @@ class Eleve {
     this.postnom,
     this.statut,
     this.classeNom,
+    this.responsableNom,
+    this.responsableTelephone,
+    this.responsableEmail,
+    this.responsableAdresse,
   });
 
   factory Eleve.fromMap(Map<String, dynamic> map) {
@@ -152,6 +161,10 @@ class Eleve {
       postnom: map['postnom'],
       statut: map['statut'],
       classeNom: map['classe_nom'],
+      responsableNom: map['responsable_nom'],
+      responsableTelephone: map['responsable_telephone'],
+      responsableEmail: map['responsable_email'],
+      responsableAdresse: map['responsable_adresse'],
     );
   }
 }

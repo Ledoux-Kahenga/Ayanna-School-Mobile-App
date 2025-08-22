@@ -44,6 +44,26 @@ class SchoolQueries {
     return result.map((e) => Classe.fromMap(e)).toList();
   }
 
+  // Insère un nouvel élève
+  static Future<int> insertEleve(Map<String, dynamic> eleveData) async {
+    final db = await DatabaseService.database;
+    return await db.insert('eleves', eleveData);
+  }
+
+  // Met à jour un élève existant
+  static Future<int> updateEleve(
+    int eleveId,
+    Map<String, dynamic> eleveData,
+  ) async {
+    final db = await DatabaseService.database;
+    return await db.update(
+      'eleves',
+      eleveData,
+      where: 'id = ?',
+      whereArgs: [eleveId],
+    );
+  } 
+
   // Requêtes pour les élèves
   static Future<List<Eleve>> getElevesByClasse(int classeId) async {
     final db = await DatabaseService.database;
