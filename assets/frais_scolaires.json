@@ -1,0 +1,10 @@
+[
+    {
+        "annee_scolaire_id": 1,
+        "date_limite": "2025-09-24",
+        "entreprise_id": 2,
+        "id": 1,
+        "montant": 50000,
+        "nom": "Inscription"
+    }
+]

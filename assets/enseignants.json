@@ -1,0 +1,26 @@
+[
+    {
+        "discipline": "langues",
+        "email": "bukasaserge@gmail.com",
+        "entreprise_id": 2,
+        "id": 1,
+        "matricule": "EN0001",
+        "niveau": "Maternelle",
+        "nom": "Bukasa",
+        "prenom": "Serge",
+        "sexe": "Homme",
+        "telephone": "+243894563697"
+    },
+    {
+        "discipline": "sciences",
+        "email": "nellykatshung@gmail.com",
+        "entreprise_id": 2,
+        "id": 2,
+        "matricule": "EN0002",
+        "niveau": "Primaire",
+        "nom": "Katshung",
+        "prenom": "Nelly",
+        "sexe": "Femme",
+        "telephone": "+243892587419"
+    }
+]

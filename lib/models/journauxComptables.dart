@@ -29,7 +29,7 @@ class JournauxComptablesModel {
   final int id;
 
   /// These fields correspond to the SQL columns that are defined as NOT NULL.
-  final DateTime date_operation;
+  final String date_operation;
   final String libelle;
   
   /// The 'montant' column is NUMERIC(15, 2) in SQL, which maps to a double in Dart.
@@ -37,9 +37,9 @@ class JournauxComptablesModel {
   
   final String type_operation;
   final int entreprise_id;
-  final DateTime created_at;
-  final DateTime date_creation;
-  final DateTime date_modification;
+  final String created_at;
+  final String date_creation;
+  final String date_modification;
 
   /// This field corresponds to the nullable foreign key column in the SQL schema.
   final int? paiement_frais_id;
@@ -62,14 +62,14 @@ class JournauxComptablesModel {
   factory JournauxComptablesModel.fromJson(Map<String, dynamic> json) {
     return JournauxComptablesModel(
       id: json['id'] as int,
-      date_operation: DateTime.parse(json['date_operation'] as String),
+      date_operation: json['date_operation'] as String,
       libelle: json['libelle'] as String,
       montant: (json['montant'] as num).toDouble(),
       type_operation: json['type_operation'] as String,
       entreprise_id: json['entreprise_id'] as int,
-      created_at: DateTime.parse(json['created_at'] as String),
-      date_creation: DateTime.parse(json['date_creation'] as String),
-      date_modification: DateTime.parse(json['date_modification'] as String),
+      created_at: json['created_at'] as String,
+      date_creation: json['date_creation'] as String,
+      date_modification: json['date_modification'] as String,
       paiement_frais_id: json['paiement_frais_id'] as int?,
     );
   }
@@ -78,14 +78,14 @@ class JournauxComptablesModel {
   Map<String, dynamic> toJson() {
     return {
       'id': id,
-      'date_operation': date_operation.toIso8601String(),
+      'date_operation': date_operation,
       'libelle': libelle,
       'montant': montant,
       'type_operation': type_operation,
       'entreprise_id': entreprise_id,
-      'created_at': created_at.toIso8601String(),
-      'date_creation': date_creation.toIso8601String(),
-      'date_modification': date_modification.toIso8601String(),
+      'created_at': created_at,
+      'date_creation': date_creation,
+      'date_modification': date_modification,
       'paiement_frais_id': paiement_frais_id,
     };
   }

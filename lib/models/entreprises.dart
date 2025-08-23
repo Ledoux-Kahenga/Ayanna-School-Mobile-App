@@ -15,8 +15,8 @@ class EntrepriseModel {
   /// These fields correspond to the VARCHAR columns that are
   /// defined as NOT NULL in the table schema.
   final String nom;
-  final DateTime date_creation;
-  final DateTime date_modification;
+  final String? date_creation; // format ISO yyyy-MM-dd ou null
+  final String? date_modification; // format ISO yyyy-MM-dd ou null
 
   /// These fields correspond to nullable columns in the SQL schema.
   /// We use nullable types (`String?`, `Uint8List?`) in Dart.
@@ -60,8 +60,8 @@ class EntrepriseModel {
       logo: json['logo'] is List<int>
           ? Uint8List.fromList(json['logo'] as List<int>)
           : null,
-      date_creation: DateTime.parse(json['date_creation'] as String),
-      date_modification: DateTime.parse(json['date_modification'] as String),
+      date_creation: json['date_creation'] as String?,
+      date_modification: json['date_modification'] as String?,
     );
   }
 
@@ -77,8 +77,8 @@ class EntrepriseModel {
       'telephone': telephone,
       'email': email,
       'logo': logo,
-      'date_creation': date_creation.toIso8601String(),
-      'date_modification': date_modification.toIso8601String(),
+      'date_creation': date_creation,
+      'date_modification': date_modification,
     };
   }
 }

@@ -1,5 +1,4 @@
-import 'package:ayanna_school/models/classe.dart';
-import 'package:ayanna_school/models/fraisScolaire.dart';
+
 import 'package:floor/floor.dart';
 
 /// @Entity marks this class as a database table.
@@ -8,18 +7,18 @@ import 'package:floor/floor.dart';
 @Entity(
   tableName: "frais_classes",
   foreignKeys: [
-    ForeignKey(
-      childColumns: ['classe_id'],
-      parentColumns: ['id'],
-      entity: ClassModel, // Assuming 'ClassModel' is the name of your entity class
-      onDelete: ForeignKeyAction.cascade,
-    ),
-    ForeignKey(
-      childColumns: ['frais_id'],
-      parentColumns: ['id'],
-      entity: FraisScolaireModel, // Assuming 'FraisScolaireModel' is the name of your entity class
-      onDelete: ForeignKeyAction.cascade,
-    ),
+    // ForeignKey(
+    //   childColumns: ['classe_id'],
+    //   parentColumns: ['id'],
+    //   entity: ClassModel, // Assuming 'ClassModel' is the name of your entity class
+    //   onDelete: ForeignKeyAction.cascade,
+    // ),
+    // ForeignKey(
+    //   childColumns: ['frais_id'],
+    //   parentColumns: ['id'],
+    //   entity: FraisScolaireModel, // Assuming 'FraisScolaireModel' is the name of your entity class
+    //   onDelete: ForeignKeyAction.cascade,
+    // ),
   ],
 )
 class FraisClassesModel {

@@ -9,18 +9,18 @@ import 'package:floor/floor.dart';
 @Entity(
   tableName: "classes",
   foreignKeys: [
-    ForeignKey(
-      childColumns: ['annee_scolaire_id'],
-      parentColumns: ['id'],
-      entity: AnneeScolaireModel,
-      onDelete: ForeignKeyAction.cascade,
-    ),
-    ForeignKey(
-      childColumns: ['enseignant_id'],
-      parentColumns: ['id'],
-      entity: EnseignantModel,
-      onDelete: ForeignKeyAction.setNull, // Or another appropriate action
-    ),
+    // ForeignKey(
+    //   childColumns: ['annee_scolaire_id'],
+    //   parentColumns: ['id'],
+    //   entity: AnneeScolaireModel,
+    //   onDelete: ForeignKeyAction.cascade,
+    // ),
+    // ForeignKey(
+    //   childColumns: ['enseignant_id'],
+    //   parentColumns: ['id'],
+    //   entity: EnseignantModel,
+    //   onDelete: ForeignKeyAction.setNull, // Or another appropriate action
+    // ),
   ],
 )
 class ClassModel {

@@ -27,16 +27,16 @@ class UtilisateurModel {
   /// These fields are NOT NULL in the SQL table, so they are required.
   final String nom;
   final String prenom;
-  
+
   /// The email has a UNIQUE constraint in the SQL, so we can add the @unique annotation in Dart.
 
   final String email;
-  
+
   final String mot_de_passe_hash;
   final String role;
   final int entreprise_id;
-  final DateTime date_creation;
-  final DateTime date_modification;
+  final String date_creation;
+  final String date_modification;
 
   /// The 'actif' column is of type BOOLEAN and is nullable.
   final bool? actif;
@@ -65,9 +65,13 @@ class UtilisateurModel {
       mot_de_passe_hash: json['mot_de_passe_hash'] as String,
       role: json['role'] as String,
       entreprise_id: json['entreprise_id'] as int,
-      date_creation: DateTime.parse(json['date_creation'] as String),
-      date_modification: DateTime.parse(json['date_modification'] as String),
-      actif: json['actif'] as bool?,
+      date_creation: json['date_creation'] as String,
+      date_modification: json['date_modification'] as String,
+      actif: (json['actif'] is bool)
+          ? json['actif']
+          : (json['actif'] is int)
+          ? json['actif'] == 1
+          : null,
     );
   }
 
@@ -81,8 +85,8 @@ class UtilisateurModel {
       'mot_de_passe_hash': mot_de_passe_hash,
       'role': role,
       'entreprise_id': entreprise_id,
-      'date_creation': date_creation.toIso8601String(),
-      'date_modification': date_modification.toIso8601String(),
+      'date_creation': date_creation,
+      'date_modification': date_modification,
       'actif': actif,
     };
   }

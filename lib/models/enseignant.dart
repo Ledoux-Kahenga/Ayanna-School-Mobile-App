@@ -13,7 +13,7 @@ import 'package:floor/floor.dart';
       entity: EntrepriseModel, // Assuming 'EntrepriseModel' is the name of your entity class
       onDelete: ForeignKeyAction.cascade,
     ),
-  ],
+  ], 
 )
 class EnseignantModel {
   /// @PrimaryKey marks this field as the primary key.

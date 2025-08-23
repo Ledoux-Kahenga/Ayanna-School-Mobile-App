@@ -1,0 +1,44 @@
+[
+    {
+        "classe_id": 2,
+        "date_naissance": "2021-08-09",
+        "id": 1,
+        "lieu_naissance": "Likasi",
+        "matricule": "EKALUBO909",
+        "nom": "Kasongo",
+        "numero_permanent": null,
+        "postnom": "Lunda",
+        "prenom": "Boniface",
+        "responsable_id": 1,
+        "sexe": "Masculin",
+        "statut": "actif"
+    },
+    {
+        "classe_id": 3,
+        "date_naissance": "2015-08-09",
+        "id": 2,
+        "lieu_naissance": "Mweneditu",
+        "matricule": "EKAMWSA918",
+        "nom": "Kanjinga",
+        "numero_permanent": "785545",
+        "postnom": "Mwadi",
+        "prenom": "Sarah",
+        "responsable_id": 2,
+        "sexe": "Féminin",
+        "statut": "actif"
+    },
+    {
+        "classe_id": 2,
+        "date_naissance": "2015-08-09",
+        "id": 3,
+        "lieu_naissance": "ubumbashi",
+        "matricule": "EMBKADE557",
+        "nom": "Mbalu",
+        "numero_permanent": "8555",
+        "postnom": "Kazadi",
+        "prenom": "Deborah",
+        "responsable_id": 3,
+        "sexe": "Féminin",
+        "statut": "actif"
+    }
+]

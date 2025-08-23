@@ -1,0 +1,26 @@
+[
+    {
+        "actif": 1,
+        "date_creation": "2025-08-08 16:09:39",
+        "date_modification": "2025-08-08 16:09:39",
+        "email": "patricksalumumboka@gmail.com",
+        "entreprise_id": 1,
+        "id": 1,
+        "mot_de_passe_hash": "dac1c089955d5afd7a67876cbf2e6c21b7eeddd6ed8a5806fa223d839e2d9d7f:245ae02a84b7767929428f01a269735c9970f4b02f7b966d6184e3930bd8f996",
+        "nom": "Admin",
+        "prenom": "System",
+        "role": "SUPER_ADMIN"
+    },
+    {
+        "actif": 1,
+        "date_creation": "2025-08-08 16:17:01",
+        "date_modification": "2025-08-08 16:17:01",
+        "email": "admin@school.com",
+        "entreprise_id": 2,
+        "id": 2,
+        "mot_de_passe_hash": "be00d0830afaa4facce1eb53682a78a0a6f114858d6609a1b5fc2025fdff2349:9c357168c12e8dad6337ab94f49549dfbfbaf196a0c231b0fb3771836da7e98b",
+        "nom": "Admin",
+        "prenom": "Admin",
+        "role": "admin"
+    }
+]

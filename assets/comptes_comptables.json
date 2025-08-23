@@ -1,0 +1,72 @@
+[
+    {
+        "actif": 1,
+        "classe_comptable_id": 5,
+        "date_creation": "2025-08-09 06:50:32",
+        "date_modification": "2025-08-09 06:50:32",
+        "id": 1,
+        "libelle": "Comptes liés à toutes les operations courantes",
+        "nom": "Caisse Ecole",
+        "numero": "5000"
+    },
+    {
+        "actif": 1,
+        "classe_comptable_id": 6,
+        "date_creation": "2025-08-09 06:51:42",
+        "date_modification": "2025-08-09 06:51:42",
+        "id": 2,
+        "libelle": "Compte lié aux salaires des personnels",
+        "nom": "Salaire Personnel",
+        "numero": "6100"
+    },
+    {
+        "actif": 1,
+        "classe_comptable_id": 6,
+        "date_creation": "2025-08-09 06:52:40",
+        "date_modification": "2025-08-09 06:52:40",
+        "id": 3,
+        "libelle": "Comptes liés aux transports des personnels",
+        "nom": "Transport Personnel",
+        "numero": "6101"
+    },
+    {
+        "actif": 1,
+        "classe_comptable_id": 6,
+        "date_creation": "2025-08-09 06:53:36",
+        "date_modification": "2025-08-09 06:54:19",
+        "id": 4,
+        "libelle": "Compte lié aux achats des materiaux scolaires",
+        "nom": "Achats Materiaux",
+        "numero": "6200"
+    },
+    {
+        "actif": 1,
+        "classe_comptable_id": 4,
+        "date_creation": "2025-08-09 06:55:14",
+        "date_modification": "2025-08-09 06:55:14",
+        "id": 5,
+        "libelle": "Clients ecoles",
+        "nom": "Clients",
+        "numero": "4000"
+    },
+    {
+        "actif": 1,
+        "classe_comptable_id": 4,
+        "date_creation": "2025-08-09 06:56:15",
+        "date_modification": "2025-08-09 06:56:15",
+        "id": 6,
+        "libelle": "Comptes des fournisseurs",
+        "nom": "Fournisseurs",
+        "numero": "4100"
+    },
+    {
+        "actif": 1,
+        "classe_comptable_id": 7,
+        "date_creation": "2025-08-09 06:57:36",
+        "date_modification": "2025-08-09 06:57:36",
+        "id": 7,
+        "libelle": "compte lié au paiement des frais scolaires",
+        "nom": "Frais scolaire",
+        "numero": "7000"
+    }
+]

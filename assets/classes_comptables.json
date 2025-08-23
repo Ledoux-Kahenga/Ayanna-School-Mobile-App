@@ -1,0 +1,86 @@
+[
+    {
+        "actif": 1,
+        "code": "1",
+        "date_creation": "2025-08-09 06:49:16",
+        "date_modification": "2025-08-09 06:49:16",
+        "document": "bilan",
+        "entreprise_id": 2,
+        "id": 1,
+        "libelle": "Comptes de ressources durables",
+        "nom": "Actif",
+        "type": "actif"
+    },
+    {
+        "actif": 1,
+        "code": "2",
+        "date_creation": "2025-08-09 06:49:16",
+        "date_modification": "2025-08-09 06:49:16",
+        "document": "bilan",
+        "entreprise_id": 2,
+        "id": 2,
+        "libelle": "Comptes emplois durables",
+        "nom": "Passif",
+        "type": "passif"
+    },
+    {
+        "actif": 1,
+        "code": "3",
+        "date_creation": "2025-08-09 06:49:16",
+        "date_modification": "2025-08-09 06:49:16",
+        "document": "bilan",
+        "entreprise_id": 2,
+        "id": 3,
+        "libelle": "Comptes de stocks et en-cours",
+        "nom": "Stocks",
+        "type": "actif"
+    },
+    {
+        "actif": 1,
+        "code": "4",
+        "date_creation": "2025-08-09 06:49:16",
+        "date_modification": "2025-08-09 06:49:16",
+        "document": "bilan",
+        "entreprise_id": 2,
+        "id": 4,
+        "libelle": "Comptes de tiers",
+        "nom": "Tierse",
+        "type": "mixte"
+    },
+    {
+        "actif": 1,
+        "code": "5",
+        "date_creation": "2025-08-09 06:49:16",
+        "date_modification": "2025-08-09 06:49:16",
+        "document": "bilan",
+        "entreprise_id": 2,
+        "id": 5,
+        "libelle": "Comptes financiers",
+        "nom": "Financiers",
+        "type": "actif"
+    },
+    {
+        "actif": 1,
+        "code": "6",
+        "date_creation": "2025-08-09 06:49:16",
+        "date_modification": "2025-08-09 06:49:16",
+        "document": "resultat",
+        "entreprise_id": 2,
+        "id": 6,
+        "libelle": "Comptes de charges",
+        "nom": "Charges",
+        "type": "charge"
+    },
+    {
+        "actif": 1,
+        "code": "7",
+        "date_creation": "2025-08-09 06:49:16",
+        "date_modification": "2025-08-09 06:49:16",
+        "document": "resultat",
+        "entreprise_id": 2,
+        "id": 7,
+        "libelle": "Comptes de produits",
+        "nom": "Produits",
+        "type": "produit"
+    }
+]

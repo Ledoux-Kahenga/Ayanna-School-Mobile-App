@@ -9,18 +9,18 @@ import 'package:floor/floor.dart';
 @Entity(
   tableName: "frais_scolaires",
   foreignKeys: [
-    ForeignKey(
-      childColumns: ['annee_scolaire_id'],
-      parentColumns: ['id'],
-      entity: AnneeScolaireModel,
-      onDelete: ForeignKeyAction.cascade,
-    ),
-    ForeignKey(
-      childColumns: ['entreprise_id'],
-      parentColumns: ['id'],
-      entity: EntrepriseModel,
-      onDelete: ForeignKeyAction.cascade,
-    ),
+    // ForeignKey(
+    //   childColumns: ['annee_scolaire_id'],
+    //   parentColumns: ['id'],
+    //   entity: AnneeScolaireModel,
+    //   onDelete: ForeignKeyAction.cascade,
+    // ),
+    // ForeignKey(
+    //   childColumns: ['entreprise_id'],
+    //   parentColumns: ['id'],
+    //   entity: EntrepriseModel,
+    //   onDelete: ForeignKeyAction.cascade,
+    // ),
   ],
 )
 class FraisScolaireModel {
@@ -36,7 +36,7 @@ class FraisScolaireModel {
   final int entreprise_id;
 
   /// The 'date_limite' column is of type DATE and is nullable.
-  final DateTime? date_limite;
+  final String? date_limite;
 
   /// The constructor for the FraisScolaireModel class.
   FraisScolaireModel({
@@ -56,9 +56,7 @@ class FraisScolaireModel {
       montant: (json['montant'] as num).toDouble(),
       annee_scolaire_id: json['annee_scolaire_id'] as int,
       entreprise_id: json['entreprise_id'] as int,
-      date_limite: json['date_limite'] != null
-          ? DateTime.parse(json['date_limite'] as String)
-          : null,
+      date_limite: json['date_limite'] as String?,
     );
   }
 
@@ -70,7 +68,7 @@ class FraisScolaireModel {
       'montant': montant,
       'annee_scolaire_id': annee_scolaire_id,
       'entreprise_id': entreprise_id,
-      'date_limite': date_limite?.toIso8601String(),
+      'date_limite': date_limite,
     };
   }
 }

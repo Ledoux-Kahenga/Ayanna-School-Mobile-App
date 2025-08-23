@@ -7,12 +7,12 @@ import 'package:floor/floor.dart';
 @Entity(
   tableName: "frais",
   foreignKeys: [
-    ForeignKey(
-      childColumns: ['entreprise_id'],
-      parentColumns: ['id'],
-      entity: EntrepriseModel,
-      onDelete: ForeignKeyAction.cascade,
-    ),
+    // ForeignKey(
+    //   childColumns: ['entreprise_id'],
+    //   parentColumns: ['id'],
+    //   entity: EntrepriseModel,
+    //   onDelete: ForeignKeyAction.cascade,
+    // ),
   ],
   indices: [
     Index(value: ['code'], unique: true),

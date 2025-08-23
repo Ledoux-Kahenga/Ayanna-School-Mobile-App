@@ -1,0 +1,42 @@
+[
+    {
+        "classe_id": 1,
+        "frais_id": 1,
+        "id": 1
+    },
+    {
+        "classe_id": 2,
+        "frais_id": 1,
+        "id": 2
+    },
+    {
+        "classe_id": 3,
+        "frais_id": 1,
+        "id": 3
+    },
+    {
+        "classe_id": 4,
+        "frais_id": 1,
+        "id": 4
+    },
+    {
+        "classe_id": 5,
+        "frais_id": 1,
+        "id": 5
+    },
+    {
+        "classe_id": 6,
+        "frais_id": 1,
+        "id": 6
+    },
+    {
+        "classe_id": 7,
+        "frais_id": 1,
+        "id": 7
+    },
+    {
+        "classe_id": 8,
+        "frais_id": 1,
+        "id": 8
+    }
+]

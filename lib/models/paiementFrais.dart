@@ -10,24 +10,24 @@ import 'package:floor/floor.dart';
 @Entity(
   tableName: "paiement_frais",
   foreignKeys: [
-    ForeignKey(
-      childColumns: ['eleve_id'],
-      parentColumns: ['id'],
-      entity: EleveModel, // Assuming 'EleveModel' exists
-      onDelete: ForeignKeyAction.cascade,
-    ),
-    ForeignKey(
-      childColumns: ['frais_scolaire_id'],
-      parentColumns: ['id'],
-      entity: FraisScolaireModel, // Assuming 'FraisScolaireModel' exists
-      onDelete: ForeignKeyAction.cascade,
-    ),
-    ForeignKey(
-      childColumns: ['user_id'],
-      parentColumns: ['id'],
-      entity: UtilisateurModel, // Assuming 'UtilisateurModel' exists
-      onDelete: ForeignKeyAction.setNull,
-    ),
+    // ForeignKey(
+    //   childColumns: ['eleve_id'],
+    //   parentColumns: ['id'],
+    //   entity: EleveModel, // Assuming 'EleveModel' exists
+    //   onDelete: ForeignKeyAction.cascade,
+    // ),
+    // ForeignKey(
+    //   childColumns: ['frais_scolaire_id'],
+    //   parentColumns: ['id'],
+    //   entity: FraisScolaireModel, // Assuming 'FraisScolaireModel' exists
+    //   onDelete: ForeignKeyAction.cascade,
+    // ),
+    // ForeignKey(
+    //   childColumns: ['user_id'],
+    //   parentColumns: ['id'],
+    //   entity: UtilisateurModel, // Assuming 'UtilisateurModel' exists
+    //   onDelete: ForeignKeyAction.setNull,
+    // ),
   ],
 )
 class PaiementFraisModel {
@@ -40,7 +40,7 @@ class PaiementFraisModel {
   final int eleve_id;
   final int frais_scolaire_id;
   final double montant_paye;
-  final DateTime date_paiement;
+  final String date_paiement;
 
   /// These fields correspond to the nullable columns in the SQL schema.
   final int? user_id;
@@ -67,7 +67,7 @@ class PaiementFraisModel {
       eleve_id: json['eleve_id'] as int,
       frais_scolaire_id: json['frais_scolaire_id'] as int,
       montant_paye: (json['montant_paye'] as num).toDouble(),
-      date_paiement: DateTime.parse(json['date_paiement'] as String),
+      date_paiement: json['date_paiement'] as String,
       user_id: json['user_id'] as int?,
       reste_a_payer: (json['reste_a_payer'] as num?)?.toDouble(),
       statut: json['statut'] as String?,
@@ -82,7 +82,7 @@ class PaiementFraisModel {
       'eleve_id': eleve_id,
       'frais_scolaire_id': frais_scolaire_id,
       'montant_paye': montant_paye,
-      'date_paiement': date_paiement.toIso8601String(),
+      'date_paiement': date_paiement,
       'user_id': user_id,
       'reste_a_payer': reste_a_payer,
       'statut': statut,
