@@ -4,13 +4,17 @@ import 'package:ayanna_school/theme/ayanna_theme.dart';
 import 'package:flutter/material.dart';
 import '../classes/classes_screen.dart';
 import '../configuration_screen.dart';
-import '../paiementFrais/paiement_frais.dart';
-import '../journal_comptable_screen.dart';
-import '../grand_livre_screen.dart';
-import '../classes/bilan_screen.dart';
+import '../gestions frais/paiement_frais.dart';
+import '../gestions frais/journal_caisse.dart';
 
 class AyannaDrawer extends StatelessWidget {
-  const AyannaDrawer({super.key});
+  final int selectedIndex;
+  final Function(int) onItemSelected;
+  const AyannaDrawer({
+    super.key,
+    required this.selectedIndex,
+    required this.onItemSelected,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -41,10 +45,9 @@ class AyannaDrawer extends StatelessWidget {
                         ],
                       ),
                       child: Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Icon(
-                          Icons.school,
-                          size: 56,
+                        padding: const EdgeInsets.all(0.0),
+                        child: Image.asset(
+                          'assets/icon/icon.png',
                           color: Colors.white,
                         ),
                       ),
@@ -64,27 +67,68 @@ class AyannaDrawer extends StatelessWidget {
               ),
             ),
             _buildDivider(),
-            // Paiement frais item
-            _buildDrawerItem(
-              context,
-              icon: Icons.payment,
-              text: 'Paiement frais',
-              onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) =>  PaiementDesFrais()),
-                );
-              },
+            ExpansionTile(
+              leading: Icon(
+                Icons.account_balance_wallet,
+                color: AyannaColors.orange,
+              ),
+              title: const Text(
+                'Gestion Frais',
+                style: TextStyle(
+                  fontWeight: FontWeight.w500,
+                  color: Colors.black,
+                ),
+              ),
+              children: [
+                Padding(
+                  padding: const EdgeInsets.only(left: 16.0),
+                  child: _buildSubItem(
+                    context,
+                    icon: Icons.payment,
+                    text: 'Paiement frais',
+                    screen: PaiementDesFrais(),
+                    selected: selectedIndex == 0,
+                    onTap: () {
+                      onItemSelected(0);
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (_) => PaiementDesFrais()),
+                        (Route<dynamic> route) => route.isFirst,
+                      );
+                    },
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(left: 16.0),
+                  child: _buildSubItem(
+                    context,
+                    icon: Icons.receipt_long,
+                    text: 'Journal caisse',
+                    screen: const JournalCaisse(),
+                    selected: selectedIndex == 1,
+                    onTap: () {
+                      onItemSelected(1);
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (_) => const JournalCaisse()),
+                        (Route<dynamic> route) => route.isFirst,
+                      );
+                    },
+                  ),
+                ),
+              ],
             ),
             _buildDivider(),
             _buildDrawerItem(
               context,
-              icon: Icons.class_,
+              icon: Icons.menu_book,
               text: 'Classes',
               onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ClassesScreen()),
+                onItemSelected(2);
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => ClassesScreen()),
+                  (Route<dynamic> route) => route.isFirst,
                 );
               },
+              selected: selectedIndex == 2,
             ),
             _buildDivider(),
             _buildDrawerItem(
@@ -92,42 +136,13 @@ class AyannaDrawer extends StatelessWidget {
               icon: Icons.people,
               text: 'Eleves',
               onTap: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(builder: (_) => const ElevesScreen()),
+                onItemSelected(3);
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => ElevesScreen()),
+                  (Route<dynamic> route) => route.isFirst,
                 );
               },
-            ),
-            _buildDivider(),
-            // Comptabilité dropdown
-            ExpansionTile(
-              leading: Icon(Icons.account_balance, color: AyannaColors.orange),
-              title: const Text(
-                'Comptabilité',
-                style: TextStyle(
-                  fontWeight: FontWeight.w500,
-                  color: Colors.black,
-                ),
-              ),
-              children: [
-                _buildSubItem(
-                  context,
-                  icon: Icons.receipt_long,
-                  text: 'Journal comptable',
-                  screen: const JournalComptableScreen(),
-                ),
-                _buildSubItem(
-                  context,
-                  icon: Icons.library_books,
-                  text: 'Grand livre',
-                  screen: const GrandLivreScreen(),
-                ),
-                _buildSubItem(
-                  context,
-                  icon: Icons.assessment,
-                  text: 'Bilan',
-                  screen: const BilanScreen(),
-                ),
-              ],
+              selected: selectedIndex == 3,
             ),
             _buildDivider(),
             _buildDrawerItem(
@@ -135,12 +150,15 @@ class AyannaDrawer extends StatelessWidget {
               icon: Icons.settings,
               text: 'Paramètre',
               onTap: () {
-                Navigator.of(context).push(
+                onItemSelected(4);
+                Navigator.of(context).pushAndRemoveUntil(
                   MaterialPageRoute(
-                    builder: (_) => const ConfigurationScreen(isFirstSetup: false),
+                    builder: (context) => ConfigurationScreen(),
                   ),
+                  (Route<dynamic> route) => route.isFirst,
                 );
               },
+              selected: selectedIndex == 4,
             ),
             _buildDivider(),
           ],
@@ -154,16 +172,19 @@ class AyannaDrawer extends StatelessWidget {
     required IconData icon,
     required String text,
     required VoidCallback onTap,
+    bool selected = false,
   }) {
     return ListTile(
       leading: Icon(icon, color: AyannaColors.orange),
       title: Text(
         text,
-        style: const TextStyle(
+        style: TextStyle(
           fontWeight: FontWeight.w500,
-          color: Colors.black,
+          color: selected ? AyannaColors.orange : Colors.black,
         ),
       ),
+      selected: selected,
+      selectedTileColor: AyannaColors.orange.withOpacity(0.15),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       hoverColor: Colors.orange.withOpacity(0.1),
       onTap: onTap,
@@ -175,25 +196,31 @@ class AyannaDrawer extends StatelessWidget {
     required IconData icon,
     required String text,
     required Widget screen,
+    required VoidCallback onTap,
+    bool selected = false,
   }) {
     return ListTile(
       leading: Icon(icon, color: AyannaColors.orange),
       title: Text(
         text,
-        style: const TextStyle(
+        style: TextStyle(
           fontWeight: FontWeight.w500,
-          color: Colors.black,
+          color: selected ? AyannaColors.orange : Colors.black,
         ),
       ),
-      onTap: () {
-        Navigator.of(context).push(
-          MaterialPageRoute(builder: (_) => screen),
-        );
-      },
+      selected: selected,
+      selectedTileColor: AyannaColors.orange.withOpacity(0.15),
+      onTap: onTap,
     );
   }
 
   Widget _buildDivider() {
-    return const Divider(thickness: 0.5, height: 0.5, indent: 16.0, endIndent: 16.0, color: Colors.orangeAccent);
+    return const Divider(
+      thickness: 0.5,
+      height: 0.5,
+      indent: 16.0,
+      endIndent: 16.0,
+      color: Colors.orangeAccent,
+    );
   }
 }

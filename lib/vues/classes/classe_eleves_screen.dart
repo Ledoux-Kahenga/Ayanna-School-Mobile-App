@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import '../../theme/ayanna_theme.dart';
-import '../widgets/ayanna_appbar.dart';
-import '../widgets/ayanna_widgets.dart';
 import '../../services/school_queries.dart';
 import '../../models/models.dart';
 import 'classe_eleve_details_screen.dart';
@@ -29,6 +27,11 @@ class _ClassElevesScreenState extends State<ClassElevesScreen> {
   void initState() {
     super.initState();
     _fetchInitialData();
+  }
+
+  @override
+  void dispose() {
+    super.dispose();
   }
 
   Future<void> _fetchInitialData() async {
@@ -108,36 +111,30 @@ class _ClassElevesScreenState extends State<ClassElevesScreen> {
                           value: _selectedFrais?.id,
                           isExpanded: true,
                           decoration: InputDecoration(
-                            labelText: 'Sélectionner un frais',
-                            labelStyle: const TextStyle(
-                              color: AyannaColors.orange,
-                              fontWeight: FontWeight.bold,
-                            ),
+                            labelText: 'Selectionner un frais',
                             border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.zero,
                               borderSide: const BorderSide(
                                 color: AyannaColors.orange,
-                                width: 2,
+                                width: 1.5,
                               ),
                             ),
                             enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.zero,
                               borderSide: const BorderSide(
                                 color: AyannaColors.orange,
-                                width: 2,
+                                width: 1.5,
                               ),
                             ),
                             focusedBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(10),
+                              borderRadius: BorderRadius.zero,
                               borderSide: const BorderSide(
                                 color: AyannaColors.orange,
-                                width: 2,
+                                width: 1.5,
                               ),
                             ),
-                            isDense: true,
-                            filled: true,
-                            fillColor: AyannaColors.white,
                           ),
+
                           dropdownColor: AyannaColors.white,
                           iconEnabledColor: AyannaColors.orange,
                           items: _fraisList
@@ -178,8 +175,8 @@ class _ClassElevesScreenState extends State<ClassElevesScreen> {
                 shrinkWrap: true,
                 crossAxisCount: 3,
                 childAspectRatio: 1.1,
-                crossAxisSpacing: 8,
-                mainAxisSpacing: 8,
+                crossAxisSpacing: 4,
+                mainAxisSpacing: 4,
                 children: [
                   _buildDashboardCard(
                     'Total',
@@ -223,59 +220,74 @@ class _ClassElevesScreenState extends State<ClassElevesScreen> {
               Expanded(
                 child: _eleves.isEmpty
                     ? const Center(child: Text('Aucun élève trouvé.'))
-                    : ListView.separated(
-                        itemCount: _eleves.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 4),
-                        itemBuilder: (context, i) {
-                          final e = _eleves[i];
-                          return Card(
-                            margin: EdgeInsets.zero,
-                            color: AyannaColors.white,
-                            elevation: 2,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                            child: ListTile(
-                              dense: true,
-                              leading: CircleAvatar(
-                                radius: 20,
-                                backgroundColor: AyannaColors.orange
-                                    .withOpacity(0.15),
-                                child: Text(
-                                  '${e.prenom[0]}${e.nom[0]}',
-                                  style: const TextStyle(
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: AyannaColors.orange,
-                                  ),
-                                ),
-                              ),
-                              title: Text(
-                                '${e.nom.toUpperCase()} ${e.prenom}',
-                                style: const TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w500,
-                                  color: AyannaColors.darkGrey,
-                                ),
-                              ),
-                              subtitle: e.matricule != null
-                                  ? Text(
-                                      'Mat: ${e.matricule}',
-                                      style: const TextStyle(
-                                        fontSize: 12,
-                                        color: Color(0xFF666666),
-                                      ),
-                                    )
-                                  : null,
-                              trailing: const Icon(
-                                Icons.arrow_forward_ios,
-                                size: 16,
+                    : SingleChildScrollView(
+                        child: Table(
+                          border: TableBorder.all(
+                            color: AyannaColors.lightGrey.withOpacity(0.5),
+                            width: 1,
+                          ),
+                          columnWidths: const {
+                            0: FlexColumnWidth(1),
+                            1: FlexColumnWidth(2),
+                          },
+                          children: [
+                            const TableRow(
+                              decoration: BoxDecoration(
                                 color: AyannaColors.orange,
                               ),
-                              onTap: () => _navigateToEleveDetails(e),
+                              children: [
+                                Padding(
+                                  padding: EdgeInsets.all(8.0),
+                                  child: Text(
+                                    'Matricule',
+                                    style: TextStyle(
+                                      color: AyannaColors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                Padding(
+                                  padding: EdgeInsets.all(8.0),
+                                  child: Text(
+                                    'Nom Complet',
+                                    style: TextStyle(
+                                      color: AyannaColors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                          );
-                        },
+                            ..._eleves.map((e) {
+                              return TableRow(
+                                children: [
+                                  InkWell(
+                                    onTap: () => _navigateToEleveDetails(e),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 12.0,
+                                        horizontal: 8.0,
+                                      ),
+                                      child: Text(e.matricule ?? 'N/A'),
+                                    ),
+                                  ),
+                                  InkWell(
+                                    onTap: () => _navigateToEleveDetails(e),
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 12.0,
+                                        horizontal: 8.0,
+                                      ),
+                                      child: Text(
+                                        '${e.nom.toUpperCase()} ${e.postnom?.toUpperCase() ?? ''} ${e.prenom}',
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            }).toList(),
+                          ],
+                        ),
                       ),
               ),
             ],
@@ -297,37 +309,41 @@ class _ClassElevesScreenState extends State<ClassElevesScreen> {
     IconData icon,
     Color? color,
   ) {
-    return Card(
-      color: color ?? AyannaColors.white,
-      elevation: 2,
-      shadowColor: AyannaColors.lightGrey,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-      child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(icon, size: 22, color: AyannaColors.orange),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.bold,
-                color: AyannaColors.darkGrey,
+    return Container(
+      margin: EdgeInsets.zero,
+      padding: EdgeInsets.zero,
+      child: Card(
+        color: color ?? AyannaColors.white,
+        elevation: 1,
+        shadowColor: AyannaColors.lightGrey,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(2)),
+        child: Padding(
+          padding:  EdgeInsets.zero,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, size: 22, color: AyannaColors.orange),
+              const SizedBox(height: 4),
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: AyannaColors.darkGrey,
+                ),
               ),
-            ),
-            Text(
-              label,
-              style: const TextStyle(
-                fontSize: 11,
-                color: AyannaColors.darkGrey,
+              Text(
+                label,
+                style: const TextStyle(
+                  fontSize: 11,
+                  color: AyannaColors.darkGrey,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
               ),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );

@@ -1,10 +1,9 @@
 import 'package:ayanna_school/vues/eleves/eleves_screen.dart';
+import 'package:ayanna_school/vues/gestions%20frais/paiement_frais.dart';
 import 'package:flutter/material.dart';
 import '../../theme/ayanna_theme.dart';
 import '../widgets/ayanna_widgets.dart';
-import '../configuration_screen.dart';
 import 'classes_screen.dart';
-import '../paiementFrais/paiement_frais.dart';
 import '../../models/models.dart';
 
 class AuthScreen extends StatefulWidget {
@@ -37,20 +36,13 @@ class _AuthScreenState extends State<AuthScreen> {
       _loading = false;
       if (_usernameController.text == 'admin' &&
           _passwordController.text == 'admin') {
-        // Navigation intelligente selon la configuration
-        if (widget.navigateToClasses) {
+ 
           Navigator.of(context).pushReplacement(
             MaterialPageRoute(
-              builder: (_) => ElevesScreen(anneeScolaire: widget.anneeScolaire),
+              builder: (_) => PaiementDesFrais(),
             ),
           );
-        } else {
-          Navigator.of(context).pushReplacement(
-            MaterialPageRoute(
-              builder: (_) => const ConfigurationScreen(isFirstSetup: true),
-            ),
-          );
-        }
+       
       } else {
         _error = 'Identifiants invalides';
       }

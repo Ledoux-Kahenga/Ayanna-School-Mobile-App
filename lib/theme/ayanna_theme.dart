@@ -62,25 +62,25 @@ final ThemeData ayannaTheme = ThemeData(
   ),
   elevatedButtonTheme: ElevatedButtonThemeData(
     style: ButtonStyle(
-      backgroundColor: MaterialStatePropertyAll(AyannaColors.orange),
-      foregroundColor: MaterialStatePropertyAll(AyannaColors.white),
-      textStyle: MaterialStatePropertyAll(
+      backgroundColor: WidgetStatePropertyAll(AyannaColors.orange),
+      foregroundColor: WidgetStatePropertyAll(AyannaColors.white),
+      textStyle: WidgetStatePropertyAll(
         TextStyle(fontWeight: FontWeight.bold),
       ),
-      shape: MaterialStatePropertyAll(
+      shape: WidgetStatePropertyAll(
         RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     ),
   ),
   outlinedButtonTheme: OutlinedButtonThemeData(
     style: ButtonStyle(
-      backgroundColor: MaterialStatePropertyAll(AyannaColors.white),
-      foregroundColor: MaterialStatePropertyAll(AyannaColors.orange),
-      side: MaterialStatePropertyAll(BorderSide(color: AyannaColors.orange)),
-      textStyle: MaterialStatePropertyAll(
+      backgroundColor: WidgetStatePropertyAll(AyannaColors.white),
+      foregroundColor: WidgetStatePropertyAll(AyannaColors.orange),
+      side: WidgetStatePropertyAll(BorderSide(color: AyannaColors.orange)),
+      textStyle: WidgetStatePropertyAll(
         TextStyle(fontWeight: FontWeight.bold),
       ),
-      shape: MaterialStatePropertyAll(
+      shape: WidgetStatePropertyAll(
         RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       ),
     ),

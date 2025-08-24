@@ -11,7 +11,7 @@ class FactureRecuWidget extends StatelessWidget {
   final String statut;
 
   const FactureRecuWidget({
-    Key? key,
+    super.key,
     required this.eleve,
     required this.classe,
     required this.frais,
@@ -19,7 +19,7 @@ class FactureRecuWidget extends StatelessWidget {
     required this.totalPaye,
     required this.reste,
     required this.statut,
-  }) : super(key: key);
+  });
 
   @override
   Widget build(BuildContext context) {

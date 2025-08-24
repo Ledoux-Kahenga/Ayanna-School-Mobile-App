@@ -1,7 +1,6 @@
+import 'package:ayanna_school/vues/widgets/ayanna_drawer.dart';
 import 'package:flutter/material.dart';
 import '../theme/ayanna_theme.dart';
-import 'widgets/ayanna_appbar.dart';
-import 'widgets/ayanna_widgets.dart';
 import '../services/school_queries.dart';
 import '../services/app_preferences.dart';
 import '../models/models.dart';
@@ -15,9 +14,6 @@ class ConfigurationScreen extends StatefulWidget {
 }
 
 class _ConfigurationScreenState extends State<ConfigurationScreen> {
-  String _selectedCurrency = 'CDF';
-  final TextEditingController _exchangeRateController = TextEditingController();
-  bool _currencyLoading = true;
   List<AnneeScolaire> _annees = [];
   AnneeScolaire? _selectedYear;
   bool _loading = true;
@@ -27,7 +23,6 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
   void initState() {
     super.initState();
     _loadData();
-    _loadCurrencyConfig();
   }
 
   Future<void> _loadData() async {
@@ -54,17 +49,6 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
     });
   }
 
-  // Load currency and exchange rate from preferences
-  Future<void> _loadCurrencyConfig() async {
-    final currency = await getAppCurrency();
-    final rate = getExchangeRate();
-    setState(() {
-      _selectedCurrency = currency;
-      _exchangeRateController.text = rate.toString();
-      _currencyLoading = false;
-    });
-  }
-
   Future<void> _saveConfiguration() async {
     if (_selectedYear == null) return;
 
@@ -77,12 +61,10 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
       // Sauvegarde dans les préférences
       await AppPreferences.setCurrentSchoolYearId(_selectedYear!.id);
 
-      // Save currency config
-      await setAppCurrency(_selectedCurrency);
-      final rate = double.tryParse(_exchangeRateController.text);
-      if (rate != null && rate > 0) {
-        await setExchangeRate(rate);
-      }
+      // final rate = double.tryParse(_exchangeRateController.text);
+      // if (rate != null && rate > 0) {
+      //   await setExchangeRate(rate);
+      // }
 
       if (widget.isFirstSetup) {
         await AppPreferences.setFirstLaunchCompleted();
@@ -108,6 +90,7 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
 
   @override
   Widget build(BuildContext context) {
+    int _drawerIndex = 4;
     return Scaffold(
       appBar: widget.isFirstSetup
           ? null
@@ -119,6 +102,10 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
                 onPressed: _saving ? null : _saveConfiguration,
               ),
             ),
+      drawer: AyannaDrawer(
+        selectedIndex: _drawerIndex,
+        onItemSelected: (i) => setState(() => _drawerIndex = i),
+      ),
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24.0),
@@ -184,63 +171,6 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
                           ),
                         ],
                       ],
-                    ],
-                  ),
-                ),
-              ),
-
-              // Section configuration monnaie
-              Card(
-                margin: const EdgeInsets.only(top: 24),
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          Icon(Icons.attach_money, color: AyannaColors.orange),
-                          const SizedBox(width: 12),
-                          Text(
-                            'Configuration de la monnaie',
-                            style: Theme.of(context).textTheme.titleMedium,
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: RadioListTile<String>(
-                              title: const Text('Franc Congolais (CDF)'),
-                              value: 'CDF',
-                              groupValue: _selectedCurrency,
-                              onChanged: (val) {
-                                setState(() => _selectedCurrency = val!);
-                              },
-                            ),
-                          ),
-                          Expanded(
-                            child: RadioListTile<String>(
-                              title: const Text('Dollar américain (USD)'),
-                              value: 'USD',
-                              groupValue: _selectedCurrency,
-                              onChanged: (val) {
-                                setState(() => _selectedCurrency = val!);
-                              },
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 16),
-                      TextFormField(
-                        controller: _exchangeRateController,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          labelText: 'Taux de change (1 USD = ... CDF)',
-                          prefixIcon: Icon(Icons.swap_horiz),
-                        ),
-                      ),
                     ],
                   ),
                 ),

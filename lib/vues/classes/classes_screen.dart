@@ -45,14 +45,8 @@ class _ClassesScreenState extends State<ClassesScreen> {
       _errorMessage = '';
     });
     try {
-      final yearId = await AppPreferences.getCurrentSchoolYearId();
-      if (yearId == null) {
-        setState(() {
-          _loading = false;
-          _errorMessage = 'Aucune année scolaire sélectionnée.';
-        });
-        return;
-      }
+      // Fetching classes for the current school year.
+      final yearId = 1;
       final classes = await SchoolQueries.getClassesByAnnee(yearId);
       final Map<int, List<Eleve>> classeEleves = {};
       for (final classe in classes) {
@@ -97,6 +91,7 @@ class _ClassesScreenState extends State<ClassesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    int _drawerIndex = 2;
     return Scaffold(
       appBar: AppBar(
         backgroundColor: AyannaColors.orange,
@@ -108,36 +103,25 @@ class _ClassesScreenState extends State<ClassesScreen> {
         iconTheme: const IconThemeData(color: AyannaColors.white),
         elevation: 2,
       ),
-      drawer: const AyannaDrawer(),
+      drawer: AyannaDrawer(
+        selectedIndex: _drawerIndex,
+        onItemSelected: (i) => setState(() => _drawerIndex = i),
+      ),
       backgroundColor: AyannaColors.lightGrey,
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(12.0),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 10.0),
-                child: Text(
-                  'Liste des classes',
-                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
-                    color: AyannaColors.orange,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
               Container(
-                height: 60,
-                decoration: BoxDecoration(
-                  color: AyannaColors.white,
-                  borderRadius: BorderRadius.circular(10),
-                  boxShadow: [
-                    BoxShadow(
-                      color: AyannaColors.lightGrey.withOpacity(0.5),
-                      blurRadius: 6,
-                      offset: Offset(0, 2),
+                decoration: const BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: AyannaColors.orange,
+                      width: 2.0,
                     ),
-                  ],
+                  ),
                 ),
                 child: TextField(
                   controller: _searchController,
@@ -155,23 +139,11 @@ class _ClassesScreenState extends State<ClassesScreen> {
                     filled: true,
                     fillColor: AyannaColors.white,
                     contentPadding: const EdgeInsets.symmetric(
-                      vertical: 20,
+                      vertical: 15,
                       horizontal: 16,
                     ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(
-                        color: AyannaColors.lightGrey,
-                        width: 2,
-                      ),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(10),
-                      borderSide: const BorderSide(
-                        color: AyannaColors.orange,
-                        width: 2,
-                      ),
-                    ),
+                    enabledBorder: InputBorder.none,
+                    focusedBorder: InputBorder.none,
                   ),
                 ),
               ),
@@ -180,99 +152,143 @@ class _ClassesScreenState extends State<ClassesScreen> {
                 child: _loading
                     ? const Center(child: CircularProgressIndicator())
                     : _errorMessage.isNotEmpty
-                    ? Center(
-                        child: Card(
-                          color: Colors.red.withOpacity(0.1),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Text(
-                              _errorMessage,
-                              style: TextStyle(color: Colors.red),
-                            ),
-                          ),
-                        ),
-                      )
-                    : _filteredClasses.isEmpty
-                    ? const Center(child: Text('Aucune classe trouvée.'))
-                    : GridView.builder(
-                        gridDelegate:
-                            const SliverGridDelegateWithFixedCrossAxisCount(
-                              crossAxisCount: 2,
-                              childAspectRatio: 1.1,
-                              crossAxisSpacing: 16,
-                              mainAxisSpacing: 16,
-                            ),
-                        itemCount: _filteredClasses.length,
-                        itemBuilder: (context, i) {
-                          final c = _filteredClasses[i];
-                          return Card(
-                            elevation: 0,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            color: AyannaColors.white,
-                            child: InkWell(
-                              borderRadius: BorderRadius.circular(16),
-                              onTap: () {
-                                Navigator.of(context).push(
-                                  MaterialPageRoute(
-                                    builder: (_) =>
-                                        ClassElevesScreen(classe: c),
-                                  ),
-                                );
-                              },
+                        ? Center(
+                            child: Card(
+                              color: Colors.red.withOpacity(0.1),
                               child: Padding(
-                                padding: const EdgeInsets.all(18.0),
-                                child: Column(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    Text(
-                                      c.nom,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleLarge
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            color: AyannaColors.orange,
-                                          ),
-                                      textAlign: TextAlign.center,
-                                      maxLines: 2,
-                                      overflow: TextOverflow.ellipsis,
-                                    ),
-                                    if (c.niveau != null) ...[
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        c.niveau!,
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodyMedium
-                                            ?.copyWith(
-                                              color: AyannaColors.darkGrey,
-                                            ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ],
-                                    if (c.effectif != null) ...[
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        'Effectif : ${c.effectif}',
-                                        style: Theme.of(context)
-                                            .textTheme
-                                            .bodySmall
-                                            ?.copyWith(
-                                              color: AyannaColors.orange,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                        textAlign: TextAlign.center,
-                                      ),
-                                    ],
-                                  ],
+                                padding: const EdgeInsets.all(16.0),
+                                child: Text(
+                                  _errorMessage,
+                                  style: const TextStyle(color: Colors.red),
                                 ),
                               ),
                             ),
-                          );
-                        },
-                      ),
+                          )
+                        : _filteredClasses.isEmpty
+                            ? const Center(child: Text('Aucune classe trouvée.'))
+                            : SingleChildScrollView(
+                                child: Table(
+                                  columnWidths: const {
+                                    0: FlexColumnWidth(1), // Nouvelle colonne N°
+                                    1: FlexColumnWidth(2),
+                                    2: FlexColumnWidth(2),
+                                    3: FlexColumnWidth(2),
+                                  },
+                                  border: TableBorder.all(
+                                    color: AyannaColors.lightGrey.withOpacity(0.5),
+                                    width: 1,
+                                  ),
+                                  children: [
+                                    TableRow(
+                                      decoration: const BoxDecoration(
+                                        color: AyannaColors.orange,
+                                      ),
+                                      children: const [
+                                        Padding(
+                                          padding: EdgeInsets.all(8.0),
+                                          child: Text(
+                                            'N°', // Nouvel en-tête N°
+                                            style: TextStyle(
+                                              color: AyannaColors.white,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: EdgeInsets.all(8.0),
+                                          child: Text(
+                                            'Classe',
+                                            style: TextStyle(
+                                              color: AyannaColors.white,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: EdgeInsets.all(8.0),
+                                          child: Text(
+                                            'Niveau',
+                                            style: TextStyle(
+                                              color: AyannaColors.white,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                        Padding(
+                                          padding: EdgeInsets.all(8.0),
+                                          child: Text(
+                                            'Effectif',
+                                            style: TextStyle(
+                                              color: AyannaColors.white,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    ..._filteredClasses.asMap().entries.map((entry) {
+                                      final index = entry.key;
+                                      final c = entry.value;
+                                      return TableRow(
+                                        children: [
+                                          InkWell(
+                                            onTap: () {
+                                              Navigator.of(context).push(
+                                                MaterialPageRoute(
+                                                  builder: (_) => ClassElevesScreen(classe: c),
+                                                ),
+                                              );
+                                            },
+                                            child: Padding(
+                                              padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
+                                              child: Text('${index + 1}'), // Numéro de la ligne
+                                            ),
+                                          ),
+                                          InkWell(
+                                            onTap: () {
+                                              Navigator.of(context).push(
+                                                MaterialPageRoute(
+                                                  builder: (_) => ClassElevesScreen(classe: c),
+                                                ),
+                                              );
+                                            },
+                                            child: Padding(
+                                              padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
+                                              child: Text(c.nom),
+                                            ),
+                                          ),
+                                          InkWell(
+                                            onTap: () {
+                                              Navigator.of(context).push(
+                                                MaterialPageRoute(
+                                                  builder: (_) => ClassElevesScreen(classe: c),
+                                                ),
+                                              );
+                                            },
+                                            child: Padding(
+                                              padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
+                                              child: Text(c.niveau ?? 'N/A'),
+                                            ),
+                                          ),
+                                          InkWell(
+                                            onTap: () {
+                                              Navigator.of(context).push(
+                                                MaterialPageRoute(
+                                                  builder: (_) => ClassElevesScreen(classe: c),
+                                                ),
+                                              );
+                                            },
+                                            child: Padding(
+                                              padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
+                                              child: Text('${c.effectif ?? 0}'),
+                                            ),
+                                          ),
+                                        ],
+                                      );
+                                    }).toList(),
+                                  ],
+                                ),
+                              ),
               ),
             ],
           ),

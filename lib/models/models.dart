@@ -1,3 +1,47 @@
+import 'dart:typed_data';
+
+class Entreprise {
+  final int id;
+  final String nom;
+  final String? adresse;
+  final String? numeroId;
+  final String? devise;
+  final String? telephone;
+  final String? email;
+  final Uint8List? logo; // Pour les données binaires (BLOB)
+  final DateTime dateCreation;
+  final DateTime dateModification;
+
+  Entreprise({
+    required this.id,
+    required this.nom,
+    this.adresse,
+    this.numeroId,
+    this.devise,
+    this.telephone,
+    this.email,
+    this.logo,
+    required this.dateCreation,
+    required this.dateModification,
+  });
+
+  // Constructeur pour créer une instance à partir d'une Map (résultat de la base de données)
+  factory Entreprise.fromMap(Map<String, dynamic> map) {
+    return Entreprise(
+      id: map['id'],
+      nom: map['nom'],
+      adresse: map['adresse'],
+      numeroId: map['numero_id'],
+      devise: map['devise'],
+      telephone: map['telephone'],
+      email: map['email'],
+      logo: map['logo'],
+      dateCreation: DateTime.parse(map['date_creation']),
+      dateModification: DateTime.parse(map['date_modification']),
+    );
+  }
+}
+
 class Utilisateur {
   final int id;
   final String nom;
@@ -123,7 +167,7 @@ class Eleve {
   // Ajout des champs responsable
   final String? responsableNom;
   final String? responsableTelephone;
-  final String? responsableEmail;
+  // final String? responsableEmail; // Removed: not present in DB schema
   final String? responsableAdresse;
 
   Eleve({
@@ -142,7 +186,7 @@ class Eleve {
     this.classeNom,
     this.responsableNom,
     this.responsableTelephone,
-    this.responsableEmail,
+    // this.responsableEmail, // Removed: not present in DB schema
     this.responsableAdresse,
   });
 
@@ -163,8 +207,35 @@ class Eleve {
       classeNom: map['classe_nom'],
       responsableNom: map['responsable_nom'],
       responsableTelephone: map['responsable_telephone'],
-      responsableEmail: map['responsable_email'],
+      // responsableEmail: map['responsable_email'], // Removed: not present in DB schema
       responsableAdresse: map['responsable_adresse'],
+    );
+  }
+}
+
+// NOUVEAU : Le modèle Responsable que vous avez fourni
+class Responsable {
+  final int id;
+  final String nom;
+  final String? telephone;
+  final String? code;
+  final String? adresse;
+
+  Responsable({
+    required this.id,
+    required this.nom,
+    this.telephone,
+    this.code,
+    this.adresse,
+  });
+
+  factory Responsable.fromMap(Map<String, dynamic> map) {
+    return Responsable(
+      id: map['id'],
+      nom: map['nom'],
+      telephone: map['telephone'],
+      code: map['code'],
+      adresse: map['adresse'],
     );
   }
 }
@@ -272,3 +343,41 @@ class FraisDetails {
   bool get isEnOrdre => resteAPayer <= 0;
   bool get isPartiellementPaye => montantPaye > 0 && resteAPayer > 0;
 }
+
+// [MODIFICATION START] - ADDED a new class for the cash journal
+
+class JournalComptable {
+  final int id;
+  final DateTime dateOperation;
+  final String libelle;
+  final double montant;
+  final String typeOperation; // 'Entrée' or 'Sortie'
+  final int? paiementFraisId;
+  final int entrepriseId;
+
+  JournalComptable({
+    required this.id,
+    required this.dateOperation,
+    required this.libelle,
+    required this.montant,
+    required this.typeOperation,
+    this.paiementFraisId,
+    required this.entrepriseId,
+  });
+
+  factory JournalComptable.fromMap(Map<String, dynamic> map) {
+    return JournalComptable(
+      id: map['id'],
+      // SQLite stores DATETIME as TEXT, so it needs to be parsed.
+      dateOperation: DateTime.parse(map['date_operation']),
+      libelle: map['libelle'],
+      montant: map['montant'] is int
+          ? (map['montant'] as int).toDouble()
+          : map['montant'],
+      typeOperation: map['type_operation'],
+      paiementFraisId: map['paiement_frais_id'],
+      entrepriseId: map['entreprise_id'],
+    );
+  }
+}
+// [MODIFICATION END]

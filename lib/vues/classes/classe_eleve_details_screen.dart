@@ -52,7 +52,7 @@ class _ClasseEleveDetailsScreenState extends State<ClasseEleveDetailsScreen> {
         backgroundColor: AyannaColors.orange,
         foregroundColor: AyannaColors.white,
         title: Text(
-          '${widget.eleve.prenom} ${widget.eleve.nom}',
+          'Tous les frais',
           style: const TextStyle(
             color: AyannaColors.white,
             fontWeight: FontWeight.bold,
@@ -95,7 +95,7 @@ class _ClasseEleveDetailsScreenState extends State<ClasseEleveDetailsScreen> {
     return Card(
       color: AyannaColors.white,
       elevation: 2,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
       child: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -103,25 +103,13 @@ class _ClasseEleveDetailsScreenState extends State<ClasseEleveDetailsScreen> {
           children: [
             Row(
               children: [
-                CircleAvatar(
-                  radius: 30,
-                  backgroundColor: AyannaColors.orange.withOpacity(0.15),
-                  child: Text(
-                    '${eleve.prenom[0]}${eleve.nom[0]}',
-                    style: const TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: AyannaColors.orange,
-                    ),
-                  ),
-                ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                        '${eleve.prenom} ${eleve.nom}',
+                        '${eleve.nom.toUpperCase()} ${eleve.postnom} ${eleve.prenom} ',
                         style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           fontWeight: FontWeight.w600,
                           color: AyannaColors.darkGrey,
@@ -178,7 +166,7 @@ class _ClasseEleveDetailsScreenState extends State<ClasseEleveDetailsScreen> {
           color: AyannaColors.white,
           elevation: 2,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
+            borderRadius: BorderRadius.circular(8),
           ),
           margin: const EdgeInsets.only(bottom: 12),
           child: Padding(
@@ -267,95 +255,98 @@ class _ClasseEleveDetailsScreenState extends State<ClasseEleveDetailsScreen> {
                   children: [
                     if (fraisDetail.montantPaye > 0)
                       ElevatedButton.icon(
-                        icon: showRecu
-                            ? const Icon(Icons.print)
-                            : const Icon(Icons.receipt_long),
-                        label: Text(showRecu ? 'Imprimer' : 'Facture'),
+                        icon: const Icon(Icons.receipt_long),
+                        label: const Text('Facture'),
+                        onPressed: () {
+                          setState(() {
+                            showRecu = true;
+                          });
+                        },
+                      ),
+                    if (showRecu)
+                      const SizedBox(width: 8),
+                    if (showRecu)
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.print),
+                        label: const Text('Imprimer'),
                         onPressed: () async {
-                          if (!showRecu) {
-                            setState(() {
-                              showRecu = true;
-                            });
-                          } else {
-                            await Printing.layoutPdf(
-                              onLayout: (format) async {
-                                final doc = pw.Document();
-                                doc.addPage(
-                                  pw.Page(
-                                    build: (pw.Context context) {
-                                      return pw.Column(
-                                        crossAxisAlignment:
-                                            pw.CrossAxisAlignment.start,
-                                        children: [
-                                          pw.Text(
-                                            'Généré par Ayanna School - ${DateTime.now()}',
+                          await Printing.layoutPdf(
+                            onLayout: (format) async {
+                              final doc = pw.Document();
+                              doc.addPage(
+                                pw.Page(
+                                  build: (pw.Context context) {
+                                    return pw.Column(
+                                      crossAxisAlignment:
+                                          pw.CrossAxisAlignment.start,
+                                      children: [
+                                        pw.Text(
+                                          'Généré par Ayanna School - ${DateTime.now()}',
+                                        ),
+                                        pw.Text('Default School'),
+                                        pw.Text(
+                                          '14 Av. Bunduki, Q. Plateau, C. Annexe',
+                                        ),
+                                        pw.Text('Tél : +243997554905'),
+                                        pw.Text('Email : comtact@school.com'),
+                                        pw.Divider(),
+                                        pw.Text(
+                                          'REÇU FRAIS',
+                                          style: pw.TextStyle(
+                                            fontSize: 20,
+                                            fontWeight: pw.FontWeight.bold,
                                           ),
-                                          pw.Text('Default School'),
-                                          pw.Text(
-                                            '14 Av. Bunduki, Q. Plateau, C. Annexe',
+                                        ),
+                                        pw.Text(
+                                          'Élève : ${widget.eleve.prenom} ${widget.eleve.nom}',
+                                        ),
+                                        pw.Text(
+                                          'Classe : ${widget.eleve.classeNom ?? "-"}',
+                                        ),
+                                        pw.Text('Frais : ${frais.nom}'),
+                                        pw.Text('Paiements :'),
+                                        pw.Table.fromTextArray(
+                                          headers: [
+                                            'Date',
+                                            'Montant',
+                                            'Caissier',
+                                          ],
+                                          data: fraisDetail.historiquePaiements
+                                              .map(
+                                                (p) => [
+                                                  p.datePaiement,
+                                                  p.montantPaye
+                                                      .toStringAsFixed(0),
+                                                  'Admin',
+                                                ],
+                                              )
+                                              .toList(),
+                                        ),
+                                        pw.Text(
+                                          'Total payé : ${fraisDetail.montantPaye.toInt()} Fc',
+                                        ),
+                                        pw.Text(
+                                          'Reste : ${fraisDetail.resteAPayer.toInt()} Fc',
+                                        ),
+                                        pw.Text('Statut : $statusText'),
+                                        pw.SizedBox(height: 16),
+                                        pw.Text(
+                                          'Merci pour votre paiement.',
+                                          style: pw.TextStyle(
+                                            fontStyle: pw.FontStyle.italic,
                                           ),
-                                          pw.Text('Tél : +243997554905'),
-                                          pw.Text('Email : comtact@school.com'),
-                                          pw.Divider(),
-                                          pw.Text(
-                                            'REÇU FRAIS',
-                                            style: pw.TextStyle(
-                                              fontSize: 20,
-                                              fontWeight: pw.FontWeight.bold,
-                                            ),
-                                          ),
-                                          pw.Text(
-                                            'Élève : ${widget.eleve.prenom} ${widget.eleve.nom}',
-                                          ),
-                                          pw.Text(
-                                            'Classe : ${widget.eleve.classeNom ?? "-"}',
-                                          ),
-                                          pw.Text('Frais : ${frais.nom}'),
-                                          pw.Text('Paiements :'),
-                                          pw.Table.fromTextArray(
-                                            headers: [
-                                              'Date',
-                                              'Montant',
-                                              'Caissier',
-                                            ],
-                                            data: fraisDetail
-                                                .historiquePaiements
-                                                .map(
-                                                  (p) => [
-                                                    p.datePaiement,
-                                                    p.montantPaye
-                                                        .toStringAsFixed(0),
-                                                    'Admin',
-                                                  ],
-                                                )
-                                                .toList(),
-                                          ),
-                                          pw.Text(
-                                            'Total payé : ${fraisDetail.montantPaye.toInt()} Fc',
-                                          ),
-                                          pw.Text(
-                                            'Reste : ${fraisDetail.resteAPayer.toInt()} Fc',
-                                          ),
-                                          pw.Text('Statut : $statusText'),
-                                          pw.SizedBox(height: 16),
-                                          pw.Text(
-                                            'Merci pour votre paiement.',
-                                            style: pw.TextStyle(
-                                              fontStyle: pw.FontStyle.italic,
-                                            ),
-                                          ),
-                                        ],
-                                      );
-                                    },
-                                  ),
-                                );
-                                return doc.save();
-                              },
-                            );
-                            setState(() {
-                              showRecu = false;
-                            });
-                          }
+                                        ),
+                                      ],
+                                    );
+                                  },
+                                ),
+                              );
+                              return doc.save();
+                            },
+                          );
+                          setState(() {
+                            showRecu = false;
+                          });
                         },
                       ),
                   ],
@@ -364,7 +355,7 @@ class _ClasseEleveDetailsScreenState extends State<ClasseEleveDetailsScreen> {
                   Padding(
                     padding: const EdgeInsets.symmetric(vertical: 8.0),
                     child: FactureRecuWidget(
-                      eleve: widget.eleve.prenom + ' ' + widget.eleve.nom,
+                      eleve: '${widget.eleve.prenom} ${widget.eleve.nom}',
                       classe: widget.eleve.classeNom ?? '-',
                       frais: frais.nom,
                       paiements: fraisDetail.historiquePaiements

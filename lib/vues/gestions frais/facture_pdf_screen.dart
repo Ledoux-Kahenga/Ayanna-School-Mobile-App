@@ -3,7 +3,7 @@ import 'package:flutter_pdfview/flutter_pdfview.dart';
 
 class FacturePdfScreen extends StatelessWidget {
   final String pdfPath;
-  const FacturePdfScreen({Key? key, required this.pdfPath}) : super(key: key);
+  const FacturePdfScreen({super.key, required this.pdfPath});
 
   @override
   Widget build(BuildContext context) {

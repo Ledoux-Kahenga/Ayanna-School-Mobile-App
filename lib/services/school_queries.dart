@@ -1,7 +1,46 @@
 import '../services/database_service.dart';
 import '../models/models.dart';
-
+  
 class SchoolQueries {
+
+  static Future<Entreprise?> getEntrepriseById(int id) async {
+  final db = await DatabaseService.database;
+  final result = await db.query(
+    'entreprises',
+    where: 'id = ?',
+    whereArgs: [id],
+    limit: 1,
+  );
+  if (result.isNotEmpty) {
+    return Entreprise.fromMap(result.first);
+  }
+  return null;
+}
+
+  static Future<List<Eleve>> getEleves() async {
+    final db = await DatabaseService.database;
+    final result = await db.rawQuery('''
+      SELECT e.*, c.nom as classe_nom
+      FROM eleves e
+      LEFT JOIN classes c ON e.classe_id = c.id
+    ''');
+    return result.map((e) => Eleve.fromMap(e)).toList();
+  }
+
+  static Future<List<Eleve>> getElevesByAnnee(int anneeScolaireId) async {
+    final db = await DatabaseService.database;
+    final result = await db.rawQuery(
+      '''
+      SELECT e.*, c.nom AS classe_nom
+      FROM eleves AS e
+      JOIN classes AS c ON e.classe_id = c.id
+      WHERE c.annee_scolaire_id = ?
+    ''',
+      [anneeScolaireId],
+    );
+    return result.map((e) => Eleve.fromMap(e)).toList();
+  }
+
   // Requêtes pour les utilisateurs
   static Future<Utilisateur?> authenticateUser(
     String username,
@@ -23,12 +62,14 @@ class SchoolQueries {
     return result.map((e) => AnneeScolaire.fromMap(e)).toList();
   }
 
+  // NOUVEAU : Récupère l'année scolaire marquée comme "en cours"
   static Future<AnneeScolaire?> getCurrentAnneeScolaire() async {
     final db = await DatabaseService.database;
     final result = await db.query(
       'annees_scolaires',
       where: 'en_cours = ?',
       whereArgs: [1],
+      limit: 1, // Assure qu'on ne récupère qu'un seul résultat
     );
     return result.isNotEmpty ? AnneeScolaire.fromMap(result.first) : null;
   }
@@ -44,13 +85,13 @@ class SchoolQueries {
     return result.map((e) => Classe.fromMap(e)).toList();
   }
 
-  // Insère un nouvel élève
+  // NOUVEAU : Insère un nouvel élève
   static Future<int> insertEleve(Map<String, dynamic> eleveData) async {
     final db = await DatabaseService.database;
     return await db.insert('eleves', eleveData);
   }
 
-  // Met à jour un élève existant
+  // NOUVEAU : Met à jour un élève existant
   static Future<int> updateEleve(
     int eleveId,
     Map<String, dynamic> eleveData,
@@ -62,7 +103,42 @@ class SchoolQueries {
       where: 'id = ?',
       whereArgs: [eleveId],
     );
-  } 
+  }
+
+  // --- REQUÊTES POUR LES RESPONSABLES ---
+
+  // Insère un nouveau responsable et retourne son ID
+  static Future<int> insertResponsable(
+    Map<String, dynamic> responsableData,
+  ) async {
+    final db = await DatabaseService.database;
+    return await db.insert('responsables', responsableData);
+  }
+
+  // Met à jour un responsable existant
+  static Future<int> updateResponsable(
+    int responsableId,
+    Map<String, dynamic> responsableData,
+  ) async {
+    final db = await DatabaseService.database;
+    return await db.update(
+      'responsables',
+      responsableData,
+      where: 'id = ?',
+      whereArgs: [responsableId],
+    );
+  }
+
+  // Récupère un responsable par son ID
+  static Future<Responsable?> getResponsableById(int responsableId) async {
+    final db = await DatabaseService.database;
+    final result = await db.query(
+      'responsables',
+      where: 'id = ?',
+      whereArgs: [responsableId],
+    );
+    return result.isNotEmpty ? Responsable.fromMap(result.first) : null;
+  }
 
   // Requêtes pour les élèves
   static Future<List<Eleve>> getElevesByClasse(int classeId) async {
@@ -122,6 +198,20 @@ class SchoolQueries {
       whereArgs: [eleveId, fraisId],
     );
     return result.map((e) => PaiementFrais.fromMap(e)).toList();
+  }
+
+  static Future<Eleve?> getEleveById(int id) async {
+    final db = await DatabaseService.database;
+    final result = await db.query(
+      'eleves',
+      where: 'id = ?',
+      whereArgs: [id],
+      limit: 1,
+    );
+    if (result.isNotEmpty) {
+      return Eleve.fromMap(result.first);
+    }
+    return null;
   }
 
   static Future<Map<String, dynamic>> getDashboardDataForClasse(
@@ -192,20 +282,86 @@ class SchoolQueries {
     };
   }
 
-  // Requête pour enregistrer un paiement
-  static Future<int> insertPaiement(PaiementFrais paiement) async {
+  // Retourne la liste des paiements pour un élève et un frais donné
+  static Future<List<PaiementFrais>> getPaiementsForFrais(int eleveId, int fraisId) async {
     final db = await DatabaseService.database;
-    return await db.insert('paiement_frais', {
-      'eleve_id': paiement.eleveId,
-      'frais_scolaire_id': paiement.fraisScolaireId,
-      'montant_paye': paiement.montantPaye,
-      'date_paiement': paiement.datePaiement,
-      'reste_a_payer': paiement.resteAPayer,
-      'statut': paiement.statut,
-      'user_id': paiement.userId,
-    });
+    final result = await db.query(
+      'paiement_frais',
+      where: 'eleve_id = ? AND frais_scolaire_id = ?',
+      whereArgs: [eleveId, fraisId],
+    );
+    return result.map((e) => PaiementFrais.fromMap(e)).toList();
   }
 
+  // Stub pour getFraisScolaireById
+  static Future<FraisScolaire?> getFraisScolaireById(int fraisId) async {
+    final db = await DatabaseService.database;
+    final result = await db.query(
+      'frais_scolaires',
+      where: 'id = ?',
+      whereArgs: [fraisId],
+    );
+    return result.isNotEmpty ? FraisScolaire.fromMap(result.first) : null;
+  }
+
+
+  // Requête pour enregistrer un paiement
+  static Future<int> insertPaiement(
+    int eleveId,
+    int fraisId,
+    double montant,
+    int userId,
+    int entrepriseId,
+  ) async {
+    final db = await DatabaseService.database;
+
+    final frais = await getFraisScolaireById(fraisId);
+    if (frais == null) {
+      throw Exception("Frais scolaire introuvable.");
+    }
+    
+    // Récupérer le nom de l'élève
+    final eleve = await getEleveById(eleveId);
+    final nomEleve = eleve?.nom ?? '';
+    final postNomEleve = eleve?.postnom ?? '';
+    final preNomEleve = eleve?.prenom ?? '';
+
+    final paiementsExistants = await getPaiementsForFrais(eleveId, fraisId);
+    final montantDejaPaye = paiementsExistants.fold(
+        0.0, (previousValue, element) => previousValue + element.montantPaye);
+    
+    final resteAPayer = frais.montant - montantDejaPaye - montant;
+    final statut = resteAPayer <= 0 ? 'complet' : 'partiel';
+
+    final newPaiementId = await db.insert('paiement_frais', {
+      'eleve_id': eleveId,
+      'frais_scolaire_id': fraisId,
+      'montant_paye': montant,
+      'date_paiement': DateTime.now().toIso8601String(),
+      'reste_a_payer': resteAPayer > 0 ? resteAPayer : 0,
+      'statut': statut,
+      'user_id': userId,
+    });
+
+    // Créer le libellé amélioré
+    final libelle = 'Paiement : ${frais.nom} par $nomEleve $postNomEleve $preNomEleve';
+
+    // Insertion de l'opération dans le journal de caisse
+    await db.insert('journaux_comptables', {
+      'date_operation': DateTime.now().toIso8601String(),
+      'libelle': libelle,
+      'montant': montant,
+      'type_operation': 'Entrée',
+      'paiement_frais_id': newPaiementId,
+      'entreprise_id': entrepriseId,
+      'created_at': DateTime.now().toIso8601String(),
+      'date_creation': DateTime.now().toIso8601String(),
+      'date_modification': DateTime.now().toIso8601String(),
+    });
+
+    return newPaiementId;
+  }
+  
   // Marque une année scolaire comme en cours et désactive les autres
   static Future<void> setCurrentSchoolYear(int yearId) async {
     final db = await DatabaseService.database;
@@ -405,4 +561,37 @@ class SchoolQueries {
       'user_id': userId,
     });
   }
+
+  // [MODIFICATION START] - ADDED a new method to fetch journal entries
+
+  // --- REQUÊTES POUR LE JOURNAL DE CAISSE ---
+
+  /// Récupère les opérations du journal pour une date donnée et un filtre optionnel.
+  static Future<List<JournalComptable>> getJournalEntries(
+    DateTime date, {
+    String filter = 'Tous', // 'Tous', 'Entrée', 'Sortie'
+  }) async {
+    final db = await DatabaseService.database;
+    // Format the date to 'YYYY-MM-DD' to match the database query format.
+    final dateString = date.toIso8601String().split('T').first;
+
+    String whereClause = 'DATE(date_operation) = ?';
+    List<dynamic> whereArgs = [dateString];
+
+    if (filter != 'Tous') {
+      whereClause += ' AND type_operation = ?';
+      whereArgs.add(filter);
+    }
+
+    final result = await db.query(
+      'journaux_comptables',
+      where: whereClause,
+      whereArgs: whereArgs,
+      orderBy: 'date_operation DESC',
+    );
+
+    return result.map((map) => JournalComptable.fromMap(map)).toList();
+  }
+
+  // [MODIFICATION END]
 }

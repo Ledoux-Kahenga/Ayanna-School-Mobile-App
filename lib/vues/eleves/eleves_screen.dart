@@ -6,6 +6,7 @@ import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../../theme/ayanna_theme.dart';
 import '../../services/school_queries.dart';
+import 'edit_eleve_screen.dart'; // Assurez-vous d'importer l'écran de modification
 
 class ElevesScreen extends StatefulWidget {
   final AnneeScolaire? anneeScolaire;
@@ -20,24 +21,45 @@ class _ElevesScreenState extends State<ElevesScreen> {
   Classe? selectedClasse;
   String? selectedStatut;
   List<Classe> classes = [];
-  List<String> statuts = ['actif', 'inactif', 'exclu'];
+  List<String> statuts = ['actif', 'abandonné', 'transféré', 'exclu'];
   List<Eleve> eleves = [];
   List<Eleve> filteredEleves = [];
+  bool isLoading = true; // Pour afficher un indicateur de chargement
 
   @override
   void initState() {
     super.initState();
-    _loadClasses();
-    filteredEleves = eleves;
+    _initData(); // Appel de la nouvelle fonction de chargement
   }
 
-  Future<void> _loadClasses() async {
-    final year = widget.anneeScolaire;
-    if (year != null) {
-      final loadedClasses = await SchoolQueries.getClassesByAnnee(year.id);
-      setState(() {
-        classes = loadedClasses;
-      });
+  // MODIFIÉ : Nouvelle fonction centralisée pour charger toutes les données nécessaires
+  Future<void> _initData() async {
+    setState(() => isLoading = true);
+
+    // 1. Détermine quelle année scolaire utiliser
+    AnneeScolaire? anneeScolaireAUtiliser = widget.anneeScolaire;
+    anneeScolaireAUtiliser ??= await SchoolQueries.getCurrentAnneeScolaire();
+
+    // 2. Si une année scolaire est trouvée, charge les classes et les élèves
+    if (anneeScolaireAUtiliser != null) {
+      final loadedClasses = await SchoolQueries.getClassesByAnnee(
+        anneeScolaireAUtiliser.id,
+      );
+      final loadedEleves = await SchoolQueries.getElevesByAnnee(
+        anneeScolaireAUtiliser.id,
+      );
+
+      if (mounted) {
+        setState(() {
+          classes = loadedClasses;
+          eleves = loadedEleves;
+          filteredEleves = eleves;
+        });
+      }
+    }
+
+    if (mounted) {
+      setState(() => isLoading = false);
     }
   }
 
@@ -74,14 +96,23 @@ class _ElevesScreenState extends State<ElevesScreen> {
               ),
               pw.SizedBox(height: 12),
               pw.Table.fromTextArray(
-                headers: ['Nom', 'Prénom', 'Classe', 'Statut'],
+                headers: [
+                  'Nom',
+                  'Post-nom',
+                  'Prénom',
+                  'Classe',
+                  'Responsable',
+                  'Tél Responsable',
+                ],
                 data: filteredEleves
                     .map(
                       (e) => [
                         e.nom,
+                        e.postnom,
                         e.prenom,
                         e.classeNom ?? '-',
-                        e.statut ?? '-',
+                        e.responsableNom,
+                        e.responsableTelephone ?? '-',
                       ],
                     )
                     .toList(),
@@ -96,6 +127,7 @@ class _ElevesScreenState extends State<ElevesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    int _drawerIndex = 3;
     return Scaffold(
       appBar: AyannaAppBar(
         title: 'Liste des élèves',
@@ -105,109 +137,243 @@ class _ElevesScreenState extends State<ElevesScreen> {
             tooltip: 'Exporter PDF',
             onPressed: _exportPDF,
           ),
-          IconButton(
-            icon: const Icon(Icons.person_add),
-            tooltip: 'Ajouter un élève',
-            onPressed: () async {
-              final result = await Navigator.of(
-                context,
-              ).pushNamed('/add-eleve', arguments: selectedClasse?.id);
-              if (result == true) {
-                // TODO: Recharger les élèves depuis la base
-                setState(() {
-                  // Vous pouvez ici appeler une méthode pour rafraîchir la liste
-                });
-              }
-            },
-          ),
+          // Le bouton Ajouter un élève est maintenant un FloatingActionButton
         ],
       ),
-      drawer: const AyannaDrawer(),
-      body: Container(
-        color: AyannaColors.orange.withOpacity(0.2),
-        child: Padding(
-          padding: const EdgeInsets.all(16.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextField(
-                decoration: const InputDecoration(
-                  labelText: 'Rechercher un élève',
-                  prefixIcon: Icon(Icons.search),
-                  border: OutlineInputBorder(),
+      drawer: AyannaDrawer(
+        selectedIndex: _drawerIndex,
+        onItemSelected: (i) => setState(() => _drawerIndex = i),
+      ),
+      body: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 16.0),
+        child: Column(
+          children: [
+           Container(
+                decoration: const BoxDecoration(
+                  border: Border(
+                    bottom: BorderSide(
+                      color: AyannaColors.orange,
+                      width: 2.0,
+                    ),
+                  ),
                 ),
+              child: TextField(
+                decoration: InputDecoration(
+                      hintText: 'Rechercher un élève',
+                      hintStyle: const TextStyle(color: Color(0xFF666666)),
+                      prefixIcon: const Icon(
+                        Icons.search,
+                        color: AyannaColors.orange,
+                      ),
+                      filled: true,
+                      fillColor: AyannaColors.white,
+                      contentPadding: const EdgeInsets.symmetric(
+                        vertical: 15,
+                        horizontal: 16,
+                      ),
+                      enabledBorder: InputBorder.none,
+                      focusedBorder: InputBorder.none,
+                    ),
+                  
                 onChanged: (value) {
                   searchQuery = value;
                   _filterEleves();
                 },
               ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: DropdownButtonFormField<Classe>(
-                      value: selectedClasse,
-                      decoration: const InputDecoration(
-                        labelText: 'Classe',
-                        border: OutlineInputBorder(),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(
+                  child: DropdownButtonFormField<Classe?>(
+                    value: selectedClasse,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      labelText: 'Classe',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.zero,
+                        borderSide: const BorderSide(color: AyannaColors.orange, width: 0.5),
                       ),
-                      items: classes.map((classe) {
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.zero,
+                        borderSide: const BorderSide(color: AyannaColors.orange, width: 0.5),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.zero,
+                        borderSide: const BorderSide(color: AyannaColors.orange, width: 1.0),
+                      ),
+                    ),
+                    
+                    hint: const Text('Toutes les classes'),
+                    items: [
+                      const DropdownMenuItem<Classe?>(
+                        value: null,
+                        child: Text('Toutes les classes'),
+                      ),
+                      ...classes.map((classe) {
                         return DropdownMenuItem<Classe>(
                           value: classe,
                           child: Text(classe.nom),
                         );
-                      }).toList(),
-                      onChanged: (value) {
-                        selectedClasse = value;
-                        _filterEleves();
-                      },
-                    ),
+                      }),
+                    ],
+                    onChanged: (value) {
+                      selectedClasse = value;
+                      _filterEleves();
+                    },
                   ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      value: selectedStatut,
-                      decoration: const InputDecoration(
-                        labelText: 'Statut',
-                        border: OutlineInputBorder(),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: DropdownButtonFormField<String?>(
+                    value: selectedStatut,
+                    isExpanded: true,
+                    decoration: InputDecoration(
+                      labelText: 'Statut',
+                      border: OutlineInputBorder(
+                        borderRadius: BorderRadius.zero,
+                        borderSide: const BorderSide(color: AyannaColors.orange, width: 0.5),
                       ),
-                      items: statuts.map((statut) {
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.zero,
+                        borderSide: const BorderSide(color: AyannaColors.orange, width: 0.5),
+                      ),
+                      focusedBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.zero,
+                        borderSide: const BorderSide(color: AyannaColors.orange, width: 1.0),
+                      ),
+                    ),
+                    hint: const Text('Tous les statuts'),
+                    items: [
+                      const DropdownMenuItem<String?>(
+                        value: null,
+                        child: Text('Tous les statuts'),
+                      ),
+                      ...statuts.map((statut) {
                         return DropdownMenuItem<String>(
                           value: statut,
                           child: Text(statut),
                         );
-                      }).toList(),
-                      onChanged: (value) {
-                        selectedStatut = value;
-                        _filterEleves();
-                      },
-                    ),
+                      }),
+                    ],
+                    onChanged: (value) {
+                      selectedStatut = value;
+                      _filterEleves();
+                    },
                   ),
-                ],
-              ),
-              const SizedBox(height: 24),
-              Expanded(
-                child: filteredEleves.isEmpty
-                    ? const Center(child: Text('Aucun élève trouvé.'))
-                    : ListView.builder(
-                        itemCount: filteredEleves.length,
-                        itemBuilder: (context, index) {
-                          final eleve = filteredEleves[index];
-                          return Card(
-                            color: AyannaColors.orange.withOpacity(0.2),
-                            child: ListTile(
-                              title: Text(eleve.formattedNomPrenom),
-                              subtitle: Text(
-                                'Classe: ${eleve.classeNom ?? '-'} | Statut: ${eleve.statut ?? '-'}',
-                              ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Expanded(
+              child: isLoading
+                  ? const Center(child: CircularProgressIndicator())
+                  : filteredEleves.isEmpty
+                      ? const Center(child: Text('Aucun élève trouvé.'))
+                      : SingleChildScrollView(
+                          child: Table(
+                            border: TableBorder.all(
+                              color: AyannaColors.lightGrey,
                             ),
-                          );
-                        },
-                      ),
-              ),
-            ],
-          ),
+                            columnWidths: const {
+                              0: FlexColumnWidth(0.5),
+                              1: FlexColumnWidth(2.5),
+                              2: FlexColumnWidth(1.5),
+                            },
+                            children: [
+                              const TableRow(
+                                decoration: BoxDecoration(
+                                  color: AyannaColors.orange,
+                                ),
+                                children: [
+                                  _HeaderCell('N°'),
+                                  _HeaderCell('Nom complet'),
+                                  _HeaderCell('Classe'),
+                                ],
+                              ),
+                              ...filteredEleves.asMap().entries.map(
+                                (entry) {
+                                  final index = entry.key;
+                                  final eleve = entry.value;
+                                  return TableRow(
+                                    children: [
+                                      _DataCell((index + 1).toString()),
+                                      GestureDetector(
+                                        onTap: () async {
+                                          final result = await Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                              builder: (context) =>
+                                                  EditEleveScreen(eleve: eleve),
+                                            ),
+                                          );
+                                          if (result == true) {
+                                            _initData();
+                                          }
+                                        },
+                                        child: _DataCell(
+                                          '${eleve.nom.toUpperCase()}${eleve.postnom != null && eleve.postnom!.isNotEmpty ? ' ${eleve.postnom!.toUpperCase()}' : ''} ${eleve.prenomCapitalized}',
+                                        ),
+                                      ),
+                                      _DataCell(eleve.classeNom ?? '-'),
+                                    ],
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
+                        ),
+            ),
+          ],
         ),
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final result = await Navigator.of(context).pushNamed('/add-eleve', arguments: selectedClasse?.id);
+          if (result == true) {
+            _initData();
+          }
+        },
+        tooltip: 'Ajouter un élève',
+        backgroundColor: AyannaColors.orange,
+        foregroundColor: AyannaColors.white,
+        child: const Icon(Icons.person_add),
+      ),
+    );
+  }
+}
+
+class _HeaderCell extends StatelessWidget {
+  final String text;
+  const _HeaderCell(this.text);
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+      child: Text(
+        text,
+        style: const TextStyle(
+          fontWeight: FontWeight.bold,
+          color: AyannaColors.white,
+          fontSize: 14,
+        ),
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+}
+
+class _DataCell extends StatelessWidget {
+  final String text;
+  const _DataCell(this.text);
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
+      child: Text(
+        text,
+        style: const TextStyle(fontSize: 13),
+        textAlign: TextAlign.center,
       ),
     );
   }

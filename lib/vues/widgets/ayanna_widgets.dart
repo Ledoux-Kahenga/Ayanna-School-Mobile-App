@@ -14,15 +14,22 @@ class AyannaLogo extends StatelessWidget {
         shape: BoxShape.circle,
         boxShadow: [
           BoxShadow(
-            color: AyannaColors.orange.withOpacity(0.2),
+            color: AyannaColors.orange.withOpacity(0.1),
             blurRadius: 8,
             offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Padding(
-        padding: const EdgeInsets.all(8.0),
-        child: Icon(Icons.school, size: size * 0.6, color: AyannaColors.white),
+        padding: const EdgeInsets.all(16.0),
+        child: Center(
+          child: Image.asset(
+            'assets/icon/icon.png',
+            width: size * 0.8,
+            height: size * 0.8,
+            color: Colors.white,
+          ),
+        ),
       ),
     );
   }
@@ -54,7 +61,7 @@ class AyannaTextField extends StatelessWidget {
           labelText: label,
           labelStyle: const TextStyle(color: AyannaColors.darkGrey),
           filled: true,
-          fillColor: AyannaColors.white,
+          fillColor: AyannaColors.darkGrey,
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
             borderSide: const BorderSide(color: AyannaColors.orange),
@@ -66,7 +73,7 @@ class AyannaTextField extends StatelessWidget {
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(10),
             borderSide: const BorderSide(
-              color: AyannaColors.lightGrey,
+              color: AyannaColors.darkGrey,
               width: 2,
             ),
           ),

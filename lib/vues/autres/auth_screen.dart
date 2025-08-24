@@ -2,8 +2,6 @@ import 'package:ayanna_school/vues/eleves/eleves_screen.dart';
 import 'package:flutter/material.dart';
 import '../../theme/ayanna_theme.dart';
 import '../widgets/ayanna_widgets.dart';
-import '../../screens/classes_screen.dart';
-import '../../screens/paiement_frais.dart';
 import '../../models/models.dart';
 
 class AuthScreen extends StatefulWidget {
