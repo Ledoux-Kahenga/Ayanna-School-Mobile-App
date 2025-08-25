@@ -31,42 +31,46 @@ class _ClassesScreenState extends State<ClassesScreen> {
     _initData();
   }
 
-  Future<void> _initData() async {
-    setState(() {
-      _loading = true;
-      _classes = [];
-      _filteredClasses = [];
-      _classeEleves = {};
-      _errorMessage = '';
-    });
-    try {
-      AnneeScolaire? anneeScolaireAUtiliser = widget.anneeScolaire;
-      anneeScolaireAUtiliser ??= await SchoolQueries.getCurrentAnneeScolaire();
-      if (anneeScolaireAUtiliser != null) {
-        final loadedClasses = await SchoolQueries.getClassesByAnnee(
-          anneeScolaireAUtiliser.id,
-        );
-        final Map<int, List<Eleve>> classeEleves = {};
-        for (final classe in loadedClasses) {
-          final eleves = await SchoolQueries.getElevesByClasse(classe.id);
-          classeEleves[classe.id] = eleves;
-        }
-        setState(() {
-          _classes = loadedClasses;
-          _classeEleves = classeEleves;
-          _filteredClasses = loadedClasses;
-        });
+Future<void> _initData() async {
+  setState(() {
+    _loading = true;
+    _classes = [];
+    _filteredClasses = [];
+    _classeEleves = {};
+    _errorMessage = '';
+  });
+  try {
+    AnneeScolaire? anneeScolaireAUtiliser = widget.anneeScolaire;
+    anneeScolaireAUtiliser ??= await SchoolQueries.getCurrentAnneeScolaire();
+    if (anneeScolaireAUtiliser != null) {
+      final loadedClasses = await SchoolQueries.getClassesByAnnee(
+        anneeScolaireAUtiliser.id,
+      );
+      final Map<int, List<Eleve>> classeEleves = {};
+      for (final classe in loadedClasses) {
+        final eleves = await SchoolQueries.getElevesByClasse(classe.id);
+        classeEleves[classe.id] = eleves;
       }
-    } catch (e) {
+
+      // AJOUTEZ CETTE LIGNE POUR TRIER LES CLASSES
+      loadedClasses.sort((a, b) => a.nom.compareTo(b.nom));
+
       setState(() {
-        _errorMessage = 'Erreur lors du chargement des classes: $e';
-      });
-    } finally {
-      setState(() {
-        _loading = false;
+        _classes = loadedClasses;
+        _classeEleves = classeEleves;
+        _filteredClasses = loadedClasses;
       });
     }
+  } catch (e) {
+    setState(() {
+      _errorMessage = 'Erreur lors du chargement des classes: $e';
+    });
+  } finally {
+    setState(() {
+      _loading = false;
+    });
   }
+}
 
   @override
   void dispose() {
@@ -74,28 +78,24 @@ class _ClassesScreenState extends State<ClassesScreen> {
     super.dispose();
   }
 
-  void _filterClasses() {
-    final query = _searchController.text.trim().toLowerCase();
-    if (query.isEmpty) {
-      setState(() {
-        _filteredClasses = _classes;
-      });
-      return;
-    }
-    final filtered = _classes.where((classe) {
-      final eleves = _classeEleves[classe.id] ?? [];
-      return eleves.any(
-        (e) =>
-            e.nom.toLowerCase().contains(query) ||
-            e.prenom.toLowerCase().contains(query) ||
-            (e.matricule?.toLowerCase().contains(query) ?? false),
-      );
-    }).toList();
+void _filterClasses() {
+  final query = _searchController.text.trim().toLowerCase();
+  if (query.isEmpty) {
     setState(() {
-      _filteredClasses = filtered;
+      _filteredClasses = _classes;
     });
+    return;
   }
-
+  
+  final filtered = _classes.where((classe) {
+    return classe.nom.toLowerCase().contains(query) ||
+        (classe.niveau?.toLowerCase().contains(query) ?? false);
+  }).toList();
+  
+  setState(() {
+    _filteredClasses = filtered;
+  });
+}
   @override
   Widget build(BuildContext context) {
     int _drawerIndex = 2;
@@ -134,7 +134,7 @@ class _ClassesScreenState extends State<ClassesScreen> {
                     fontSize: 16,
                   ),
                   decoration: InputDecoration(
-                    hintText: 'Rechercher un élève (nom, prénom, matricule)',
+                    hintText: 'Rechercher classes',
                     hintStyle: const TextStyle(color: Color(0xFF666666)),
                     prefixIcon: const Icon(
                       Icons.search,
@@ -170,146 +170,89 @@ class _ClassesScreenState extends State<ClassesScreen> {
                       )
                     : _filteredClasses.isEmpty
                     ? const Center(child: Text('Aucune classe trouvée.'))
-                    : SingleChildScrollView(
-                        child: Table(
-                          columnWidths: const {
-                            0: FlexColumnWidth(1), // Nouvelle colonne N°
-                            1: FlexColumnWidth(2),
-                            2: FlexColumnWidth(2),
-                            3: FlexColumnWidth(2),
-                          },
-                          border: TableBorder.all(
-                            color: AyannaColors.lightGrey.withOpacity(0.5),
-                            width: 1,
-                          ),
-                          children: [
-                            TableRow(
-                              decoration: const BoxDecoration(
-                                color: AyannaColors.orange,
+                    : ListView.builder(
+                        itemCount: _filteredClasses.length,
+                        itemBuilder: (context, index) {
+                          final classe = _filteredClasses[index];
+                          final elevesCount =
+                              _classeEleves[classe.id]?.length ?? 0;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8.0),
+                            child: Card(
+                              elevation: 2,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
                               ),
-                              children: const [
-                                Padding(
-                                  padding: EdgeInsets.all(8.0),
-                                  child: Text(
-                                    'N°', // Nouvel en-tête N°
-                                    style: TextStyle(
-                                      color: AyannaColors.white,
-                                      fontWeight: FontWeight.bold,
+                              child: InkWell(
+                                borderRadius: BorderRadius.circular(8),
+                                onTap: () {
+                                  Navigator.of(context).push(
+                                    MaterialPageRoute(
+                                      builder: (_) =>
+                                          ClassElevesScreen(classe: classe),
                                     ),
+                                  );
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.all(16.0),
+                                  child: Row(
+                                    children: [
+                                      const Icon(
+                                        Icons.school,
+                                        color: AyannaColors.orange,
+                                        size: 40,
+                                      ),
+                                      const SizedBox(width: 16),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Text(
+                                              '${classe.nom}',
+                                              style: const TextStyle(
+                                                fontWeight: FontWeight.bold,
+                                                fontSize: 18,
+                                              ),
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Text(
+                                              'Niveau: ${classe.niveau ?? 'N/A'}',
+                                              style: const TextStyle(
+                                                color: Colors.grey,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.end,
+                                        children: [
+                                          Text(
+                                            '$elevesCount',
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 20,
+                                              color: AyannaColors.orange,
+                                            ),
+                                          ),
+                                          const Text(
+                                            'Élèves',
+                                            style: TextStyle(
+                                              color: Colors.grey,
+                                              fontSize: 12,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ),
                                 ),
-                                Padding(
-                                  padding: EdgeInsets.all(8.0),
-                                  child: Text(
-                                    'Classe',
-                                    style: TextStyle(
-                                      color: AyannaColors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: EdgeInsets.all(8.0),
-                                  child: Text(
-                                    'Niveau',
-                                    style: TextStyle(
-                                      color: AyannaColors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                                Padding(
-                                  padding: EdgeInsets.all(8.0),
-                                  child: Text(
-                                    'Effectif',
-                                    style: TextStyle(
-                                      color: AyannaColors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ],
+                              ),
                             ),
-                            ..._filteredClasses.asMap().entries.map((entry) {
-                              final index = entry.key;
-                              final c = entry.value;
-                              return TableRow(
-                                children: [
-                                  InkWell(
-                                    onTap: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (_) =>
-                                              ClassElevesScreen(classe: c),
-                                        ),
-                                      );
-                                    },
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 12.0,
-                                        horizontal: 8.0,
-                                      ),
-                                      child: Text(
-                                        '${index + 1}',
-                                      ), // Numéro de la ligne
-                                    ),
-                                  ),
-                                  InkWell(
-                                    onTap: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (_) =>
-                                              ClassElevesScreen(classe: c),
-                                        ),
-                                      );
-                                    },
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 12.0,
-                                        horizontal: 8.0,
-                                      ),
-                                      child: Text(c.nom),
-                                    ),
-                                  ),
-                                  InkWell(
-                                    onTap: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (_) =>
-                                              ClassElevesScreen(classe: c),
-                                        ),
-                                      );
-                                    },
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 12.0,
-                                        horizontal: 8.0,
-                                      ),
-                                      child: Text(c.niveau ?? 'N/A'),
-                                    ),
-                                  ),
-                                  InkWell(
-                                    onTap: () {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (_) =>
-                                              ClassElevesScreen(classe: c),
-                                        ),
-                                      );
-                                    },
-                                    child: Padding(
-                                      padding: const EdgeInsets.symmetric(
-                                        vertical: 12.0,
-                                        horizontal: 8.0,
-                                      ),
-                                      child: Text('${c.effectif ?? 0}'),
-                                    ),
-                                  ),
-                                ],
-                              );
-                            }).toList(),
-                          ],
-                        ),
+                          );
+                        },
                       ),
               ),
             ],

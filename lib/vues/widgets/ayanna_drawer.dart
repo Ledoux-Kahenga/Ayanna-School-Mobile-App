@@ -68,6 +68,7 @@ class AyannaDrawer extends StatelessWidget {
             ),
             _buildDivider(),
             ExpansionTile(
+              initiallyExpanded: true,
               leading: Icon(
                 Icons.account_balance_wallet,
                 color: AyannaColors.orange,

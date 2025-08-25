@@ -140,13 +140,13 @@ class SchoolQueries {
   // [########### REQUÊTES POUR LES RESPONSABLES [###########]
   static Future<Responsable?> getResponsableById(int id) async {
     final db = await DatabaseService.database;
-    final result = await db.query('responsables_old', where: 'id = ?', whereArgs: [id]);
+    final result = await db.query('responsables', where: 'id = ?', whereArgs: [id]);
     return result.isNotEmpty ? Responsable.fromMap(result.first) : null;
   }
 
   static Future<int> updateResponsable(int id, Map<String, dynamic> data) async {
     final db = await DatabaseService.database;
-    return await db.update('responsables_old', data, where: 'id = ?', whereArgs: [id]);
+    return await db.update('responsables', data, where: 'id = ?', whereArgs: [id]);
   }
 
   // [########### REQUÊTES POUR LES CLASSES [###########]
@@ -324,6 +324,16 @@ class SchoolQueries {
     return EleveFraisDetails(eleve: eleve, fraisDetails: fraisDetailsList);
   }
 
+ // [NOUVEAU] Récupère tous les paiements pour un élève
+  static Future<List<PaiementFrais>> getPaiementsByEleve(int eleveId) async {
+    final db = await DatabaseService.database;
+    final result = await db.query(
+      'paiement_frais',
+      where: 'eleve_id = ?',
+      whereArgs: [eleveId],
+    );
+    return result.map((e) => PaiementFrais.fromMap(e)).toList();
+  }
   // --- [######### REQUÊTES POUR LE JOURNAL DE CAISSE ##########] ---
 
   static Future<List<JournalComptable>> getJournalEntries(

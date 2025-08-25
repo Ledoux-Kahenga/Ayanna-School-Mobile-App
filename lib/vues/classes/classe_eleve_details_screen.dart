@@ -8,7 +8,13 @@ import '../../models/models.dart';
 
 class ClasseEleveDetailsScreen extends StatefulWidget {
   final Eleve eleve;
-  const ClasseEleveDetailsScreen({required this.eleve, super.key});
+  final FraisScolaire? frais;
+  const ClasseEleveDetailsScreen({
+    required this.eleve,
+    this.frais, // Ajoutez ce paramètre au constructeur
+    super.key,
+  });
+
 
   @override
   State<ClasseEleveDetailsScreen> createState() =>

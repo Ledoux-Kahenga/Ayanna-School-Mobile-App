@@ -357,7 +357,7 @@ class _HeaderCell extends StatelessWidget {
           color: AyannaColors.white,
           fontSize: 14,
         ),
-        textAlign: TextAlign.center,
+        // textAlign: TextAlign.center,
       ),
     );
   }
@@ -373,7 +373,7 @@ class _DataCell extends StatelessWidget {
       child: Text(
         text,
         style: const TextStyle(fontSize: 13),
-        textAlign: TextAlign.center,
+        // textAlign: TextAlign.center,
       ),
     );
   }

@@ -270,7 +270,7 @@ class FraisScolaire {
   }
 }
 
-class PaiementFrais {
+class PaiementFrais { 
   final int id;
   final int eleveId;
   final int fraisScolaireId;

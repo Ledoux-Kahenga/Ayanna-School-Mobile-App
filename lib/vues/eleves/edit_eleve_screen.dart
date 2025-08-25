@@ -62,7 +62,7 @@ class _EditEleveScreenState extends State<EditEleveScreen> {
 
     // Charger le responsable
     if (eleve.responsableId != null) {
-      responsable = await SchoolQueries.getResponsableById(eleve.responsableId!);
+      responsable = await SchoolQueries.getResponsableById(eleve.responsableId ?? 0);
     }
     responsableNom = responsable?.nom ?? '';
     responsableTelephone = responsable?.telephone ?? '';

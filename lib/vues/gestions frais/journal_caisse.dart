@@ -1,6 +1,7 @@
 import 'package:ayanna_school/models/models.dart';
 import 'package:ayanna_school/services/school_queries.dart';
 import 'package:ayanna_school/vues/gestions%20frais/depense_sortie.dart';
+import 'package:ayanna_school/vues/gestions%20frais/journal_caisse_pdf.dart';
 import 'package:ayanna_school/vues/widgets/ayanna_drawer.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart'; 
@@ -77,12 +78,36 @@ class _JournalCaisseState extends State<JournalCaisse> {
   }
 
   Future<void> _exportToPdf() async {
+  setState(() {
+    _isLoading = true;
+  });
+  try {
+    await generateAndPrintJournalPdf(
+      _journalEntries,
+      _selectedDate,
+      _totalEntrees,
+      _totalSorties,
+      _soldeDuJour,
+    );
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
-        content: Text('Fonctionnalité d\'exportation PDF à implémenter.'),
+        content: Text('Facture générée avec succès.'),
+        backgroundColor: Colors.green,
       ),
     );
+  } catch (e) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Erreur lors de la génération du PDF: $e'),
+        backgroundColor: Colors.red,
+      ),
+    );
+  } finally {
+    setState(() {
+      _isLoading = false;
+    });
   }
+}
 
   // [AMÉLIORÉ] Navigue et rafraîchit les données au retour
   Future<void> _navigateToDepensePage() async {
@@ -117,7 +142,7 @@ class _JournalCaisseState extends State<JournalCaisse> {
         actions: [
           IconButton(
             tooltip: 'Nouvelle sortie de caisse',
-            icon: const Icon(Icons.trending_down),
+            icon: const Icon(Icons.add_circle_outline),
             onPressed: _navigateToDepensePage, // [AMÉLIORÉ]
           ),
           IconButton(
