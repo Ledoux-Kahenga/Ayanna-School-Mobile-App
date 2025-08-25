@@ -167,7 +167,6 @@ class Eleve {
   // Ajout des champs responsable
   final String? responsableNom;
   final String? responsableTelephone;
-  // final String? responsableEmail; // Removed: not present in DB schema
   final String? responsableAdresse;
 
   Eleve({
@@ -186,7 +185,6 @@ class Eleve {
     this.classeNom,
     this.responsableNom,
     this.responsableTelephone,
-    // this.responsableEmail, // Removed: not present in DB schema
     this.responsableAdresse,
   });
 
@@ -207,13 +205,11 @@ class Eleve {
       classeNom: map['classe_nom'],
       responsableNom: map['responsable_nom'],
       responsableTelephone: map['responsable_telephone'],
-      // responsableEmail: map['responsable_email'], // Removed: not present in DB schema
       responsableAdresse: map['responsable_adresse'],
     );
   }
 }
 
-// NOUVEAU : Le modèle Responsable que vous avez fourni
 class Responsable {
   final int id;
   final String nom;
@@ -344,7 +340,6 @@ class FraisDetails {
   bool get isPartiellementPaye => montantPaye > 0 && resteAPayer > 0;
 }
 
-// [MODIFICATION START] - ADDED a new class for the cash journal
 
 class JournalComptable {
   final int id;
@@ -368,7 +363,6 @@ class JournalComptable {
   factory JournalComptable.fromMap(Map<String, dynamic> map) {
     return JournalComptable(
       id: map['id'],
-      // SQLite stores DATETIME as TEXT, so it needs to be parsed.
       dateOperation: DateTime.parse(map['date_operation']),
       libelle: map['libelle'],
       montant: map['montant'] is int
@@ -380,4 +374,95 @@ class JournalComptable {
     );
   }
 }
-// [MODIFICATION END]
+
+class ComptesConfig {
+  final int id;
+  final int entrepriseId;
+  final int compteCaisseId;
+  final int compteFraisId;
+  final int compteClientId;
+
+  ComptesConfig({
+    required this.id,
+    required this.entrepriseId,
+    required this.compteCaisseId,
+    required this.compteFraisId,
+    required this.compteClientId,
+  });
+
+  factory ComptesConfig.fromMap(Map<String, dynamic> map) {
+    return ComptesConfig(
+      id: map['id'],
+      entrepriseId: map['entreprise_id'],
+      compteCaisseId: map['compte_caisse_id'],
+      compteFraisId: map['compte_frais_id'],
+      compteClientId: map['compte_client_id'],
+    );
+  }
+}
+
+// [NOUVEAU] Modèle pour les comptes comptables
+class CompteComptable {
+  final int id;
+  final String numero;
+  final String nom;
+  final String libelle;
+  final int classeComptableId;
+
+  CompteComptable({
+    required this.id,
+    required this.numero,
+    required this.nom,
+    required this.libelle,
+    required this.classeComptableId,
+  });
+  
+  factory CompteComptable.fromMap(Map<String, dynamic> map) {
+    return CompteComptable(
+      id: map['id'],
+      numero: map['numero'],
+      nom: map['nom'],
+      libelle: map['libelle'],
+      classeComptableId: map['classe_comptable_id'],
+    );
+  }
+}
+
+// [NOUVEAU] Modèle pour les dépenses
+class Depense {
+    final int id;
+    final String libelle;
+    final double montant;
+    final DateTime dateDepense;
+    final int entrepriseId;
+    final String? piece;
+    final String? observation;
+    final int? journalId;
+    final int? userId;
+
+    Depense({
+      required this.id,
+      required this.libelle,
+      required this.montant,
+      required this.dateDepense,
+      required this.entrepriseId,
+      this.piece,
+      this.observation,
+      this.journalId,
+      this.userId,
+    });
+
+    factory Depense.fromMap(Map<String, dynamic> map) {
+        return Depense(
+            id: map['id'],
+            libelle: map['libelle'],
+            montant: (map['montant'] as num).toDouble(),
+            dateDepense: DateTime.parse(map['date_depense']),
+            entrepriseId: map['entreprise_id'],
+            piece: map['piece'],
+            observation: map['observation'],
+            journalId: map['journal_id'],
+            userId: map['user_id'],
+        );
+    }
+}

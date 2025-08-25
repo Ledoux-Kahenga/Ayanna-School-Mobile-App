@@ -102,7 +102,7 @@ CREATE TABLE frais_classes (
 
 -- Table des frais scolaires (plus complète)
 CREATE TABLE frais_scolaires (
-    id INTEGER NOT NULL PRIMARY KEY,
+    id INTEGER NOT NULL PRIMARY KEY, 
     nom VARCHAR(100) NOT NULL,
     montant DECIMAL(15, 2) NOT NULL,
     date_limite DATE,

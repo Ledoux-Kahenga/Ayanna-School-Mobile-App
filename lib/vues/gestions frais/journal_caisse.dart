@@ -1,13 +1,9 @@
-// [MODIFICATION START] - REBUILT the entire file for the Cash Journal UI
-
 import 'package:ayanna_school/models/models.dart';
 import 'package:ayanna_school/services/school_queries.dart';
+import 'package:ayanna_school/vues/gestions%20frais/depense_sortie.dart';
 import 'package:ayanna_school/vues/widgets/ayanna_drawer.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; // Required for date and number formatting
-// import 'package:pdf/pdf.dart'; // Required for PDF export
-// import 'package:pdf/widgets.dart' as pw; // Required for PDF export
-// import 'package:printing/printing.dart'; // Required for PDF export
+import 'package:intl/intl.dart'; 
 import '../../theme/ayanna_theme.dart';
 
 class JournalCaisse extends StatefulWidget {
@@ -55,9 +51,9 @@ class _JournalCaisseState extends State<JournalCaisse> {
     double entrees = 0.0;
     double sorties = 0.0;
     for (var entry in _journalEntries) {
-      if (entry.typeOperation == 'Entrée') {
+      if (entry.typeOperation.toLowerCase() == 'entrée') {
         entrees += entry.montant;
-      } else if (entry.typeOperation == 'Sortie') {
+      } else if (entry.typeOperation.toLowerCase() == 'sortie') {
         sorties += entry.montant;
       }
     }
@@ -80,12 +76,7 @@ class _JournalCaisseState extends State<JournalCaisse> {
     }
   }
 
-  // Placeholder for PDF export functionality
   Future<void> _exportToPdf() async {
-    // 1. Create a PDF document: final pdf = pw.Document();
-    // 2. Add a page with title, date, table header, and data rows from _journalEntries.
-    // 3. Add the summary totals at the end.
-    // 4. Use the printing package to save or share the file: await Printing.layoutPdf(...)
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(
         content: Text('Fonctionnalité d\'exportation PDF à implémenter.'),
@@ -93,9 +84,22 @@ class _JournalCaisseState extends State<JournalCaisse> {
     );
   }
 
+  // [AMÉLIORÉ] Navigue et rafraîchit les données au retour
+  Future<void> _navigateToDepensePage() async {
+    final result = await Navigator.push<bool>(
+      context, 
+      MaterialPageRoute(builder: (context) => const DepenseSortiePage())
+    );
+
+    // Si la page de dépense a renvoyé 'true', on rafraîchit les données
+    if (result == true) {
+      _fetchJournalData();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final currencyFormat = NumberFormat.currency(locale: 'fr_FR', symbol: 'FC');
+    final currencyFormat = NumberFormat.currency(locale: 'fr_FR', symbol: 'FC', decimalDigits: 2);
     final dateFormat = DateFormat('EEEE, d MMMM yyyy', 'fr_FR');
     final timeFormat = DateFormat('HH:mm');
 
@@ -110,6 +114,18 @@ class _JournalCaisseState extends State<JournalCaisse> {
         title: const Text('Journal de Caisse'),
         iconTheme: const IconThemeData(color: AyannaColors.white),
         elevation: 2,
+        actions: [
+          IconButton(
+            tooltip: 'Nouvelle sortie de caisse',
+            icon: const Icon(Icons.trending_down),
+            onPressed: _navigateToDepensePage, // [AMÉLIORÉ]
+          ),
+          IconButton(
+            tooltip: 'Exporter en PDF',
+            icon: const Icon(Icons.picture_as_pdf),
+            onPressed: _exportToPdf,
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -120,14 +136,15 @@ class _JournalCaisseState extends State<JournalCaisse> {
                 : _journalEntries.isEmpty
                 ? const Center(child: Text('Aucune opération pour cette date.'))
                 : SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
                     child: Card(
                       elevation: 4,
                       child: Table(
                         border: TableBorder.all(color: AyannaColors.lightGrey),
                         columnWidths: const {
                           0: FlexColumnWidth(1.2),
-                          1: FlexColumnWidth(2.8),
-                          2: FlexColumnWidth(2.5),
+                          1: FlexColumnWidth(3.5),
+                          2: FlexColumnWidth(2.0),
                           3: FlexColumnWidth(1.5),
                         },
                         children: [
@@ -145,19 +162,17 @@ class _JournalCaisseState extends State<JournalCaisse> {
                           ),
                           // Data Rows
                           ..._journalEntries.map((entry) {
-                            final isEntree = entry.typeOperation == 'Entrée';
+                            final isEntree = entry.typeOperation.toLowerCase() == 'entrée';
                             final montantColor = isEntree
                                 ? Colors.green[700]
                                 : Colors.red[700];
                             return TableRow(
                               children: [
                                 _buildTableCell(
-                                  DateFormat(
-                                    'hh:mm',
-                                  ).format(entry.dateOperation),
+                                  timeFormat.format(entry.dateOperation),
                                   isData: true,
                                 ),
-                                _buildTableCell(entry.libelle, isData: true),
+                                _buildTableCell(entry.libelle, isData: true, alignLeft: true),
                                 _buildTableCell(
                                   currencyFormat.format(entry.montant),
                                   isData: true,
@@ -211,11 +226,6 @@ class _JournalCaisseState extends State<JournalCaisse> {
               }
             },
           ),
-          OutlinedButton.icon(
-            onPressed: _exportToPdf,
-            icon: const Icon(Icons.picture_as_pdf),
-            label: const Text('Exporter en PDF'),
-          ),
         ],
       ),
     );
@@ -232,20 +242,20 @@ class _JournalCaisseState extends State<JournalCaisse> {
             _buildSummaryRow(
               'Total des Entrées:',
               _totalEntrees,
-              Colors.green,
+              Colors.green[700]!,
               currencyFormat,
             ),
             _buildSummaryRow(
               'Total des Sorties:',
               _totalSorties,
-              Colors.red,
+              Colors.red[700]!,
               currencyFormat,
             ),
             const Divider(),
             _buildSummaryRow(
               'Solde du Jour:',
               _soldeDuJour,
-              _soldeDuJour >= 0 ? Colors.blue : Colors.red,
+              _soldeDuJour >= 0 ? Colors.blue[800]! : Colors.red[700]!,
               currencyFormat,
               isTotal: true,
             ),
@@ -272,7 +282,7 @@ class _JournalCaisseState extends State<JournalCaisse> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: style.copyWith(color: Colors.black)),
+          Text(label, style: style.copyWith(color: Colors.black87)),
           Text(format.format(value), style: style),
         ],
       ),
@@ -284,16 +294,16 @@ class _JournalCaisseState extends State<JournalCaisse> {
     bool isHeader = false,
     bool isData = false,
     Color? color,
+    bool alignLeft = false
   }) {
     final style = TextStyle(
       fontWeight: isHeader ? FontWeight.bold : FontWeight.normal,
-      color: isHeader ? AyannaColors.orange : color ?? AyannaColors.orange,
+      color: color ?? (isHeader ? AyannaColors.orange : Colors.black87),
       fontSize: 14,
     );
     return Padding(
       padding: const EdgeInsets.all(8.0),
-      child: Text(text, textAlign: TextAlign.center, style: style),
+      child: Text(text, textAlign: alignLeft ? TextAlign.left : TextAlign.center, style: style),
     );
   }
 }
-// [MODIFICATION END]

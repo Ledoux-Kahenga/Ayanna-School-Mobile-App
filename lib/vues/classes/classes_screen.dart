@@ -9,7 +9,8 @@ import 'classe_eleves_screen.dart';
 import '../widgets/ayanna_drawer.dart';
 
 class ClassesScreen extends StatefulWidget {
-  const ClassesScreen({super.key});
+  final AnneeScolaire? anneeScolaire;
+  const ClassesScreen({super.key, this.anneeScolaire});
 
   @override
   State<ClassesScreen> createState() => _ClassesScreenState();
@@ -27,16 +28,10 @@ class _ClassesScreenState extends State<ClassesScreen> {
   void initState() {
     super.initState();
     _searchController.addListener(_filterClasses);
-    _loadClassesAndEleves();
+    _initData();
   }
 
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
-  }
-
-  Future<void> _loadClassesAndEleves() async {
+  Future<void> _initData() async {
     setState(() {
       _loading = true;
       _classes = [];
@@ -45,26 +40,38 @@ class _ClassesScreenState extends State<ClassesScreen> {
       _errorMessage = '';
     });
     try {
-      // Fetching classes for the current school year.
-      final yearId = 1;
-      final classes = await SchoolQueries.getClassesByAnnee(yearId);
-      final Map<int, List<Eleve>> classeEleves = {};
-      for (final classe in classes) {
-        final eleves = await SchoolQueries.getElevesByClasse(classe.id);
-        classeEleves[classe.id] = eleves;
+      AnneeScolaire? anneeScolaireAUtiliser = widget.anneeScolaire;
+      anneeScolaireAUtiliser ??= await SchoolQueries.getCurrentAnneeScolaire();
+      if (anneeScolaireAUtiliser != null) {
+        final loadedClasses = await SchoolQueries.getClassesByAnnee(
+          anneeScolaireAUtiliser.id,
+        );
+        final Map<int, List<Eleve>> classeEleves = {};
+        for (final classe in loadedClasses) {
+          final eleves = await SchoolQueries.getElevesByClasse(classe.id);
+          classeEleves[classe.id] = eleves;
+        }
+        setState(() {
+          _classes = loadedClasses;
+          _classeEleves = classeEleves;
+          _filteredClasses = loadedClasses;
+        });
       }
-      setState(() {
-        _classes = classes;
-        _classeEleves = classeEleves;
-        _filteredClasses = classes;
-        _loading = false;
-      });
     } catch (e) {
       setState(() {
-        _loading = false;
         _errorMessage = 'Erreur lors du chargement des classes: $e';
       });
+    } finally {
+      setState(() {
+        _loading = false;
+      });
     }
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
   }
 
   void _filterClasses() {
@@ -117,10 +124,7 @@ class _ClassesScreenState extends State<ClassesScreen> {
               Container(
                 decoration: const BoxDecoration(
                   border: Border(
-                    bottom: BorderSide(
-                      color: AyannaColors.orange,
-                      width: 2.0,
-                    ),
+                    bottom: BorderSide(color: AyannaColors.orange, width: 2.0),
                   ),
                 ),
                 child: TextField(
@@ -152,143 +156,161 @@ class _ClassesScreenState extends State<ClassesScreen> {
                 child: _loading
                     ? const Center(child: CircularProgressIndicator())
                     : _errorMessage.isNotEmpty
-                        ? Center(
-                            child: Card(
-                              color: Colors.red.withOpacity(0.1),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16.0),
-                                child: Text(
-                                  _errorMessage,
-                                  style: const TextStyle(color: Colors.red),
-                                ),
-                              ),
+                    ? Center(
+                        child: Card(
+                          color: Colors.red.withOpacity(0.1),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Text(
+                              _errorMessage,
+                              style: const TextStyle(color: Colors.red),
                             ),
-                          )
-                        : _filteredClasses.isEmpty
-                            ? const Center(child: Text('Aucune classe trouvée.'))
-                            : SingleChildScrollView(
-                                child: Table(
-                                  columnWidths: const {
-                                    0: FlexColumnWidth(1), // Nouvelle colonne N°
-                                    1: FlexColumnWidth(2),
-                                    2: FlexColumnWidth(2),
-                                    3: FlexColumnWidth(2),
-                                  },
-                                  border: TableBorder.all(
-                                    color: AyannaColors.lightGrey.withOpacity(0.5),
-                                    width: 1,
-                                  ),
-                                  children: [
-                                    TableRow(
-                                      decoration: const BoxDecoration(
-                                        color: AyannaColors.orange,
-                                      ),
-                                      children: const [
-                                        Padding(
-                                          padding: EdgeInsets.all(8.0),
-                                          child: Text(
-                                            'N°', // Nouvel en-tête N°
-                                            style: TextStyle(
-                                              color: AyannaColors.white,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                        Padding(
-                                          padding: EdgeInsets.all(8.0),
-                                          child: Text(
-                                            'Classe',
-                                            style: TextStyle(
-                                              color: AyannaColors.white,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                        Padding(
-                                          padding: EdgeInsets.all(8.0),
-                                          child: Text(
-                                            'Niveau',
-                                            style: TextStyle(
-                                              color: AyannaColors.white,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                        Padding(
-                                          padding: EdgeInsets.all(8.0),
-                                          child: Text(
-                                            'Effectif',
-                                            style: TextStyle(
-                                              color: AyannaColors.white,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    ..._filteredClasses.asMap().entries.map((entry) {
-                                      final index = entry.key;
-                                      final c = entry.value;
-                                      return TableRow(
-                                        children: [
-                                          InkWell(
-                                            onTap: () {
-                                              Navigator.of(context).push(
-                                                MaterialPageRoute(
-                                                  builder: (_) => ClassElevesScreen(classe: c),
-                                                ),
-                                              );
-                                            },
-                                            child: Padding(
-                                              padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
-                                              child: Text('${index + 1}'), // Numéro de la ligne
-                                            ),
-                                          ),
-                                          InkWell(
-                                            onTap: () {
-                                              Navigator.of(context).push(
-                                                MaterialPageRoute(
-                                                  builder: (_) => ClassElevesScreen(classe: c),
-                                                ),
-                                              );
-                                            },
-                                            child: Padding(
-                                              padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
-                                              child: Text(c.nom),
-                                            ),
-                                          ),
-                                          InkWell(
-                                            onTap: () {
-                                              Navigator.of(context).push(
-                                                MaterialPageRoute(
-                                                  builder: (_) => ClassElevesScreen(classe: c),
-                                                ),
-                                              );
-                                            },
-                                            child: Padding(
-                                              padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
-                                              child: Text(c.niveau ?? 'N/A'),
-                                            ),
-                                          ),
-                                          InkWell(
-                                            onTap: () {
-                                              Navigator.of(context).push(
-                                                MaterialPageRoute(
-                                                  builder: (_) => ClassElevesScreen(classe: c),
-                                                ),
-                                              );
-                                            },
-                                            child: Padding(
-                                              padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8.0),
-                                              child: Text('${c.effectif ?? 0}'),
-                                            ),
-                                          ),
-                                        ],
-                                      );
-                                    }).toList(),
-                                  ],
-                                ),
+                          ),
+                        ),
+                      )
+                    : _filteredClasses.isEmpty
+                    ? const Center(child: Text('Aucune classe trouvée.'))
+                    : SingleChildScrollView(
+                        child: Table(
+                          columnWidths: const {
+                            0: FlexColumnWidth(1), // Nouvelle colonne N°
+                            1: FlexColumnWidth(2),
+                            2: FlexColumnWidth(2),
+                            3: FlexColumnWidth(2),
+                          },
+                          border: TableBorder.all(
+                            color: AyannaColors.lightGrey.withOpacity(0.5),
+                            width: 1,
+                          ),
+                          children: [
+                            TableRow(
+                              decoration: const BoxDecoration(
+                                color: AyannaColors.orange,
                               ),
+                              children: const [
+                                Padding(
+                                  padding: EdgeInsets.all(8.0),
+                                  child: Text(
+                                    'N°', // Nouvel en-tête N°
+                                    style: TextStyle(
+                                      color: AyannaColors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                Padding(
+                                  padding: EdgeInsets.all(8.0),
+                                  child: Text(
+                                    'Classe',
+                                    style: TextStyle(
+                                      color: AyannaColors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                Padding(
+                                  padding: EdgeInsets.all(8.0),
+                                  child: Text(
+                                    'Niveau',
+                                    style: TextStyle(
+                                      color: AyannaColors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                                Padding(
+                                  padding: EdgeInsets.all(8.0),
+                                  child: Text(
+                                    'Effectif',
+                                    style: TextStyle(
+                                      color: AyannaColors.white,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            ..._filteredClasses.asMap().entries.map((entry) {
+                              final index = entry.key;
+                              final c = entry.value;
+                              return TableRow(
+                                children: [
+                                  InkWell(
+                                    onTap: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              ClassElevesScreen(classe: c),
+                                        ),
+                                      );
+                                    },
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 12.0,
+                                        horizontal: 8.0,
+                                      ),
+                                      child: Text(
+                                        '${index + 1}',
+                                      ), // Numéro de la ligne
+                                    ),
+                                  ),
+                                  InkWell(
+                                    onTap: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              ClassElevesScreen(classe: c),
+                                        ),
+                                      );
+                                    },
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 12.0,
+                                        horizontal: 8.0,
+                                      ),
+                                      child: Text(c.nom),
+                                    ),
+                                  ),
+                                  InkWell(
+                                    onTap: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              ClassElevesScreen(classe: c),
+                                        ),
+                                      );
+                                    },
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 12.0,
+                                        horizontal: 8.0,
+                                      ),
+                                      child: Text(c.niveau ?? 'N/A'),
+                                    ),
+                                  ),
+                                  InkWell(
+                                    onTap: () {
+                                      Navigator.of(context).push(
+                                        MaterialPageRoute(
+                                          builder: (_) =>
+                                              ClassElevesScreen(classe: c),
+                                        ),
+                                      );
+                                    },
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        vertical: 12.0,
+                                        horizontal: 8.0,
+                                      ),
+                                      child: Text('${c.effectif ?? 0}'),
+                                    ),
+                                  ),
+                                ],
+                              );
+                            }).toList(),
+                          ],
+                        ),
+                      ),
               ),
             ],
           ),

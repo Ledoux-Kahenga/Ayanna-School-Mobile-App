@@ -9,11 +9,9 @@ import '../../services/app_preferences.dart';
 import 'package:printing/printing.dart';
 import 'package:pdf/widgets.dart' as pw;
 
-
 class PaiementDesFrais extends StatefulWidget {
-  const PaiementDesFrais({super.key});
-
-
+  final AnneeScolaire? anneeScolaire;
+  const PaiementDesFrais({super.key, this.anneeScolaire});
 
   @override
   State<PaiementDesFrais> createState() => _PaiementDesFraisState();
@@ -27,12 +25,13 @@ class _PaiementDesFraisState extends State<PaiementDesFrais> {
   final TextEditingController _searchController = TextEditingController();
   Eleve? _selectedEleve;
   List<FraisDetails> _fraisDetails = [];
+  List<Classe> _classes = [];
 
   @override
   void initState() {
     super.initState();
     _searchController.addListener(_filterEleves);
-    _loadAllEleves();
+    _initData();
   }
 
   @override
@@ -41,7 +40,7 @@ class _PaiementDesFraisState extends State<PaiementDesFrais> {
     super.dispose();
   }
 
-  Future<void> _loadAllEleves() async {
+  Future<void> _initData() async {
     setState(() {
       _loading = true;
       _eleves = [];
@@ -49,57 +48,35 @@ class _PaiementDesFraisState extends State<PaiementDesFrais> {
       _errorMessage = '';
       _selectedEleve = null;
       _fraisDetails = [];
+      _classes = [];
     });
     try {
-      // Récupère tous les élèves de l'année scolaire courante
-      // Utilise la valeur de l'année scolaire courante passée depuis main.dart
-      final yearId = 1;
-      final classes = await SchoolQueries.getClassesByAnnee(yearId);
-      // Create a map of classeId to class name
-      List<Eleve> allEleves = [];
-      for (final classe in classes) {
-        final eleves = await SchoolQueries.getElevesByClasse(classe.id);
-        // For each eleve, set classeNom
-        final elevesWithClasseNom = eleves
-            .map(
-              (e) => Eleve(
-                id: e.id,
-                nom: e.nom,
-                prenom: e.prenom,
-                sexe: e.sexe,
-                dateNaissance: e.dateNaissance,
-                lieuNaissance: e.lieuNaissance,
-                numeroPermanent: e.numeroPermanent,
-                classeId: e.classeId,
-                responsableId: e.responsableId,
-                matricule: e.matricule,
-                postnom: e.postnom,
-                statut: e.statut,
-                classeNom: classe.nom,
-              ),
-            )
-            .toList();
-        allEleves.addAll(elevesWithClasseNom);
+      AnneeScolaire? anneeScolaireAUtiliser = widget.anneeScolaire;
+      anneeScolaireAUtiliser ??= await SchoolQueries.getCurrentAnneeScolaire();
+      if (anneeScolaireAUtiliser != null) {
+        final loadedClasses = await SchoolQueries.getClassesByAnnee(
+          anneeScolaireAUtiliser.id,
+        );
+        final loadedEleves = await SchoolQueries.getElevesByAnnee(
+          anneeScolaireAUtiliser.id,
+        );
+        setState(() {
+          _classes = loadedClasses;
+          _eleves = loadedEleves;
+          _filteredEleves = _eleves;
+        });
       }
-      // Tri alphabétique par nom puis prénom
-      allEleves.sort((a, b) {
-        final nomCmp = a.nom.toLowerCase().compareTo(b.nom.toLowerCase());
-        if (nomCmp != 0) return nomCmp;
-        return a.prenom.toLowerCase().compareTo(b.prenom.toLowerCase());
-      });
-      setState(() {
-        _eleves = allEleves;
-        _filteredEleves = allEleves;
-        _loading = false;
-      });
     } catch (e) {
       setState(() {
-        _loading = false;
         _errorMessage = 'Erreur lors du chargement des élèves: $e';
+      });
+    } finally {
+      setState(() {
+        _loading = false;
       });
     }
   }
-  
+
   void _filterEleves() {
     final query = _searchController.text.trim().toLowerCase();
     if (query.isEmpty) {
@@ -196,11 +173,10 @@ class _PaiementDesFraisState extends State<PaiementDesFrais> {
           ),
           iconTheme: const IconThemeData(color: AyannaColors.white),
         ),
-        drawer:  
-        AyannaDrawer(
+        drawer: AyannaDrawer(
           selectedIndex: _drawerIndex,
           onItemSelected: (i) => setState(() => _drawerIndex = i),
-          ),
+        ),
         body: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(12.0),
@@ -314,7 +290,8 @@ class _PaiementDesFraisState extends State<PaiementDesFrais> {
                                     ),
                                   ),
                                   subtitle: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       if (e.matricule != null)
                                         Text(
@@ -410,7 +387,8 @@ class _PaiementDesFraisState extends State<PaiementDesFrais> {
                                 child: Padding(
                                   padding: const EdgeInsets.all(12.0),
                                   child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
                                     children: [
                                       Row(
                                         children: [
@@ -462,7 +440,9 @@ class _PaiementDesFraisState extends State<PaiementDesFrais> {
                                           'Reste : ${snapshot.data ?? fd.resteAPayer.toStringAsFixed(0)}',
                                         ),
                                       ),
-                                      if (fd.historiquePaiements.isNotEmpty) ...[
+                                      if (fd
+                                          .historiquePaiements
+                                          .isNotEmpty) ...[
                                         const SizedBox(height: 8),
                                         Text(
                                           'Historique :',
@@ -470,10 +450,13 @@ class _PaiementDesFraisState extends State<PaiementDesFrais> {
                                             context,
                                           ).textTheme.bodyMedium,
                                         ),
-                                        _buildPaiementTable(fd.historiquePaiements), // Table view here
+                                        _buildPaiementTable(
+                                          fd.historiquePaiements,
+                                        ), // Table view here
                                       ],
                                       Row(
-                                        mainAxisAlignment: MainAxisAlignment.end,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.end,
                                         children: [
                                           if (fd.resteAPayer > 0)
                                             ElevatedButton.icon(
@@ -493,7 +476,8 @@ class _PaiementDesFraisState extends State<PaiementDesFrais> {
                                                         controller:
                                                             montantController,
                                                         keyboardType:
-                                                            TextInputType.number,
+                                                            TextInputType
+                                                                .number,
                                                         decoration: InputDecoration(
                                                           labelText:
                                                               'Montant à payer (max ${fd.resteAPayer.toStringAsFixed(0)})',
@@ -537,13 +521,17 @@ class _PaiementDesFraisState extends State<PaiementDesFrais> {
                                                   final paiement = PaiementFrais(
                                                     id: 0,
                                                     eleveId: _selectedEleve!.id,
-                                                    fraisScolaireId: fd.frais.id,
+                                                    fraisScolaireId:
+                                                        fd.frais.id,
                                                     montantPaye: result,
-                                                    datePaiement: DateFormat('dd-MM-yyyy').format(DateTime.now()),
+                                                    datePaiement: DateFormat(
+                                                      'dd-MM-yyyy',
+                                                    ).format(DateTime.now()),
                                                     resteAPayer:
                                                         fd.resteAPayer - result,
                                                     statut:
-                                                        fd.resteAPayer - result <=
+                                                        fd.resteAPayer -
+                                                                result <=
                                                             0
                                                         ? 'en_ordre'
                                                         : 'partiellement_paye',
@@ -613,7 +601,8 @@ class _PaiementDesFraisState extends State<PaiementDesFrais> {
                                                                 pw.Text(
                                                                   'REÇU FRAIS',
                                                                   style: pw.TextStyle(
-                                                                    fontSize: 20,
+                                                                    fontSize:
+                                                                        20,
                                                                     fontWeight: pw
                                                                         .FontWeight
                                                                         .bold,
@@ -643,7 +632,7 @@ class _PaiementDesFraisState extends State<PaiementDesFrais> {
                                                                         (p) => [
                                                                           p.datePaiement,
                                                                           p.montantPaye,
-                                                                              
+
                                                                           'Admin',
                                                                         ],
                                                                       )
@@ -696,10 +685,10 @@ class _PaiementDesFraisState extends State<PaiementDesFrais> {
                                           ),
                                           child: FactureRecuWidget(
                                             eleve:
-                                                '${_selectedEleve!
-                                                    .prenomCapitalized} ${_selectedEleve!.nomPostnomMaj}',
+                                                '${_selectedEleve!.prenomCapitalized} ${_selectedEleve!.nomPostnomMaj}',
                                             classe:
-                                                _selectedEleve!.classeNom ?? '-',
+                                                _selectedEleve!.classeNom ??
+                                                '-',
                                             frais: fd.frais.nom,
                                             paiements: fd.historiquePaiements
                                                 .map(
