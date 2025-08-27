@@ -98,7 +98,7 @@ void _filterClasses() {
 }
   @override
   Widget build(BuildContext context) {
-    int _drawerIndex = 2;
+    int drawerIndex = 2;
     return Scaffold(
       appBar: AppBar(
         backgroundColor: AyannaColors.orange,
@@ -111,8 +111,8 @@ void _filterClasses() {
         elevation: 2,
       ),
       drawer: AyannaDrawer(
-        selectedIndex: _drawerIndex,
-        onItemSelected: (i) => setState(() => _drawerIndex = i),
+        selectedIndex: drawerIndex,
+        onItemSelected: (i) => setState(() => drawerIndex = i),
       ),
       backgroundColor: AyannaColors.lightGrey,
       body: SafeArea(
@@ -209,7 +209,7 @@ void _filterClasses() {
                                               CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                              '${classe.nom}',
+                                              classe.nom,
                                               style: const TextStyle(
                                                 fontWeight: FontWeight.bold,
                                                 fontSize: 18,

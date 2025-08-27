@@ -210,7 +210,7 @@ class _JournalCaisseState extends State<JournalCaisse> {
                                 ),
                               ],
                             );
-                          }).toList(),
+                          }),
                         ],
                       ),
                     ),

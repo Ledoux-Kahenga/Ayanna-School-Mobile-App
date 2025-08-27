@@ -127,7 +127,7 @@ class _ElevesScreenState extends State<ElevesScreen> {
 
   @override
   Widget build(BuildContext context) {
-    int _drawerIndex = 3;
+    int drawerIndex = 3;
     return Scaffold(
       appBar: AyannaAppBar(
         title: 'Liste des élèves',
@@ -141,8 +141,8 @@ class _ElevesScreenState extends State<ElevesScreen> {
         ],
       ),
       drawer: AyannaDrawer(
-        selectedIndex: _drawerIndex,
-        onItemSelected: (i) => setState(() => _drawerIndex = i),
+        selectedIndex: drawerIndex,
+        onItemSelected: (i) => setState(() => drawerIndex = i),
       ),
       body: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 16.0),

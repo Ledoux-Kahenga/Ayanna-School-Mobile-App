@@ -126,7 +126,7 @@ class _PaiementDesFraisState extends State<PaiementDesFrais> {
 
   @override
   Widget build(BuildContext context) {
-    int _drawerIndex = 0;
+    int drawerIndex = 0;
     return WillPopScope(
       onWillPop: () async {
         if (_selectedEleve != null) {
@@ -152,10 +152,10 @@ class _PaiementDesFraisState extends State<PaiementDesFrais> {
                 ),
                 ElevatedButton(
                   onPressed: () => Navigator.of(context).pop(true),
-                  child: const Text('Quitter'),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: AyannaColors.orange,
                   ),
+                  child: const Text('Quitter'),
                 ),
               ],
             ),
@@ -174,8 +174,8 @@ class _PaiementDesFraisState extends State<PaiementDesFrais> {
           iconTheme: const IconThemeData(color: AyannaColors.white),
         ),
         drawer: AyannaDrawer(
-          selectedIndex: _drawerIndex,
-          onItemSelected: (i) => setState(() => _drawerIndex = i),
+          selectedIndex: drawerIndex,
+          onItemSelected: (i) => setState(() => drawerIndex = i),
         ),
         body: SafeArea(
           child: Padding(
@@ -772,12 +772,12 @@ class _PaiementDesFraisState extends State<PaiementDesFrais> {
           ...paiements.map((p) {
             return TableRow(
               children: [
-                _buildTableCell(p.datePaiement as String),
+                _buildTableCell(p.datePaiement),
                 _buildTableCell('${p.montantPaye.toStringAsFixed(0)} Fc'),
                 _buildTableCell('Admin'),
               ],
             );
-          }).toList(),
+          }),
         ],
       ),
     );

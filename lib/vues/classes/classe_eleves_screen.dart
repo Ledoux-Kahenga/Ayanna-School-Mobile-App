@@ -299,7 +299,7 @@ class _ClassElevesScreenState extends State<ClassElevesScreen> {
                                           ],
                                         );
                                       },
-                                    ).toList(),
+                                    ),
                                   ],
                                 ),
                               ),

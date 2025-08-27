@@ -139,10 +139,12 @@ class _DepenseSortiePageState extends State<DepenseSortiePage> {
                 keyboardType: TextInputType.number,
                 validator: (value) {
                   if (value!.isEmpty) return 'Veuillez entrer le montant';
-                  if (double.tryParse(value) == null)
+                  if (double.tryParse(value) == null) {
                     return 'Veuillez entrer un nombre valide';
-                  if (double.parse(value) <= 0)
+                  }
+                  if (double.parse(value) <= 0) {
                     return 'Le montant doit être positif';
+                  }
                   return null;
                 },
               ),

@@ -90,7 +90,7 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
 
   @override
   Widget build(BuildContext context) {
-    int _drawerIndex = 4;
+    int drawerIndex = 4;
     return Scaffold(
       appBar: widget.isFirstSetup
           ? null
@@ -103,8 +103,8 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
               ),
             ),
       drawer: AyannaDrawer(
-        selectedIndex: _drawerIndex,
-        onItemSelected: (i) => setState(() => _drawerIndex = i),
+        selectedIndex: drawerIndex,
+        onItemSelected: (i) => setState(() => drawerIndex = i),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
