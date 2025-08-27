@@ -226,14 +226,14 @@ class Responsable {
   });
 
   factory Responsable.fromMap(Map<String, dynamic> map) {
-    return Responsable(
-      id: map['id'],
-      nom: map['nom'],
-      telephone: map['telephone'],
-      code: map['code'],
-      adresse: map['adresse'],
-    );
-  }
+  return Responsable(
+    id: map['id'],
+    nom: map['nom'] ?? '', // Ajout de la valeur par défaut ''
+    telephone: map['telephone'],
+    code: map['code'],
+    adresse: map['adresse'],
+  );
+}
 }
 
 class FraisScolaire {

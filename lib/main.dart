@@ -1,9 +1,10 @@
 import 'package:ayanna_school/models/models.dart';
+import 'package:ayanna_school/services/app_preferences.dart';
 import 'package:ayanna_school/vues/eleves/add_eleve_screen.dart';
 import 'package:ayanna_school/vues/gestions%20frais/paiement_frais.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/date_symbol_data_local.dart';
-import 'package:provider/provider.dart';
+import 'package:provider/provider.dart';   
 import 'package:sqflite/sqflite.dart';
 
 import 'services/database_service.dart';
@@ -16,6 +17,7 @@ void main() async {
   await initializeDateFormatting('fr_FR', '');
   WidgetsFlutterBinding.ensureInitialized();
   final database = await DatabaseService.database;
+   await AppPreferences().init();
   runApp(MainApp(database: database));
 }
 

@@ -2,7 +2,6 @@ import 'package:ayanna_school/vues/widgets/ayanna_drawer.dart';
 import 'package:flutter/material.dart';
 import '../theme/ayanna_theme.dart';
 import '../services/school_queries.dart';
-import '../services/app_preferences.dart';
 import '../models/models.dart';
 
 class ConfigurationScreen extends StatefulWidget {
@@ -26,65 +25,69 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
   }
 
   Future<void> _loadData() async {
-    final annees = await SchoolQueries.getAllAnneesScolaires();
-    final currentYearId = await AppPreferences.getCurrentSchoolYearId();
-
     setState(() {
-      _annees = annees;
-      if (currentYearId != null) {
-        _selectedYear = annees.where((a) => a.id == currentYearId).firstOrNull;
-      } else {
-        _selectedYear = annees.where((a) => a.enCours == 1).firstOrNull;
-      }
-
-      // Si aucune année trouvée ou si l'année sélectionnée n'est pas dans la liste, prendre la première
-      if (_selectedYear == null && annees.isNotEmpty) {
-        _selectedYear = annees.first;
-      } else if (_selectedYear != null &&
-          !annees.any((a) => a.id == _selectedYear!.id)) {
-        _selectedYear = annees.isNotEmpty ? annees.first : null;
-      }
-
-      _loading = false;
+      _loading = true;
     });
+    try {
+      final annees = await SchoolQueries.getAllAnneesScolaires();
+      final currentYear = await SchoolQueries.getCurrentAnneeScolaire();
+
+      setState(() {
+        _annees = annees;
+        if (currentYear != null) {
+          _selectedYear = currentYear;
+        } else if (_annees.isNotEmpty) {
+          _selectedYear = _annees.first;
+        }
+      });
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erreur chargement des données: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _loading = false;
+      });
+    }
   }
 
   Future<void> _saveConfiguration() async {
-    if (_selectedYear == null) return;
+    if (_selectedYear == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Veuillez sélectionner une année scolaire.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
 
-    setState(() => _saving = true);
-
+    setState(() {
+      _saving = true;
+    });
     try {
-      // Marque l'année sélectionnée comme en cours dans la base
-      await SchoolQueries.setCurrentSchoolYear(_selectedYear!.id);
-
-      // Sauvegarde dans les préférences
-      await AppPreferences.setCurrentSchoolYearId(_selectedYear!.id);
-
-      // final rate = double.tryParse(_exchangeRateController.text);
-      // if (rate != null && rate > 0) {
-      //   await setExchangeRate(rate);
-      // }
-
-      if (widget.isFirstSetup) {
-        await AppPreferences.setFirstLaunchCompleted();
-      }
-
-      if (mounted) {
-        // Navigation vers la page des classes
-        Navigator.of(context).pop();
-      }
+      await SchoolQueries.updateCurrentAnneeScolaire(_selectedYear!.id);
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Configuration sauvegardée avec succès.'),
+          backgroundColor: Colors.green,
+        ),
+      );
     } catch (e) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Erreur lors de la sauvegarde: $e'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erreur lors de la sauvegarde: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
     } finally {
-      setState(() => _saving = false);
+      setState(() {
+        _saving = false;
+      });
     }
   }
 
@@ -92,107 +95,89 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
   Widget build(BuildContext context) {
     int drawerIndex = 4;
     return Scaffold(
-      appBar: widget.isFirstSetup
-          ? null
-          : AppBar(
-              title: const Text('Configuration'),
-              backgroundColor: AyannaColors.orange,
-              leading: IconButton(
-                icon: const Icon(Icons.arrow_back),
-                onPressed: _saving ? null : _saveConfiguration,
-              ),
-            ),
-      drawer: AyannaDrawer(
-        selectedIndex: drawerIndex,
-        onItemSelected: (i) => setState(() => drawerIndex = i),
+      appBar: AppBar(
+        title: const Text('Configuration'),
+        backgroundColor: AyannaColors.orange,
+        foregroundColor: AyannaColors.white,
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              // Section année scolaire
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(20.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+      drawer: AyannaDrawer(
+          selectedIndex: drawerIndex,
+          onItemSelected: (i) => setState(() => drawerIndex = i),
+        ),
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Card(
+                    elevation: 4,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Icon(Icons.school, color: AyannaColors.orange),
-                          const SizedBox(width: 12),
                           Text(
-                            'Année scolaire en cours',
-                            style: Theme.of(context).textTheme.titleMedium,
+                            'Configuration de l\'année scolaire',
+                            style: Theme.of(context).textTheme.titleLarge,
                           ),
+                          const Divider(height: 24),
+                          const SizedBox(height: 12),
+                          DropdownButtonFormField<AnneeScolaire>(
+                            value: _selectedYear,
+                            decoration: const InputDecoration(
+                              labelText: 'Année scolaire en cours',
+                              border: OutlineInputBorder(),
+                            ),
+                            items: _annees.map((year) {
+                              return DropdownMenuItem(
+                                value: year,
+                                child: Text(year.nom),
+                              );
+                            }).toList(),
+                            onChanged: (value) {
+                              setState(() {
+                                _selectedYear = value;
+                              });
+                            },
+                            validator: (value) {
+                              if (value == null) {
+                                return 'Veuillez sélectionner une année scolaire';
+                              }
+                              return null;
+                            },
+                          ),
+                          if (_selectedYear != null) ...[
+                            const SizedBox(height: 12),
+                            Text(
+                              'Période: ${_selectedYear!.dateDebut.toString().substring(0, 10)} - ${_selectedYear!.dateFin.toString().substring(0, 10)}',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ],
                         ],
                       ),
-                      const SizedBox(height: 16),
-                      if (_loading)
-                        const Center(child: CircularProgressIndicator())
-                      else if (_annees.isEmpty)
-                        const Center(
-                          child: Text('Aucune année scolaire disponible'),
-                        )
-                      else ...[
-                        DropdownButtonFormField<AnneeScolaire>(
-                          value: _annees.any((a) => a.id == _selectedYear?.id)
-                              ? _selectedYear
-                              : null,
-                          decoration: const InputDecoration(
-                            labelText: "Sélectionner l'année scolaire",
-                            prefixIcon: Icon(Icons.calendar_today),
-                          ),
-                          items: _annees.map((annee) {
-                            return DropdownMenuItem<AnneeScolaire>(
-                              value: annee,
-                              child: Text(annee.nom),
-                            );
-                          }).toList(),
-                          onChanged: (AnneeScolaire? value) {
-                            setState(() {
-                              _selectedYear = value;
-                            });
-                          },
-                          validator: (value) {
-                            if (value == null) {
-                              return 'Veuillez sélectionner une année scolaire';
-                            }
-                            return null;
-                          },
-                        ),
-                        if (_selectedYear != null) ...[
-                          const SizedBox(height: 12),
-                          Text(
-                            'Période: ${_selectedYear!.dateDebut} - ${_selectedYear!.dateFin}',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ],
-                      ],
-                    ],
+                    ),
                   ),
-                ),
-              ),
-
-              // Bouton Sauvegarder
-              Padding(
-                padding: const EdgeInsets.symmetric(vertical: 32.0),
-                child: ElevatedButton.icon(
-                  icon: const Icon(Icons.save),
-                  label: const Text('Sauvegarder'),
-                  style: ElevatedButton.styleFrom(
-                    minimumSize: const Size.fromHeight(48),
-                    backgroundColor: AyannaColors.orange,
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 32.0),
+                    child: ElevatedButton.icon(
+                      icon: const Icon(Icons.save),
+                      label: const Text('Sauvegarder'),
+                      style: ElevatedButton.styleFrom(
+                        minimumSize: const Size.fromHeight(48),
+                        backgroundColor: AyannaColors.orange,
+                        foregroundColor: AyannaColors.white,
+                      ),
+                      onPressed: _saving ? null : _saveConfiguration,
+                    ),
                   ),
-                  onPressed: _saving ? null : _saveConfiguration,
-                ),
+                ],
               ),
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
 }

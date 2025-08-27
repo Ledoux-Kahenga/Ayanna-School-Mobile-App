@@ -1,3 +1,4 @@
+import 'package:ayanna_school/services/pdf_service.dart';
 import 'package:ayanna_school/vues/widgets/facture_recu_widget.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
@@ -122,6 +123,13 @@ class _PaiementDesFraisState extends State<PaiementDesFrais> {
         _errorMessage = 'Erreur lors du chargement des frais: $e';
       });
     }
+  }
+
+  Future<String> formatAmount(double amount) async {
+    final devise = AppPreferences().devise;
+    // Utilise NumberFormat pour un formatage propre
+    final format = NumberFormat("#,##0", "fr_FR");
+    return '${format.format(amount)} $devise';
   }
 
   @override
@@ -570,106 +578,116 @@ class _PaiementDesFraisState extends State<PaiementDesFrais> {
                                                     fd.showRecu = true;
                                                   });
                                                 } else {
-                                                  // Impression PDF avec le package printing
-                                                  await Printing.layoutPdf(
-                                                    onLayout: (format) async {
-                                                      final doc = pw.Document();
-                                                      doc.addPage(
-                                                        pw.Page(
-                                                          build: (pw.Context context) {
-                                                            return pw.Column(
-                                                              crossAxisAlignment: pw
-                                                                  .CrossAxisAlignment
-                                                                  .start,
-                                                              children: [
-                                                                pw.Text(
-                                                                  'Généré par Ayanna School - ${DateTime.now()}',
-                                                                ),
-                                                                pw.Text(
-                                                                  'Default School',
-                                                                ),
-                                                                pw.Text(
-                                                                  '14 Av. Bunduki, Q. Plateau, C. Annexe',
-                                                                ),
-                                                                pw.Text(
-                                                                  'Tél : +243997554905',
-                                                                ),
-                                                                pw.Text(
-                                                                  'Email : comtact@school.com',
-                                                                ),
-                                                                pw.Divider(),
-                                                                pw.Text(
-                                                                  'REÇU FRAIS',
-                                                                  style: pw.TextStyle(
-                                                                    fontSize:
-                                                                        20,
-                                                                    fontWeight: pw
-                                                                        .FontWeight
-                                                                        .bold,
-                                                                  ),
-                                                                ),
-                                                                pw.Text(
-                                                                  'Élève : ${_selectedEleve!.prenomCapitalized} ${_selectedEleve!.nomPostnomMaj}',
-                                                                ),
-                                                                pw.Text(
-                                                                  'Classe : ${_selectedEleve!.classeNom ?? "-"}',
-                                                                ),
-                                                                pw.Text(
-                                                                  'Frais : ${fd.frais.nom}',
-                                                                ),
-                                                                pw.Text(
-                                                                  'Paiements :',
-                                                                ),
-                                                                pw.Table.fromTextArray(
-                                                                  headers: [
-                                                                    'Date',
-                                                                    'Montant',
-                                                                    'Caissier',
-                                                                  ],
-                                                                  data: fd
-                                                                      .historiquePaiements
-                                                                      .map(
-                                                                        (p) => [
-                                                                          p.datePaiement,
-                                                                          p.montantPaye,
-
-                                                                          'Admin',
-                                                                        ],
-                                                                      )
-                                                                      .toList(),
-                                                                ),
-                                                                pw.Text(
-                                                                  'Total payé : ${fd.montantPaye.toInt()} Fc',
-                                                                ),
-                                                                pw.Text(
-                                                                  'Reste : ${fd.resteAPayer.toInt()} Fc',
-                                                                ),
-                                                                pw.Text(
-                                                                  'Statut : ${fd.statut == 'en_ordre'
-                                                                      ? 'En ordre'
-                                                                      : fd.statut == 'partiellement_paye'
-                                                                      ? 'Partiel'
-                                                                      : 'Pas en ordre'}',
-                                                                ),
-                                                                pw.SizedBox(
-                                                                  height: 16,
-                                                                ),
-                                                                pw.Text(
-                                                                  'Merci pour votre paiement.',
-                                                                  style: pw.TextStyle(
-                                                                    fontStyle: pw
-                                                                        .FontStyle
-                                                                        .italic,
-                                                                  ),
-                                                                ),
-                                                              ],
-                                                            );
-                                                          },
-                                                        ),
+                                                  final pdfBytes =
+                                                      await PdfService.generateRecuPdf(
+                                                        fd,
+                                                        _selectedEleve!,
                                                       );
-                                                      return doc.save();
-                                                    },
+                                                  await Printing.layoutPdf(
+                                                    onLayout: (format) async =>
+                                                        pdfBytes,
                                                   );
+
+                                                  // await Printing.layoutPdf(
+                                                  //   onLayout: (format) async {
+                                                  //     final doc = pw.Document();
+                                                  //     doc.addPage(
+                                                  //       pw.Page(
+                                                  //         build: (pw.Context context) {
+                                                  //           return pw.Column(
+                                                  //             crossAxisAlignment: pw
+                                                  //                 .CrossAxisAlignment
+                                                  //                 .start,
+                                                  //             children: [
+                                                  //               pw.Text(
+                                                  //                 'Généré par Ayanna School - ${DateTime.now()}',
+                                                  //               ),
+                                                  //               pw.Text(
+                                                  //                 'Default School',
+                                                  //               ),
+                                                  //               pw.Text(
+                                                  //                 '14 Av. Bunduki, Q. Plateau, C. Annexe',
+                                                  //               ),
+                                                  //               pw.Text(
+                                                  //                 'Tél : +243997554905',
+                                                  //               ),
+                                                  //               pw.Text(
+                                                  //                 'Email : comtact@school.com',
+                                                  //               ),
+                                                  //               pw.Divider(),
+                                                  //               pw.Text(
+                                                  //                 'REÇU FRAIS',
+                                                  //                 style: pw.TextStyle(
+                                                  //                   fontSize:
+                                                  //                       20,
+                                                  //                   fontWeight: pw
+                                                  //                       .FontWeight
+                                                  //                       .bold,
+                                                  //                 ),
+                                                  //               ),
+                                                  //               pw.Text(
+                                                  //                 'Élève : ${_selectedEleve!.prenomCapitalized} ${_selectedEleve!.nomPostnomMaj}',
+                                                  //               ),
+                                                  //               pw.Text(
+                                                  //                 'Classe : ${_selectedEleve!.classeNom ?? "-"}',
+                                                  //               ),
+                                                  //               pw.Text(
+                                                  //                 'Frais : ${fd.frais.nom}',
+                                                  //               ),
+                                                  //               pw.Text(
+                                                  //                 'Paiements :',
+                                                  //               ),
+                                                  //               pw.Table.fromTextArray(
+                                                  //                 headers: [
+                                                  //                   'Date',
+                                                  //                   'Montant',
+                                                  //                   'Caissier',
+                                                  //                 ],
+                                                  //                 data: fd
+                                                  //                     .historiquePaiements
+                                                  //                     .map(
+                                                  //                       (p) => [
+                                                  //                         p.datePaiement,
+                                                  //                         p.montantPaye,
+
+                                                  //                         'Admin',
+                                                  //                       ],
+                                                  //                     )
+                                                  //                     .toList(),
+                                                  //               ),
+                                                  //               pw.Text(
+                                                  //                 'Total payé : ${fd.montantPaye.toInt()} ${AppPreferences().devise}',
+                                                  //               ),
+                                                  //               pw.Text(
+                                                  //                 'Reste : ${fd.resteAPayer.toInt()} ${AppPreferences().devise}',
+                                                  //               ),
+                                                  //               pw.Text(
+                                                  //                 'Statut : ${fd.statut == 'en_ordre'
+                                                  //                     ? 'En ordre'
+                                                  //                     : fd.statut == 'partiellement_paye'
+                                                  //                     ? 'Partiel'
+                                                  //                     : 'Pas en ordre'}',
+                                                  //               ),
+                                                  //               pw.SizedBox(
+                                                  //                 height: 16,
+                                                  //               ),
+                                                  //               pw.Text(
+                                                  //                 'Merci pour votre paiement.',
+                                                  //                 style: pw.TextStyle(
+                                                  //                   fontStyle: pw
+                                                  //                       .FontStyle
+                                                  //                       .italic,
+                                                  //                 ),
+                                                  //               ),
+                                                  //             ],
+                                                  //           );
+                                                  //         },
+                                                  //       ),
+                                                  //     );
+                                                  //     return doc.save();
+                                                  //   },
+                                                  // );
+
                                                   setState(() {
                                                     fd.showRecu = false;
                                                   });
@@ -773,7 +791,9 @@ class _PaiementDesFraisState extends State<PaiementDesFrais> {
             return TableRow(
               children: [
                 _buildTableCell(p.datePaiement),
-                _buildTableCell('${p.montantPaye.toStringAsFixed(0)} Fc'),
+                _buildTableCell(
+                  '${p.montantPaye.toStringAsFixed(0)} ${AppPreferences().devise}',
+                ),
                 _buildTableCell('Admin'),
               ],
             );

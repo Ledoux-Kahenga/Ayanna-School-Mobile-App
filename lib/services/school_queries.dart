@@ -479,4 +479,39 @@ class SchoolQueries {
       'totalRecu': totalRecu,
     };
   }
+
+  // NOUVELLE MÉTHODE pour calculer le solde de la caisse
+  static Future<double> getSoldeCaisse() async {
+    final db = await DatabaseService.database;
+    // Calcule la somme de toutes les entrées
+    final entreesResult = await db.rawQuery(
+      "SELECT SUM(montant) as total FROM journaux_comptables WHERE type_operation = 'Entrée'"
+    );
+    final double entrees = (entreesResult.first['total'] as num?)?.toDouble() ?? 0.0;
+
+    // Calcule la somme de toutes les sorties
+    final sortiesResult = await db.rawQuery(
+      "SELECT SUM(montant) as total FROM journaux_comptables WHERE type_operation = 'Sortie'"
+    );
+    final double sorties = (sortiesResult.first['total'] as num?)?.toDouble() ?? 0.0;
+
+    return entrees - sorties;
+  }
+
+   static Future<void> updateCurrentAnneeScolaire(int anneeId) async {
+    final db = await DatabaseService.database;
+    await db.transaction((txn) async {
+      await txn.update(
+        'annees_scolaires',
+        {'en_cours': 0},
+      );
+      await txn.update(
+        'annees_scolaires',
+        {'en_cours': 1},
+        where: 'id = ?',
+        whereArgs: [anneeId],
+      );
+    });
+  }
+
 }

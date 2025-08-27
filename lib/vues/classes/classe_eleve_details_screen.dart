@@ -1,3 +1,4 @@
+import 'package:ayanna_school/services/pdf_service.dart';
 import 'package:flutter/material.dart';
 import '../../theme/ayanna_theme.dart';
 import '../widgets/facture_recu_widget.dart';
@@ -14,7 +15,6 @@ class ClasseEleveDetailsScreen extends StatefulWidget {
     this.frais, // Ajoutez ce paramètre au constructeur
     super.key,
   });
-
 
   @override
   State<ClasseEleveDetailsScreen> createState() =>
@@ -171,9 +171,7 @@ class _ClasseEleveDetailsScreenState extends State<ClasseEleveDetailsScreen> {
         return Card(
           color: AyannaColors.white,
           elevation: 2,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
-          ),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           margin: const EdgeInsets.only(bottom: 12),
           child: Padding(
             padding: const EdgeInsets.all(16.0),
@@ -269,87 +267,95 @@ class _ClasseEleveDetailsScreenState extends State<ClasseEleveDetailsScreen> {
                           });
                         },
                       ),
-                    if (showRecu)
-                      const SizedBox(width: 8),
+                    if (showRecu) const SizedBox(width: 8),
                     if (showRecu)
                       ElevatedButton.icon(
                         icon: const Icon(Icons.print),
                         label: const Text('Imprimer'),
                         onPressed: () async {
-                          await Printing.layoutPdf(
-                            onLayout: (format) async {
-                              final doc = pw.Document();
-                              doc.addPage(
-                                pw.Page(
-                                  build: (pw.Context context) {
-                                    return pw.Column(
-                                      crossAxisAlignment:
-                                          pw.CrossAxisAlignment.start,
-                                      children: [
-                                        pw.Text(
-                                          'Généré par Ayanna School - ${DateTime.now()}',
-                                        ),
-                                        pw.Text('Default School'),
-                                        pw.Text(
-                                          '14 Av. Bunduki, Q. Plateau, C. Annexe',
-                                        ),
-                                        pw.Text('Tél : +243997554905'),
-                                        pw.Text('Email : comtact@school.com'),
-                                        pw.Divider(),
-                                        pw.Text(
-                                          'REÇU FRAIS',
-                                          style: pw.TextStyle(
-                                            fontSize: 20,
-                                            fontWeight: pw.FontWeight.bold,
-                                          ),
-                                        ),
-                                        pw.Text(
-                                          'Élève : ${widget.eleve.prenom} ${widget.eleve.nom}',
-                                        ),
-                                        pw.Text(
-                                          'Classe : ${widget.eleve.classeNom ?? "-"}',
-                                        ),
-                                        pw.Text('Frais : ${frais.nom}'),
-                                        pw.Text('Paiements :'),
-                                        pw.Table.fromTextArray(
-                                          headers: [
-                                            'Date',
-                                            'Montant',
-                                            'Caissier',
-                                          ],
-                                          data: fraisDetail.historiquePaiements
-                                              .map(
-                                                (p) => [
-                                                  p.datePaiement,
-                                                  p.montantPaye
-                                                      .toStringAsFixed(0),
-                                                  'Admin',
-                                                ],
-                                              )
-                                              .toList(),
-                                        ),
-                                        pw.Text(
-                                          'Total payé : ${fraisDetail.montantPaye.toInt()} Fc',
-                                        ),
-                                        pw.Text(
-                                          'Reste : ${fraisDetail.resteAPayer.toInt()} Fc',
-                                        ),
-                                        pw.Text('Statut : $statusText'),
-                                        pw.SizedBox(height: 16),
-                                        pw.Text(
-                                          'Merci pour votre paiement.',
-                                          style: pw.TextStyle(
-                                            fontStyle: pw.FontStyle.italic,
-                                          ),
-                                        ),
-                                      ],
-                                    );
-                                  },
-                                ),
-                              );
-                              return doc.save();
-                            },
+                          final pdfBytes = await PdfService.generateRecuPdf(
+                            fraisDetail,
+                            widget.eleve,
                           );
+                          await Printing.layoutPdf(
+                            onLayout: (format) async => pdfBytes,
+                          );
+
+                          // await Printing.layoutPdf(
+                          //   onLayout: (format) async {
+                          //     final doc = pw.Document();
+                          //     doc.addPage(
+                          //       pw.Page(
+                          //         build: (pw.Context context) {
+                          //           return pw.Column(
+                          //             crossAxisAlignment:
+                          //                 pw.CrossAxisAlignment.start,
+                          //             children: [
+                          //               pw.Text(
+                          //                 'Généré par Ayanna School - ${DateTime.now()}',
+                          //               ),
+                          //               pw.Text('Default School'),
+                          //               pw.Text(
+                          //                 '14 Av. Bunduki, Q. Plateau, C. Annexe',
+                          //               ),
+                          //               pw.Text('Tél : +243997554905'),
+                          //               pw.Text('Email : comtact@school.com'),
+                          //               pw.Divider(),
+                          //               pw.Text(
+                          //                 'REÇU FRAIS',
+                          //                 style: pw.TextStyle(
+                          //                   fontSize: 20,
+                          //                   fontWeight: pw.FontWeight.bold,
+                          //                 ),
+                          //               ),
+                          //               pw.Text(
+                          //                 'Élève : ${widget.eleve.prenom} ${widget.eleve.nom}',
+                          //               ),
+                          //               pw.Text(
+                          //                 'Classe : ${widget.eleve.classeNom ?? "-"}',
+                          //               ),
+                          //               pw.Text('Frais : ${frais.nom}'),
+                          //               pw.Text('Paiements :'),
+                          //               pw.Table.fromTextArray(
+                          //                 headers: [
+                          //                   'Date',
+                          //                   'Montant',
+                          //                   'Caissier',
+                          //                 ],
+                          //                 data: fraisDetail.historiquePaiements
+                          //                     .map(
+                          //                       (p) => [
+                          //                         p.datePaiement,
+                          //                         p.montantPaye
+                          //                             .toStringAsFixed(0),
+                          //                         'Admin',
+                          //                       ],
+                          //                     )
+                          //                     .toList(),
+                          //               ),
+                          //               pw.Text(
+                          //                 'Total payé : ${fraisDetail.montantPaye.toInt()} Fc',
+                          //               ),
+                          //               pw.Text(
+                          //                 'Reste : ${fraisDetail.resteAPayer.toInt()} Fc',
+                          //               ),
+                          //               pw.Text('Statut : $statusText'),
+                          //               pw.SizedBox(height: 16),
+                          //               pw.Text(
+                          //                 'Merci pour votre paiement.',
+                          //                 style: pw.TextStyle(
+                          //                   fontStyle: pw.FontStyle.italic,
+                          //                 ),
+                          //               ),
+                          //             ],
+                          //           );
+                          //         },
+                          //       ),
+                          //     );
+                          //     return doc.save();
+                          //   },
+                          // );
+
                           setState(() {
                             showRecu = false;
                           });

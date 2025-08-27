@@ -1,4 +1,5 @@
 import 'package:ayanna_school/models/models.dart';
+import 'package:ayanna_school/services/app_preferences.dart';
 import 'package:ayanna_school/services/school_queries.dart';
 import 'package:ayanna_school/vues/gestions%20frais/depense_sortie.dart';
 import 'package:ayanna_school/vues/gestions%20frais/journal_caisse_pdf.dart';
@@ -124,7 +125,7 @@ class _JournalCaisseState extends State<JournalCaisse> {
 
   @override
   Widget build(BuildContext context) {
-    final currencyFormat = NumberFormat.currency(locale: 'fr_FR', symbol: 'FC', decimalDigits: 2);
+    final currencyFormat = NumberFormat.currency(locale: 'fr_FR', symbol: AppPreferences().devise, decimalDigits: 0);
     final dateFormat = DateFormat('EEEE, d MMMM yyyy', 'fr_FR');
     final timeFormat = DateFormat('HH:mm');
 

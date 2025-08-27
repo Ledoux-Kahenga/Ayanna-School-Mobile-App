@@ -1,9 +1,11 @@
 // Fichier : lib/vues/depense_sortie.dart
 
 import 'package:ayanna_school/models/models.dart';
+import 'package:ayanna_school/services/app_preferences.dart';
 import 'package:ayanna_school/services/school_queries.dart';
 import 'package:ayanna_school/theme/ayanna_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 class DepenseSortiePage extends StatefulWidget {
   const DepenseSortiePage({super.key});
@@ -22,46 +24,93 @@ class _DepenseSortiePageState extends State<DepenseSortiePage> {
   final TextEditingController _montantController = TextEditingController();
   bool _isLoading = false;
 
-  Future<void> _enregistrerDepense() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-      });
-      try {
-        await SchoolQueries.insertSortieCaisse(
-          entrepriseId: 2, // Remplacez par l'ID de votre entreprise
-          montant: double.parse(_montantController.text),
-          libelle: _libelleController.text,
-          compteDestinationId: int.parse(compteSelectionne!),
-          pieceJustification: _pieceJustificationController.text.isNotEmpty
-              ? _pieceJustificationController.text
-              : null,
-          observation: _observationController.text.isNotEmpty
-              ? _observationController.text
-              : null,
-          userId: 2, // Remplacez par l'ID de l'utilisateur connecté
-        );
+  double _soldeCaisse = 0.0;
+  bool _soldeLoading = true;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Dépense enregistrée avec succès'),
-            backgroundColor: Colors.green,
-          ),
-        );
-        // Ferme la page et renvoie 'true' pour indiquer le succès
-        Navigator.of(context).pop(true);
-      } catch (e) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
-        );
-      } finally {
+   @override
+  void initState() {
+    super.initState();
+    _fetchSoldeCaisse(); // Charger le solde au démarrage
+  }
+
+   Future<void> _fetchSoldeCaisse() async {
+    try {
+      final solde = await SchoolQueries.getSoldeCaisse();
+      if (mounted) {
         setState(() {
-          _isLoading = false;
+          _soldeCaisse = solde;
+          _soldeLoading = false;
         });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _soldeLoading = false;
+        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur chargement du solde: $e')),
+        );
       }
     }
   }
 
+ Future<void> _enregistrerDepense() async {
+  if (_formKey.currentState!.validate()) {
+    // 1. Get the amount to be spent
+    final double montantDepense = double.parse(_montantController.text);
+    
+    // 2. Refresh the cash balance before the transaction
+    await _fetchSoldeCaisse();
+
+    // 3. Check if the cash balance is sufficient
+    if (_soldeCaisse < montantDepense) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Le montant de la dépense est supérieur au solde de la caisse.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return; // Stop the execution here if the balance is insufficient
+    }
+
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      await SchoolQueries.insertSortieCaisse(
+        entrepriseId: 2, // Remplacez par l'ID de votre entreprise
+        montant: montantDepense,
+        libelle: _libelleController.text,
+        compteDestinationId: int.parse(compteSelectionne!),
+        pieceJustification: _pieceJustificationController.text.isNotEmpty
+            ? _pieceJustificationController.text
+            : null,
+        observation: _observationController.text.isNotEmpty
+            ? _observationController.text
+            : null,
+        userId: 2, // Remplacez par l'ID de l'utilisateur connecté
+      );
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Dépense enregistrée avec succès'),
+          backgroundColor: Colors.green,
+        ),
+      );
+      
+      Navigator.of(context).pop(true);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+}
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -147,6 +196,18 @@ class _DepenseSortiePageState extends State<DepenseSortiePage> {
                   }
                   return null;
                 },
+              ),
+                Padding(
+                padding: const EdgeInsets.only(top: 8.0),
+                child: _soldeLoading
+                    ? const Center(child: Text("Chargement du solde..."))
+                    : Text(
+                        'Disponible en caisse : ${NumberFormat("#,##0", "fr_FR").format(_soldeCaisse)} ${AppPreferences().devise}',
+                        style: TextStyle(
+                          color: _soldeCaisse > 0 ? Colors.green.shade800 : Colors.red,
+                          fontStyle: FontStyle.italic,
+                        ),
+                      ),
               ),
               const SizedBox(height: 16),
               // Champ pour la pièce de justification
