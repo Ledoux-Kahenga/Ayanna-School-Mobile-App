@@ -3,6 +3,7 @@ import 'package:path/path.dart';
 import 'package:flutter/services.dart';
 import 'dart:io';
 import 'package:path_provider/path_provider.dart';
+import '../database/sync_migration.dart';
 
 class DatabaseService {
   static Database? _db;
@@ -27,6 +28,20 @@ class DatabaseService {
       );
       await File(path).writeAsBytes(bytes, flush: true);
     }
-    return await openDatabase(path);
+
+    final db = await openDatabase(path);
+
+    // Exécuter la migration de synchronisation si nécessaire
+    try {
+      final migrationComplete = await SyncMigration.isSyncMigrationComplete(db);
+      if (!migrationComplete) {
+        await SyncMigration.runSyncMigration(db);
+      }
+    } catch (e) {
+      print('⚠️ Erreur lors de la migration de synchronisation: $e');
+      // Ne pas faire échouer l'initialisation de la DB pour autant
+    }
+
+    return db;
   }
 }

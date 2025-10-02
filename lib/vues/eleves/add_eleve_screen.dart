@@ -14,7 +14,7 @@ class AddEleveScreen extends StatefulWidget {
 class _AddEleveScreenState extends State<AddEleveScreen> {
   final _formKey = GlobalKey<FormState>();
   String nom = '';
-  String postNom = '';
+  String postnom = '';
   String prenom = '';
   String? sexe;
   String? dateNaissance;
@@ -25,7 +25,6 @@ class _AddEleveScreenState extends State<AddEleveScreen> {
   List<Classe> classesDisponibles = [];
   int? responsableId;
   String? matricule;
-  String? postnom;
   String statut = 'actif';
   // Champs responsable
   String responsableNom = '';
@@ -50,23 +49,53 @@ class _AddEleveScreenState extends State<AddEleveScreen> {
     }
   }
 
+  // Méthode pour formater le prénom (première lettre majuscule, reste en minuscule)
+  String _formatPrenom(String prenom) {
+    if (prenom.isEmpty) return prenom;
+    return prenom[0].toUpperCase() + prenom.substring(1).toLowerCase();
+  }
+
   Future<void> _saveEleve() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
-      final db = await SchoolQueries.getAllAnneesScolaires(); // Just to ensure DB is ready
+
+      // Créer le responsable d'abord si les informations sont fournies
+      int? finalResponsableId = responsableId;
+      if (responsableNom.trim().isNotEmpty) {
+        print('🔄 Création du responsable: $responsableNom');
+        finalResponsableId = await SchoolQueries.insertResponsable({
+          'nom': responsableNom.trim(),
+          'telephone': responsableTelephone.trim().isNotEmpty
+              ? responsableTelephone.trim()
+              : null,
+          'adresse': responsableAdresse.trim().isNotEmpty
+              ? responsableAdresse.trim()
+              : null,
+          'code': null, // Code généré automatiquement par la DB
+        });
+        print('✅ Responsable créé avec ID: $finalResponsableId');
+      }
+
+      // Créer l'élève avec l'ID du responsable et formatage correct des noms
       await SchoolQueries.insertEleve({
-        'nom': nom,
-        'prenom': prenom,
+        'nom': nom.trim().toUpperCase(), // NOM en MAJUSCULES
+        'prenom': _formatPrenom(
+          prenom.trim(),
+        ), // Prénom avec première lettre majuscule
+        'postnom': postnom.trim().isNotEmpty
+            ? postnom.trim().toUpperCase()
+            : null, // POST-NOM en MAJUSCULES
         'sexe': sexe,
         'date_naissance': dateNaissance,
         'lieu_naissance': lieuNaissance,
         'numero_permanent': numeroPermanent,
         'classe_id': classeId,
-        'responsable_id': responsableId,
+        'responsable_id': finalResponsableId,
         'matricule': matricule,
-        'postnom': postnom,
         'statut': statut,
       });
+
+      print('✅ Élève créé avec responsable_id: $finalResponsableId');
       Navigator.of(context).pop(true);
     }
   }
@@ -116,43 +145,65 @@ class _AddEleveScreenState extends State<AddEleveScreen> {
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
-                          decoration: _formFieldDecoration.copyWith(labelText: 'Nom'),
-                          validator: (v) => v == null || v.isEmpty ? 'Nom requis' : null,
+                          decoration: _formFieldDecoration.copyWith(
+                            labelText: 'Nom',
+                          ),
+                          validator: (v) =>
+                              v == null || v.isEmpty ? 'Nom requis' : null,
                           onSaved: (v) => nom = v ?? '',
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
-                          decoration: _formFieldDecoration.copyWith(labelText: 'Post-nom'),
-                          onSaved: (v) => postNom = v ?? '',
+                          decoration: _formFieldDecoration.copyWith(
+                            labelText: 'Post-nom',
+                          ),
+                          onSaved: (v) => postnom = v ?? '',
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
-                          decoration: _formFieldDecoration.copyWith(labelText: 'Prénom'),
-                          validator: (v) => v == null || v.isEmpty ? 'Prénom requis' : null,
+                          decoration: _formFieldDecoration.copyWith(
+                            labelText: 'Prénom',
+                          ),
+                          validator: (v) =>
+                              v == null || v.isEmpty ? 'Prénom requis' : null,
                           onSaved: (v) => prenom = v ?? '',
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<String>(
-                          decoration: _formFieldDecoration.copyWith(labelText: 'Sexe'),
+                          decoration: _formFieldDecoration.copyWith(
+                            labelText: 'Sexe',
+                          ),
                           items: const [
-                            DropdownMenuItem(value: 'M', child: Text('Masculin')),
-                            DropdownMenuItem(value: 'F', child: Text('Féminin')),
+                            DropdownMenuItem(
+                              value: 'M',
+                              child: Text('Masculin'),
+                            ),
+                            DropdownMenuItem(
+                              value: 'F',
+                              child: Text('Féminin'),
+                            ),
                           ],
                           onChanged: (v) => setState(() => sexe = v),
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
-                          decoration: _formFieldDecoration.copyWith(labelText: 'Date de naissance'),
+                          decoration: _formFieldDecoration.copyWith(
+                            labelText: 'Date de naissance',
+                          ),
                           onSaved: (v) => dateNaissance = v,
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
-                          decoration: _formFieldDecoration.copyWith(labelText: 'Lieu de naissance'),
+                          decoration: _formFieldDecoration.copyWith(
+                            labelText: 'Lieu de naissance',
+                          ),
                           onSaved: (v) => lieuNaissance = v,
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
-                          decoration: _formFieldDecoration.copyWith(labelText: 'Numéro permanent'),
+                          decoration: _formFieldDecoration.copyWith(
+                            labelText: 'Numéro permanent',
+                          ),
                           onSaved: (v) => numeroPermanent = v,
                         ),
                         const SizedBox(height: 12),
@@ -178,7 +229,9 @@ class _AddEleveScreenState extends State<AddEleveScreen> {
                         ),
                         const SizedBox(height: 12),
                         DropdownButtonFormField<int>(
-                          decoration: _formFieldDecoration.copyWith(labelText: 'Classe'),
+                          decoration: _formFieldDecoration.copyWith(
+                            labelText: 'Classe',
+                          ),
                           value: classeId,
                           items: classesDisponibles
                               .map(
@@ -214,22 +267,30 @@ class _AddEleveScreenState extends State<AddEleveScreen> {
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
-                          decoration: _formFieldDecoration.copyWith(labelText: 'Nom du responsable'),
+                          decoration: _formFieldDecoration.copyWith(
+                            labelText: 'Nom du responsable',
+                          ),
                           onSaved: (v) => responsableNom = v ?? '',
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
-                          decoration: _formFieldDecoration.copyWith(labelText: 'Téléphone parent'),
+                          decoration: _formFieldDecoration.copyWith(
+                            labelText: 'Téléphone parent',
+                          ),
                           onSaved: (v) => responsableTelephone = v ?? '',
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
-                          decoration: _formFieldDecoration.copyWith(labelText: 'Email'),
+                          decoration: _formFieldDecoration.copyWith(
+                            labelText: 'Email',
+                          ),
                           onSaved: (v) => responsableEmail = v ?? '',
                         ),
                         const SizedBox(height: 12),
                         TextFormField(
-                          decoration: _formFieldDecoration.copyWith(labelText: 'Adresse'),
+                          decoration: _formFieldDecoration.copyWith(
+                            labelText: 'Adresse',
+                          ),
                           onSaved: (v) => responsableAdresse = v ?? '',
                         ),
                         const SizedBox(height: 12),

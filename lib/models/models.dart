@@ -11,6 +11,7 @@ class Entreprise {
   final Uint8List? logo; // Pour les données binaires (BLOB)
   final DateTime dateCreation;
   final DateTime dateModification;
+  final DateTime? updatedAt;
 
   Entreprise({
     required this.id,
@@ -23,6 +24,7 @@ class Entreprise {
     this.logo,
     required this.dateCreation,
     required this.dateModification,
+    this.updatedAt,
   });
 
   // Constructeur pour créer une instance à partir d'une Map (résultat de la base de données)
@@ -38,6 +40,9 @@ class Entreprise {
       logo: map['logo'],
       dateCreation: DateTime.parse(map['date_creation']),
       dateModification: DateTime.parse(map['date_modification']),
+      updatedAt: map['updated_at'] != null
+          ? DateTime.parse(map['updated_at'])
+          : null,
     );
   }
 }
@@ -46,14 +51,28 @@ class Utilisateur {
   final int id;
   final String nom;
   final String motDePasse;
+  final DateTime? dateCreation;
+  final DateTime? updatedAt;
 
-  Utilisateur({required this.id, required this.nom, required this.motDePasse});
+  Utilisateur({
+    required this.id,
+    required this.nom,
+    required this.motDePasse,
+    this.dateCreation,
+    this.updatedAt,
+  });
 
   factory Utilisateur.fromMap(Map<String, dynamic> map) {
     return Utilisateur(
       id: map['id'],
       nom: map['nom'],
       motDePasse: map['mot_de_passe'],
+      dateCreation: map['date_creation'] != null
+          ? DateTime.parse(map['date_creation'])
+          : null,
+      updatedAt: map['updated_at'] != null
+          ? DateTime.parse(map['updated_at'])
+          : null,
     );
   }
 }
@@ -65,6 +84,8 @@ class AnneeScolaire {
   final String dateFin;
   final int entrepriseId;
   final int enCours;
+  final DateTime? dateCreation;
+  final DateTime? updatedAt;
 
   AnneeScolaire({
     required this.id,
@@ -73,6 +94,8 @@ class AnneeScolaire {
     required this.dateFin,
     required this.entrepriseId,
     required this.enCours,
+    this.dateCreation,
+    this.updatedAt,
   });
 
   factory AnneeScolaire.fromMap(Map<String, dynamic> map) {
@@ -83,6 +106,12 @@ class AnneeScolaire {
       dateFin: map['date_fin'],
       entrepriseId: map['entreprise_id'],
       enCours: map['en_cours'],
+      dateCreation: map['date_creation'] != null
+          ? DateTime.parse(map['date_creation'])
+          : null,
+      updatedAt: map['updated_at'] != null
+          ? DateTime.parse(map['updated_at'])
+          : null,
     );
   }
 
@@ -104,6 +133,8 @@ class Classe {
   final String? niveau;
   final int? effectif;
   final String? code;
+  final DateTime? dateCreation;
+  final DateTime? updatedAt;
 
   Classe({
     required this.id,
@@ -113,6 +144,8 @@ class Classe {
     this.niveau,
     this.effectif,
     this.code,
+    this.dateCreation,
+    this.updatedAt,
   });
 
   factory Classe.fromMap(Map<String, dynamic> map) {
@@ -124,6 +157,12 @@ class Classe {
       niveau: map['niveau'],
       effectif: map['effectif'],
       code: map['code'],
+      dateCreation: map['date_creation'] != null
+          ? DateTime.parse(map['date_creation'])
+          : null,
+      updatedAt: map['updated_at'] != null
+          ? DateTime.parse(map['updated_at'])
+          : null,
     );
   }
 }
@@ -168,6 +207,8 @@ class Eleve {
   final String? responsableNom;
   final String? responsableTelephone;
   final String? responsableAdresse;
+  final DateTime? dateCreation;
+  final DateTime? updatedAt;
 
   Eleve({
     required this.id,
@@ -186,6 +227,8 @@ class Eleve {
     this.responsableNom,
     this.responsableTelephone,
     this.responsableAdresse,
+    this.dateCreation,
+    this.updatedAt,
   });
 
   factory Eleve.fromMap(Map<String, dynamic> map) {
@@ -206,6 +249,12 @@ class Eleve {
       responsableNom: map['responsable_nom'],
       responsableTelephone: map['responsable_telephone'],
       responsableAdresse: map['responsable_adresse'],
+      dateCreation: map['date_creation'] != null
+          ? DateTime.parse(map['date_creation'])
+          : null,
+      updatedAt: map['updated_at'] != null
+          ? DateTime.parse(map['updated_at'])
+          : null,
     );
   }
 }
@@ -216,6 +265,8 @@ class Responsable {
   final String? telephone;
   final String? code;
   final String? adresse;
+  final DateTime? dateCreation;
+  final DateTime? updatedAt;
 
   Responsable({
     required this.id,
@@ -223,17 +274,25 @@ class Responsable {
     this.telephone,
     this.code,
     this.adresse,
+    this.dateCreation,
+    this.updatedAt,
   });
 
   factory Responsable.fromMap(Map<String, dynamic> map) {
-  return Responsable(
-    id: map['id'],
-    nom: map['nom'] ?? '', // Ajout de la valeur par défaut ''
-    telephone: map['telephone'],
-    code: map['code'],
-    adresse: map['adresse'],
-  );
-}
+    return Responsable(
+      id: map['id'],
+      nom: map['nom'] ?? '', // Ajout de la valeur par défaut ''
+      telephone: map['telephone'],
+      code: map['code'],
+      adresse: map['adresse'],
+      dateCreation: map['date_creation'] != null
+          ? DateTime.parse(map['date_creation'])
+          : null,
+      updatedAt: map['updated_at'] != null
+          ? DateTime.parse(map['updated_at'])
+          : null,
+    );
+  }
 }
 
 class FraisScolaire {
@@ -244,6 +303,8 @@ class FraisScolaire {
   final int entrepriseId;
   final int anneeScolaireId;
   final String? code;
+  final DateTime? dateCreation;
+  final DateTime? updatedAt;
 
   FraisScolaire({
     required this.id,
@@ -253,6 +314,8 @@ class FraisScolaire {
     required this.entrepriseId,
     required this.anneeScolaireId,
     this.code,
+    this.dateCreation,
+    this.updatedAt,
   });
 
   factory FraisScolaire.fromMap(Map<String, dynamic> map) {
@@ -266,11 +329,17 @@ class FraisScolaire {
       entrepriseId: map['entreprise_id'],
       anneeScolaireId: map['annee_scolaire_id'],
       code: map['code'],
+      dateCreation: map['date_creation'] != null
+          ? DateTime.parse(map['date_creation'])
+          : null,
+      updatedAt: map['updated_at'] != null
+          ? DateTime.parse(map['updated_at'])
+          : null,
     );
   }
 }
 
-class PaiementFrais { 
+class PaiementFrais {
   final int id;
   final int eleveId;
   final int fraisScolaireId;
@@ -279,6 +348,8 @@ class PaiementFrais {
   final double? resteAPayer;
   final String? statut;
   final int? userId;
+  final DateTime? dateCreation;
+  final DateTime? updatedAt;
 
   PaiementFrais({
     required this.id,
@@ -289,6 +360,8 @@ class PaiementFrais {
     this.resteAPayer,
     this.statut,
     this.userId,
+    this.dateCreation,
+    this.updatedAt,
   });
 
   factory PaiementFrais.fromMap(Map<String, dynamic> map) {
@@ -307,6 +380,12 @@ class PaiementFrais {
                 : map['reste_a_payer']),
       statut: map['statut'],
       userId: map['user_id'],
+      dateCreation: map['date_creation'] != null
+          ? DateTime.parse(map['date_creation'])
+          : null,
+      updatedAt: map['updated_at'] != null
+          ? DateTime.parse(map['updated_at'])
+          : null,
     );
   }
 }
@@ -340,7 +419,6 @@ class FraisDetails {
   bool get isPartiellementPaye => montantPaye > 0 && resteAPayer > 0;
 }
 
-
 class JournalComptable {
   final int id;
   final DateTime dateOperation;
@@ -349,6 +427,8 @@ class JournalComptable {
   final String typeOperation; // 'Entrée' or 'Sortie'
   final int? paiementFraisId;
   final int entrepriseId;
+  final DateTime? dateCreation;
+  final DateTime? updatedAt;
 
   JournalComptable({
     required this.id,
@@ -358,6 +438,8 @@ class JournalComptable {
     required this.typeOperation,
     this.paiementFraisId,
     required this.entrepriseId,
+    this.dateCreation,
+    this.updatedAt,
   });
 
   factory JournalComptable.fromMap(Map<String, dynamic> map) {
@@ -371,6 +453,12 @@ class JournalComptable {
       typeOperation: map['type_operation'],
       paiementFraisId: map['paiement_frais_id'],
       entrepriseId: map['entreprise_id'],
+      dateCreation: map['date_creation'] != null
+          ? DateTime.parse(map['date_creation'])
+          : null,
+      updatedAt: map['updated_at'] != null
+          ? DateTime.parse(map['updated_at'])
+          : null,
     );
   }
 }
@@ -381,6 +469,8 @@ class ComptesConfig {
   final int compteCaisseId;
   final int compteFraisId;
   final int compteClientId;
+  final DateTime? dateCreation;
+  final DateTime? updatedAt;
 
   ComptesConfig({
     required this.id,
@@ -388,6 +478,8 @@ class ComptesConfig {
     required this.compteCaisseId,
     required this.compteFraisId,
     required this.compteClientId,
+    this.dateCreation,
+    this.updatedAt,
   });
 
   factory ComptesConfig.fromMap(Map<String, dynamic> map) {
@@ -397,6 +489,12 @@ class ComptesConfig {
       compteCaisseId: map['compte_caisse_id'],
       compteFraisId: map['compte_frais_id'],
       compteClientId: map['compte_client_id'],
+      dateCreation: map['date_creation'] != null
+          ? DateTime.parse(map['date_creation'])
+          : null,
+      updatedAt: map['updated_at'] != null
+          ? DateTime.parse(map['updated_at'])
+          : null,
     );
   }
 }
@@ -408,6 +506,8 @@ class CompteComptable {
   final String nom;
   final String libelle;
   final int classeComptableId;
+  final DateTime? dateCreation;
+  final DateTime? updatedAt;
 
   CompteComptable({
     required this.id,
@@ -415,8 +515,10 @@ class CompteComptable {
     required this.nom,
     required this.libelle,
     required this.classeComptableId,
+    this.dateCreation,
+    this.updatedAt,
   });
-  
+
   factory CompteComptable.fromMap(Map<String, dynamic> map) {
     return CompteComptable(
       id: map['id'],
@@ -424,45 +526,209 @@ class CompteComptable {
       nom: map['nom'],
       libelle: map['libelle'],
       classeComptableId: map['classe_comptable_id'],
+      dateCreation: map['date_creation'] != null
+          ? DateTime.parse(map['date_creation'])
+          : null,
+      updatedAt: map['updated_at'] != null
+          ? DateTime.parse(map['updated_at'])
+          : null,
     );
   }
 }
 
 // [NOUVEAU] Modèle pour les dépenses
 class Depense {
-    final int id;
-    final String libelle;
-    final double montant;
-    final DateTime dateDepense;
-    final int entrepriseId;
-    final String? piece;
-    final String? observation;
-    final int? journalId;
-    final int? userId;
+  final int id;
+  final String libelle;
+  final double montant;
+  final DateTime dateDepense;
+  final int entrepriseId;
+  final String? piece;
+  final String? observation;
+  final int? journalId;
+  final int? userId;
+  final DateTime? dateCreation;
+  final DateTime? updatedAt;
 
-    Depense({
-      required this.id,
-      required this.libelle,
-      required this.montant,
-      required this.dateDepense,
-      required this.entrepriseId,
-      this.piece,
-      this.observation,
-      this.journalId,
-      this.userId,
-    });
+  Depense({
+    required this.id,
+    required this.libelle,
+    required this.montant,
+    required this.dateDepense,
+    required this.entrepriseId,
+    this.piece,
+    this.observation,
+    this.journalId,
+    this.userId,
+    this.dateCreation,
+    this.updatedAt,
+  });
 
-    factory Depense.fromMap(Map<String, dynamic> map) {
-        return Depense(
-            id: map['id'],
-            libelle: map['libelle'],
-            montant: (map['montant'] as num).toDouble(),
-            dateDepense: DateTime.parse(map['date_depense']),
-            entrepriseId: map['entreprise_id'],
-            piece: map['piece'],
-            observation: map['observation'],
-            journalId: map['journal_id'],
-            userId: map['user_id'],
-        );
-    }
+  factory Depense.fromMap(Map<String, dynamic> map) {
+    return Depense(
+      id: map['id'],
+      libelle: map['libelle'],
+      montant: (map['montant'] as num).toDouble(),
+      dateDepense: DateTime.parse(map['date_depense']),
+      entrepriseId: map['entreprise_id'],
+      piece: map['piece'],
+      observation: map['observation'],
+      journalId: map['journal_id'],
+      userId: map['user_id'],
+      dateCreation: map['date_creation'] != null
+          ? DateTime.parse(map['date_creation'])
+          : null,
+      updatedAt: map['updated_at'] != null
+          ? DateTime.parse(map['updated_at'])
+          : null,
+    );
+  }
+}
+
+// [NOUVEAU] Modèle pour les écritures comptables
+class EcritureComptable {
+  final int id;
+  final int journalId;
+  final int compteComptableId;
+  final double? debit;
+  final double? credit;
+  final int ordre;
+  final DateTime dateEcriture;
+  final String? libelle;
+  final String? reference;
+  final DateTime? dateCreation;
+  final DateTime? dateModification;
+  final DateTime? updatedAt;
+
+  EcritureComptable({
+    required this.id,
+    required this.journalId,
+    required this.compteComptableId,
+    this.debit,
+    this.credit,
+    required this.ordre,
+    required this.dateEcriture,
+    this.libelle,
+    this.reference,
+    this.dateCreation,
+    this.dateModification,
+    this.updatedAt,
+  });
+
+  factory EcritureComptable.fromMap(Map<String, dynamic> map) {
+    return EcritureComptable(
+      id: map['id'],
+      journalId: map['journal_id'],
+      compteComptableId: map['compte_comptable_id'],
+      debit: map['debit'] != null ? (map['debit'] as num).toDouble() : null,
+      credit: map['credit'] != null ? (map['credit'] as num).toDouble() : null,
+      ordre: map['ordre'],
+      dateEcriture: DateTime.parse(map['date_ecriture']),
+      libelle: map['libelle'],
+      reference: map['reference'],
+      dateCreation: map['date_creation'] != null
+          ? DateTime.parse(map['date_creation'])
+          : null,
+      dateModification: map['date_modification'] != null
+          ? DateTime.parse(map['date_modification'])
+          : null,
+      updatedAt: map['updated_at'] != null
+          ? DateTime.parse(map['updated_at'])
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'journal_id': journalId,
+      'compte_comptable_id': compteComptableId,
+      'debit': debit,
+      'credit': credit,
+      'ordre': ordre,
+      'date_ecriture': dateEcriture.toIso8601String(),
+      'libelle': libelle,
+      'reference': reference,
+      'date_creation': dateCreation?.toIso8601String(),
+      'date_modification': dateModification?.toIso8601String(),
+      'updated_at': updatedAt?.toIso8601String(),
+    };
+  }
+}
+
+// Modèles pour la synchronisation
+class SyncMetadata {
+  final int id;
+  final String key;
+  final String? value;
+  final DateTime? updatedAt;
+
+  SyncMetadata({
+    required this.id,
+    required this.key,
+    this.value,
+    this.updatedAt,
+  });
+
+  factory SyncMetadata.fromMap(Map<String, dynamic> map) {
+    return SyncMetadata(
+      id: map['id'] as int,
+      key: map['key'] as String,
+      value: map['value'] as String?,
+      updatedAt: map['updated_at'] != null
+          ? DateTime.parse(map['updated_at'] as String)
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'key': key,
+      'value': value,
+      'updated_at': updatedAt?.toIso8601String(),
+    };
+  }
+}
+
+class LocalAction {
+  final int id;
+  final String tableName;
+  final int recordId;
+  final String actionType; // 'CREATE', 'UPDATE', 'DELETE'
+  final DateTime updatedAt;
+  final Map<String, dynamic>? data;
+
+  LocalAction({
+    required this.id,
+    required this.tableName,
+    required this.recordId,
+    required this.actionType,
+    required this.updatedAt,
+    this.data,
+  });
+
+  factory LocalAction.fromMap(Map<String, dynamic> map) {
+    return LocalAction(
+      id: map['id'] as int,
+      tableName: map['table_name'] as String,
+      recordId: map['record_id'] as int,
+      actionType: map['action_type'] as String,
+      updatedAt: DateTime.parse(map['updated_at'] as String),
+      data: map['data'] != null
+          ? Map<String, dynamic>.from(map['data'] as Map)
+          : null,
+    );
+  }
+
+  Map<String, dynamic> toMap() {
+    return {
+      'id': id,
+      'table_name': tableName,
+      'record_id': recordId,
+      'action_type': actionType,
+      'updated_at': updatedAt.toIso8601String(),
+      'data': data,
+    };
+  }
 }

@@ -545,12 +545,10 @@ class _PaiementDesFraisState extends State<PaiementDesFrais> {
                                                         : 'partiellement_paye',
                                                     userId: 1,
                                                   );
-                                                  await SchoolQueries.insertPaiement(
-                                                    _selectedEleve!.id,
-                                                    fd.frais.id,
-                                                    result,
-                                                    2,
-                                                    2,
+                                                  await SchoolQueries.enregistrerPaiement(
+                                                    eleveId: _selectedEleve!.id,
+                                                    fraisId: fd.frais.id,
+                                                    montant: result,
                                                   );
                                                   await _loadFraisForEleve(
                                                     _selectedEleve!,

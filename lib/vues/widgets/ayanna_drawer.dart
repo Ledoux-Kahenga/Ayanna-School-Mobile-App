@@ -6,6 +6,8 @@ import '../classes/classes_screen.dart';
 import '../configuration_screen.dart';
 import '../gestions frais/paiement_frais.dart';
 import '../gestions frais/journal_caisse.dart';
+import '../synchronisation/sync_status_screen.dart';
+import '../../services/school_queries.dart';
 
 class AyannaDrawer extends StatelessWidget {
   final int selectedIndex;
@@ -62,6 +64,24 @@ class AyannaDrawer extends StatelessWidget {
                         letterSpacing: 1.2,
                       ),
                     ),
+                    const SizedBox(height: 4),
+                    FutureBuilder<String>(
+                      future: SchoolQueries.getNomEcole(),
+                      builder: (context, snapshot) {
+                        if (snapshot.hasData) {
+                          return Text(
+                            snapshot.data!,
+                            style: TextStyle(
+                              color: Colors.white.withOpacity(0.9),
+                              fontSize: 14,
+                              fontWeight: FontWeight.w400,
+                            ),
+                            textAlign: TextAlign.center,
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
                   ],
                 ),
               ),
@@ -109,7 +129,9 @@ class AyannaDrawer extends StatelessWidget {
                     onTap: () {
                       onItemSelected(1);
                       Navigator.of(context).pushAndRemoveUntil(
-                        MaterialPageRoute(builder: (_) => const JournalCaisse()),
+                        MaterialPageRoute(
+                          builder: (_) => const JournalCaisse(),
+                        ),
                         (Route<dynamic> route) => route.isFirst,
                       );
                     },
@@ -144,6 +166,20 @@ class AyannaDrawer extends StatelessWidget {
                 );
               },
               selected: selectedIndex == 3,
+            ),
+            _buildDivider(),
+            _buildDrawerItem(
+              context,
+              icon: Icons.sync,
+              text: 'Synchronisation',
+              onTap: () {
+                onItemSelected(5);
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (context) => SyncStatusScreen()),
+                  (Route<dynamic> route) => route.isFirst,
+                );
+              },
+              selected: selectedIndex == 5,
             ),
             _buildDivider(),
             _buildDrawerItem(
