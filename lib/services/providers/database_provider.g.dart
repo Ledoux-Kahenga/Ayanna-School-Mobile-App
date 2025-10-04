@@ -168,7 +168,7 @@ final periodeDaoProvider = AutoDisposeProvider<PeriodeDao>.internal(
 );
 
 typedef PeriodeDaoRef = AutoDisposeProviderRef<PeriodeDao>;
-String _$fraisScolaireDaoHash() => r'6082dd8a22c37e63783d04e86a6346457dd50a32';
+String _$fraisScolaireDaoHash() => r'1df83c3df3462f83bfb5a0fb0c174665d6467cf5';
 
 /// See also [fraisScolaireDao].
 @ProviderFor(fraisScolaireDao)
