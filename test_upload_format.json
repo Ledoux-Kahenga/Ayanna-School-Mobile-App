@@ -1,0 +1,28 @@
+{
+    "client_id":"flutter-client",
+     "changes": [
+    {
+            "table": "eleves",
+            "operation": "update",
+            "action": "modifié",
+            "data": {
+                "id": 73,
+                "nom": "Akili",
+                "postnom": "Mali",
+                "prenom": "Chrispin",
+                "sexe": "Masculin",
+                "statut": "actif",
+                "date_naissance": "2015-09-14",
+                "lieu_naissance": "Goma",
+                "matricule": "EAKMACH688",
+                "numero_permanent": null,
+                "classe_id": 40,
+                "responsable_id": 101,
+                "date_creation": "2025-09-14T14:20:52.000000+00:00",
+                "date_modification": "2025-09-14T14:20:52.000000+00:00",
+                "updated_at": "2025-09-14T14:21:38.000000+00:00"
+            }
+        }
+  ],
+  "timestamp": "string"
+}

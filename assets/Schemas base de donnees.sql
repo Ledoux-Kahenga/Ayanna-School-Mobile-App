@@ -11,6 +11,8 @@ CREATE TABLE entreprises (
 	id INTEGER NOT NULL, 
 	date_modification DATETIME NOT NULL, 
 	updated_at DATETIME NOT NULL, 
+	server_id INTEGER,
+	is_sync BOOLEAN DEFAULT 0,
 	PRIMARY KEY (id)
 )
 CREATE TABLE responsables (
@@ -22,6 +24,8 @@ CREATE TABLE responsables (
 	date_creation DATETIME NOT NULL, 
 	date_modification DATETIME NOT NULL, 
 	updated_at DATETIME NOT NULL, 
+	server_id INTEGER,
+	is_sync BOOLEAN DEFAULT 0,
 	PRIMARY KEY (id), 
 	UNIQUE (code)
 )
