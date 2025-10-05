@@ -58,7 +58,7 @@ class _PaiementDesFraisState extends ConsumerState<PaiementDesFrais> {
 
     // Vérifier si toutes les permissions sont accordées
     bool allGranted = statuses.values.every((status) => status.isGranted);
-    
+
     if (allGranted) {
       _startScan();
     } else {

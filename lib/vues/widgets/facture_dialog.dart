@@ -50,7 +50,7 @@ class _FactureDialogState extends State<FactureDialog> {
 
     // Vérifier si toutes les permissions sont accordées
     bool allGranted = statuses.values.every((status) => status.isGranted);
-    
+
     if (allGranted) {
       _startScan();
     } else {
