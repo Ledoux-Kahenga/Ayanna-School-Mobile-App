@@ -3,18 +3,19 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'responsable.g.dart';
 
-@Entity(tableName: 'responsables',
+@Entity(
+  tableName: 'responsables',
   indices: [
     // Contrainte d'unicité sur server_id pour éviter les doublons
     // Permet la gestion automatique des conflits
     Index(value: ['server_id'], unique: true),
-  ],)
+  ],
+)
 @JsonSerializable()
 class Responsable {
-  @PrimaryKey(autoGenerate: true)
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @PrimaryKey(autoGenerate: false)
+  @JsonKey(includeToJson: false)
   final int? id;
-
   @ColumnInfo(name: 'server_id')
   @JsonKey(name: 'id')
   int? serverId;

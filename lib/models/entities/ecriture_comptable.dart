@@ -7,7 +7,7 @@ part 'ecriture_comptable.g.dart';
 
 @Entity(
   tableName: 'ecritures_comptables',
-    indices: [
+  indices: [
     // Contrainte d'unicité sur server_id pour éviter les doublons
     // Permet la gestion automatique des conflits
     Index(value: ['server_id'], unique: true),
@@ -27,10 +27,9 @@ part 'ecriture_comptable.g.dart';
 )
 @JsonSerializable()
 class EcritureComptable {
-  @PrimaryKey(autoGenerate: true)
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @PrimaryKey(autoGenerate: false)
+  @JsonKey(includeToJson: false)
   final int? id;
-
   @ColumnInfo(name: 'server_id')
   @JsonKey(name: 'id')
   int? serverId;

@@ -1,21 +1,22 @@
-import 'package:ayanna_school/models/models.dart';
+import 'package:ayanna_school/models/entities/journal_comptable.dart';
 import 'package:ayanna_school/services/app_preferences.dart';
-import 'package:ayanna_school/services/school_queries.dart';
+import 'package:ayanna_school/services/providers/providers.dart';
 import 'package:ayanna_school/vues/gestions%20frais/depense_sortie.dart';
 import 'package:ayanna_school/vues/gestions%20frais/journal_caisse_pdf.dart';
 import 'package:ayanna_school/vues/widgets/ayanna_drawer.dart';
 import 'package:flutter/material.dart';
-import 'package:intl/intl.dart'; 
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../theme/ayanna_theme.dart';
 
-class JournalCaisse extends StatefulWidget {
+class JournalCaisse extends ConsumerStatefulWidget {
   const JournalCaisse({super.key});
 
   @override
-  State<JournalCaisse> createState() => _JournalCaisseState();
+  ConsumerState<JournalCaisse> createState() => _JournalCaisseState();
 }
 
-class _JournalCaisseState extends State<JournalCaisse> {
+class _JournalCaisseState extends ConsumerState<JournalCaisse> {
   int _drawerIndex = 1;
   bool _isLoading = true;
   DateTime _selectedDate = DateTime.now();
@@ -37,10 +38,9 @@ class _JournalCaisseState extends State<JournalCaisse> {
       _isLoading = true;
     });
 
-    final entries = await SchoolQueries.getJournalEntries(
-      _selectedDate,
-      filter: _selectedFilter,
-    );
+    final entries = await ref
+        .read(journauxComptablesNotifierProvider.notifier)
+        .getJournalEntries(_selectedDate, filter: _selectedFilter);
 
     setState(() {
       _journalEntries = entries;
@@ -79,42 +79,42 @@ class _JournalCaisseState extends State<JournalCaisse> {
   }
 
   Future<void> _exportToPdf() async {
-  setState(() {
-    _isLoading = true;
-  });
-  try {
-    await generateAndPrintJournalPdf(
-      _journalEntries,
-      _selectedDate,
-      _totalEntrees,
-      _totalSorties,
-      _soldeDuJour,
-    );
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Facture générée avec succès.'),
-        backgroundColor: Colors.green,
-      ),
-    );
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('Erreur lors de la génération du PDF: $e'),
-        backgroundColor: Colors.red,
-      ),
-    );
-  } finally {
     setState(() {
-      _isLoading = false;
+      _isLoading = true;
     });
+    try {
+      await generateAndPrintJournalPdf(
+        _journalEntries,
+        _selectedDate,
+        _totalEntrees,
+        _totalSorties,
+        _soldeDuJour,
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Facture générée avec succès.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erreur lors de la génération du PDF: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
-}
 
   // [AMÉLIORÉ] Navigue et rafraîchit les données au retour
   Future<void> _navigateToDepensePage() async {
     final result = await Navigator.push<bool>(
-      context, 
-      MaterialPageRoute(builder: (context) => const DepenseSortiePage())
+      context,
+      MaterialPageRoute(builder: (context) => const DepenseSortiePage()),
     );
 
     // Si la page de dépense a renvoyé 'true', on rafraîchit les données
@@ -125,7 +125,11 @@ class _JournalCaisseState extends State<JournalCaisse> {
 
   @override
   Widget build(BuildContext context) {
-    final currencyFormat = NumberFormat.currency(locale: 'fr_FR', symbol: AppPreferences().devise, decimalDigits: 0);
+    final currencyFormat = NumberFormat.currency(
+      locale: 'fr_FR',
+      symbol: AppPreferences().devise,
+      decimalDigits: 0,
+    );
     final dateFormat = DateFormat('EEEE, d MMMM yyyy', 'fr_FR');
     final timeFormat = DateFormat('HH:mm');
 
@@ -162,7 +166,7 @@ class _JournalCaisseState extends State<JournalCaisse> {
                 : _journalEntries.isEmpty
                 ? const Center(child: Text('Aucune opération pour cette date.'))
                 : SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                    padding: const EdgeInsets.symmetric(horizontal: 8.0),
                     child: Card(
                       elevation: 4,
                       child: Table(
@@ -188,7 +192,8 @@ class _JournalCaisseState extends State<JournalCaisse> {
                           ),
                           // Data Rows
                           ..._journalEntries.map((entry) {
-                            final isEntree = entry.typeOperation.toLowerCase() == 'entrée';
+                            final isEntree =
+                                entry.typeOperation.toLowerCase() == 'entrée';
                             final montantColor = isEntree
                                 ? Colors.green[700]
                                 : Colors.red[700];
@@ -198,7 +203,11 @@ class _JournalCaisseState extends State<JournalCaisse> {
                                   timeFormat.format(entry.dateOperation),
                                   isData: true,
                                 ),
-                                _buildTableCell(entry.libelle, isData: true, alignLeft: true),
+                                _buildTableCell(
+                                  entry.libelle,
+                                  isData: true,
+                                  alignLeft: true,
+                                ),
                                 _buildTableCell(
                                   currencyFormat.format(entry.montant),
                                   isData: true,
@@ -215,7 +224,7 @@ class _JournalCaisseState extends State<JournalCaisse> {
                         ],
                       ),
                     ),
-                ),
+                  ),
           ),
           _buildSummary(currencyFormat),
         ],
@@ -320,7 +329,7 @@ class _JournalCaisseState extends State<JournalCaisse> {
     bool isHeader = false,
     bool isData = false,
     Color? color,
-    bool alignLeft = false
+    bool alignLeft = false,
   }) {
     final style = TextStyle(
       fontWeight: isHeader ? FontWeight.bold : FontWeight.normal,
@@ -329,7 +338,11 @@ class _JournalCaisseState extends State<JournalCaisse> {
     );
     return Padding(
       padding: const EdgeInsets.all(8.0),
-      child: Text(text, textAlign: alignLeft ? TextAlign.left : TextAlign.center, style: style),
+      child: Text(
+        text,
+        textAlign: alignLeft ? TextAlign.left : TextAlign.center,
+        style: style,
+      ),
     );
   }
 }

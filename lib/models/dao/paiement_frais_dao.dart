@@ -76,6 +76,9 @@ abstract class PaiementFraisDao {
   @delete
   Future<void> deletePaiementFrais(PaiementFrais paiementFrais);
 
+  @Query('DELETE FROM paiement_frais')
+  Future<void> deleteAllPaiementsFrais();
+
   @Query('DELETE FROM paiement_frais WHERE eleve_id = :eleveId')
   Future<void> deletePaiementsByEleve(int eleveId);
 

@@ -61,6 +61,9 @@ abstract class EleveDao {
   @delete
   Future<void> deleteEleve(Eleve eleve);
 
+  @Query('DELETE FROM eleves')
+  Future<void> deleteAllEleves();
+  
   @Query('DELETE FROM eleves WHERE classe_id = :classeId')
   Future<void> deleteElevesByClasse(int classeId);
 

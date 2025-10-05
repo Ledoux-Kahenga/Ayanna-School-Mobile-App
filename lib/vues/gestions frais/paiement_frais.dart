@@ -1,75 +1,52 @@
+import 'package:ayanna_school/models/entities/annee_scolaire.dart';
+import 'package:ayanna_school/models/entities/paiement_frais.dart';
+import 'package:ayanna_school/models/frais_details.dart';
 import 'package:ayanna_school/services/pdf_service.dart';
+import 'package:ayanna_school/services/app_preferences.dart';
 import 'package:ayanna_school/vues/widgets/facture_recu_widget.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import 'package:printing/printing.dart';
 import '../../theme/ayanna_theme.dart';
 import '../widgets/ayanna_drawer.dart';
-import '../../services/school_queries.dart';
-import '../../models/models.dart';
-import '../../services/app_preferences.dart';
-import 'package:printing/printing.dart';
-import 'package:pdf/widgets.dart' as pw;
+import '../../models/entities/eleve.dart' as entities;
+import '../../services/providers/providers.dart';
 
-class PaiementDesFrais extends StatefulWidget {
+class PaiementDesFrais extends ConsumerStatefulWidget {
   final AnneeScolaire? anneeScolaire;
   const PaiementDesFrais({super.key, this.anneeScolaire});
 
   @override
-  State<PaiementDesFrais> createState() => _PaiementDesFraisState();
+  ConsumerState<PaiementDesFrais> createState() => _PaiementDesFraisState();
 }
 
-class _PaiementDesFraisState extends State<PaiementDesFrais> {
-  List<Eleve> _eleves = [];
-  List<Eleve> _filteredEleves = [];
+class _PaiementDesFraisState extends ConsumerState<PaiementDesFrais> {
   bool _loading = false;
   String _errorMessage = '';
   final TextEditingController _searchController = TextEditingController();
-  Eleve? _selectedEleve;
+  entities.Eleve? _selectedEleve;
   List<FraisDetails> _fraisDetails = [];
-  List<Classe> _classes = [];
 
   @override
   void initState() {
     super.initState();
-    _searchController.addListener(_filterEleves);
     _initData();
-  }
-
-  @override
-  void dispose() {
-    _searchController.dispose();
-    super.dispose();
   }
 
   Future<void> _initData() async {
     setState(() {
       _loading = true;
-      _eleves = [];
-      _filteredEleves = [];
       _errorMessage = '';
       _selectedEleve = null;
       _fraisDetails = [];
-      _classes = [];
     });
     try {
-      AnneeScolaire? anneeScolaireAUtiliser = widget.anneeScolaire;
-      anneeScolaireAUtiliser ??= await SchoolQueries.getCurrentAnneeScolaire();
-      if (anneeScolaireAUtiliser != null) {
-        final loadedClasses = await SchoolQueries.getClassesByAnnee(
-          anneeScolaireAUtiliser.id,
-        );
-        final loadedEleves = await SchoolQueries.getElevesByAnnee(
-          anneeScolaireAUtiliser.id,
-        );
-        setState(() {
-          _classes = loadedClasses;
-          _eleves = loadedEleves;
-          _filteredEleves = _eleves;
-        });
-      }
+      // No need to load élèves here since we're using reactive data fetching
+      // The reactive provider will handle loading élèves
     } catch (e) {
       setState(() {
-        _errorMessage = 'Erreur lors du chargement des élèves: $e';
+        _errorMessage = 'Erreur lors du chargement: $e';
       });
     } finally {
       setState(() {
@@ -78,43 +55,18 @@ class _PaiementDesFraisState extends State<PaiementDesFrais> {
     }
   }
 
-  void _filterEleves() {
-    final query = _searchController.text.trim().toLowerCase();
-    if (query.isEmpty) {
-      setState(() {
-        _filteredEleves = _eleves;
-      });
-      return;
-    }
-    final filtered = _eleves
-        .where(
-          (e) =>
-              e.nom.toLowerCase().contains(query) ||
-              e.prenom.toLowerCase().contains(query) ||
-              (e.matricule?.toLowerCase().contains(query) ?? false),
-        )
-        .toList();
-    // Tri alphabétique
-    filtered.sort((a, b) {
-      final nomCmp = a.nom.toLowerCase().compareTo(b.nom.toLowerCase());
-      if (nomCmp != 0) return nomCmp;
-      return a.prenom.toLowerCase().compareTo(b.prenom.toLowerCase());
-    });
-    setState(() {
-      _filteredEleves = filtered;
-    });
-  }
-
-  Future<void> _loadFraisForEleve(Eleve eleve) async {
+  Future<void> _loadFraisForEleve(entities.Eleve eleve) async {
     setState(() {
       _selectedEleve = eleve;
       _fraisDetails = [];
       _loading = true;
     });
     try {
-      final details = await SchoolQueries.getEleveFraisDetails(eleve.id);
+      final details = await ref
+          .read(paiementsFraisNotifierProvider.notifier)
+          .getEleveFraisDetails(eleve.id!);
       setState(() {
-        _fraisDetails = details.fraisDetails;
+        _fraisDetails = details;
         _loading = false;
       });
     } catch (e) {
@@ -256,82 +208,155 @@ class _PaiementDesFraisState extends State<PaiementDesFrais> {
                   )
                 else if (_selectedEleve == null)
                   Expanded(
-                    child: _filteredEleves.isEmpty
-                        ? const Center(child: Text('Aucun élève trouvé.'))
-                        : ListView.separated(
-                            itemCount: _filteredEleves.length,
-                            separatorBuilder: (_, __) => Divider(
-                              height: 1,
-                              thickness: 0.7,
-                              color: AyannaColors.lightGrey,
-                              indent: 16,
-                              endIndent: 16,
-                            ),
-                            itemBuilder: (context, i) {
-                              final e = _filteredEleves[i];
-                              return Card(
-                                margin: EdgeInsets.zero,
-                                elevation: 0,
-                                shape: const RoundedRectangleBorder(),
-                                color: AyannaColors.white,
-                                child: ListTile(
-                                  dense: true,
-                                  leading: CircleAvatar(
-                                    radius: 20,
-                                    backgroundColor: AyannaColors.orange
-                                        .withOpacity(0.15),
-                                    child: Text(
-                                      '${e.prenom[0]}${e.nom[0]}',
-                                      style: const TextStyle(
-                                        fontSize: 14,
-                                        fontWeight: FontWeight.bold,
-                                        color: AyannaColors.orange,
+                    child: Consumer(
+                      builder: (context, ref, child) {
+                        final elevesAsync = ref.watch(elevesNotifierProvider);
+
+                        return elevesAsync.when(
+                          data: (allEleves) {
+                            List<entities.Eleve> filtered;
+
+                            if (_searchController.text.trim().isEmpty) {
+                              filtered = allEleves;
+                            } else {
+                              final query = _searchController.text
+                                  .trim()
+                                  .toLowerCase();
+                              filtered = allEleves
+                                  .where(
+                                    (e) =>
+                                        e.nom.toLowerCase().contains(query) ||
+                                        e.prenom.toLowerCase().contains(
+                                          query,
+                                        ) ||
+                                        (e.matricule?.toLowerCase().contains(
+                                              query,
+                                            ) ??
+                                            false),
+                                  )
+                                  .toList();
+                            }
+
+                            // Tri alphabétique
+                            filtered.sort((a, b) {
+                              final nomCmp = a.nom.toLowerCase().compareTo(
+                                b.nom.toLowerCase(),
+                              );
+                              if (nomCmp != 0) return nomCmp;
+                              return a.prenom.toLowerCase().compareTo(
+                                b.prenom.toLowerCase(),
+                              );
+                            });
+
+                            if (filtered.isEmpty) {
+                              return const Center(
+                                child: Text('Aucun élève trouvé.'),
+                              );
+                            }
+
+                            return ListView.separated(
+                              itemCount: filtered.length,
+                              separatorBuilder: (_, __) => Divider(
+                                height: 1,
+                                thickness: 0.7,
+                                color: AyannaColors.lightGrey,
+                                indent: 16,
+                                endIndent: 16,
+                              ),
+                              itemBuilder: (context, i) {
+                                final e = filtered[i];
+                                return Card(
+                                  margin: EdgeInsets.zero,
+                                  elevation: 0,
+                                  shape: const RoundedRectangleBorder(),
+                                  color: AyannaColors.white,
+                                  child: ListTile(
+                                    dense: true,
+                                    leading: CircleAvatar(
+                                      radius: 20,
+                                      backgroundColor: AyannaColors.orange
+                                          .withOpacity(0.15),
+                                      child: Text(
+                                        e.prenom.isNotEmpty && e.nom.isNotEmpty
+                                            ? '${e.prenom[0]}${e.nom[0]}'
+                                            : '?',
+                                        style: const TextStyle(
+                                          fontSize: 14,
+                                          fontWeight: FontWeight.bold,
+                                          color: AyannaColors.orange,
+                                        ),
                                       ),
                                     ),
-                                  ),
-                                  title: Text(
-                                    '${e.nom.toUpperCase()}${e.postnom != null && e.postnom!.isNotEmpty ? ' ${e.postnom!.toUpperCase()}' : ''} ${e.prenomCapitalized}',
-                                    style: const TextStyle(
-                                      fontSize: 15,
-                                      fontWeight: FontWeight.w500,
-                                      color: AyannaColors.darkGrey,
+                                    title: Text(
+                                      '${e.nom.toUpperCase()}${e.postnom != null && e.postnom!.isNotEmpty ? ' ${e.postnom!.toUpperCase()}' : ''} ${e.prenomCapitalized}',
+                                      style: const TextStyle(
+                                        fontSize: 15,
+                                        fontWeight: FontWeight.w500,
+                                        color: AyannaColors.darkGrey,
+                                      ),
                                     ),
-                                  ),
-                                  subtitle: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      if (e.matricule != null)
+                                    subtitle: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      children: [
+                                        if (e.matricule != null)
+                                          Text(
+                                            'Mat: ${e.matricule}',
+                                            style: const TextStyle(
+                                              fontSize: 12,
+                                              color: Color(0xFF666666),
+                                              fontWeight: FontWeight.normal,
+                                            ),
+                                          ),
+                                        const SizedBox(height: 2),
                                         Text(
-                                          'Mat: ${e.matricule}',
+                                          'Classe : ${e.classeNom ?? "-"}',
                                           style: const TextStyle(
-                                            fontSize: 12,
-                                            color: Color(0xFF666666),
-                                            fontWeight: FontWeight.normal,
+                                            fontSize: 13,
+                                            color: AyannaColors.orange,
+                                            fontWeight: FontWeight.bold,
                                           ),
                                         ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        'Classe : ${e.classeNom ?? "-"}',
-                                        style: const TextStyle(
-                                          fontSize: 13,
-                                          color: AyannaColors.orange,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                    ],
+                                      ],
+                                    ),
+                                    trailing: Icon(
+                                      Icons.arrow_forward_ios,
+                                      size: 16,
+                                      color: AyannaColors.orange,
+                                    ),
+                                    shape: const RoundedRectangleBorder(),
+                                    onTap: () => _loadFraisForEleve(e),
                                   ),
-                                  trailing: Icon(
-                                    Icons.arrow_forward_ios,
-                                    size: 16,
-                                    color: AyannaColors.orange,
-                                  ),
-                                  shape: const RoundedRectangleBorder(),
-                                  onTap: () => _loadFraisForEleve(e),
+                                );
+                              },
+                            );
+                          },
+                          loading: () =>
+                              const Center(child: CircularProgressIndicator()),
+                          error: (error, stack) => Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(
+                                  Icons.error,
+                                  size: 64,
+                                  color: Colors.red,
                                 ),
-                              );
-                            },
+                                const SizedBox(height: 16),
+                                Text('Erreur: $error'),
+                                const SizedBox(height: 16),
+                                ElevatedButton(
+                                  onPressed: () {
+                                    ref.invalidate(elevesNotifierProvider);
+                                  },
+                                  child: const Text('Réessayer'),
+                                ),
+                              ],
+                            ),
                           ),
+                        );
+                      },
+                    ),
                   )
                 else ...[
                   Padding(
@@ -431,9 +456,9 @@ class _PaiementDesFraisState extends State<PaiementDesFrais> {
                                       ),
                                       const SizedBox(height: 8),
                                       FutureBuilder<String>(
-                                        future: formatAmount(fd.frais.montant),
+                                        future: formatAmount(fd.montant),
                                         builder: (context, snapshot) => Text(
-                                          'Montant : ${snapshot.data ?? fd.frais.montant.toStringAsFixed(0)}',
+                                          'Montant : ${snapshot.data ?? fd.montant.toStringAsFixed(0)}',
                                         ),
                                       ),
                                       FutureBuilder<String>(
@@ -526,30 +551,17 @@ class _PaiementDesFraisState extends State<PaiementDesFrais> {
                                                   },
                                                 );
                                                 if (result != null) {
-                                                  final paiement = PaiementFrais(
-                                                    id: 0,
-                                                    eleveId: _selectedEleve!.id,
-                                                    fraisScolaireId:
-                                                        fd.frais.id,
-                                                    montantPaye: result,
-                                                    datePaiement: DateFormat(
-                                                      'dd-MM-yyyy',
-                                                    ).format(DateTime.now()),
-                                                    resteAPayer:
-                                                        fd.resteAPayer - result,
-                                                    statut:
-                                                        fd.resteAPayer -
-                                                                result <=
-                                                            0
-                                                        ? 'en_ordre'
-                                                        : 'partiellement_paye',
-                                                    userId: 1,
-                                                  );
-                                                  await SchoolQueries.enregistrerPaiement(
-                                                    eleveId: _selectedEleve!.id,
-                                                    fraisId: fd.frais.id,
-                                                    montant: result,
-                                                  );
+                                                  await ref
+                                                      .read(
+                                                        paiementsFraisNotifierProvider
+                                                            .notifier,
+                                                      )
+                                                      .enregistrerPaiement(
+                                                        eleveId:
+                                                            _selectedEleve!.id!,
+                                                        fraisId: fd.frais.id,
+                                                        montant: result,
+                                                      );
                                                   await _loadFraisForEleve(
                                                     _selectedEleve!,
                                                   );
@@ -580,6 +592,9 @@ class _PaiementDesFraisState extends State<PaiementDesFrais> {
                                                       await PdfService.generateRecuPdf(
                                                         fd,
                                                         _selectedEleve!,
+                                                        entrepriseNom:
+                                                            'Ayanna School',
+                                                        devise: 'CDF',
                                                       );
                                                   await Printing.layoutPdf(
                                                     onLayout: (format) async =>
@@ -694,7 +709,7 @@ class _PaiementDesFraisState extends State<PaiementDesFrais> {
                                             ),
                                         ],
                                       ),
-                                      if (fd.showRecu ?? false)
+                                      if (fd.showRecu)
                                         Padding(
                                           padding: const EdgeInsets.symmetric(
                                             vertical: 8.0,
@@ -709,7 +724,9 @@ class _PaiementDesFraisState extends State<PaiementDesFrais> {
                                             paiements: fd.historiquePaiements
                                                 .map(
                                                   (p) => {
-                                                    'date': p.datePaiement,
+                                                    'date': DateFormat(
+                                                      'dd/MM/yyyy',
+                                                    ).format(p.datePaiement),
                                                     'montant': p.montantPaye
                                                         .toStringAsFixed(0),
                                                     'caissier': 'Admin',
@@ -788,7 +805,9 @@ class _PaiementDesFraisState extends State<PaiementDesFrais> {
           ...paiements.map((p) {
             return TableRow(
               children: [
-                _buildTableCell(p.datePaiement),
+                _buildTableCell(
+                  DateFormat('dd/MM/yyyy').format(p.datePaiement),
+                ),
                 _buildTableCell(
                   '${p.montantPaye.toStringAsFixed(0)} ${AppPreferences().devise}',
                 ),

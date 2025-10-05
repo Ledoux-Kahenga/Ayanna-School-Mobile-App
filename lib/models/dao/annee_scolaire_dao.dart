@@ -37,7 +37,9 @@ abstract class AnneeScolaireDao {
 
   @delete
   Future<void> deleteAnneeScolaire(AnneeScolaire anneeScolaire);
-
+  @Query('DELETE FROM annees_scolaires')
+  Future<void> deleteAllAnneesScolaires();
+  
   @Query('DELETE FROM annees_scolaires WHERE entreprise_id = :entrepriseId')
   Future<void> deleteAnneesScolairesByEntreprise(int entrepriseId);
 

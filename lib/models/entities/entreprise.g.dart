@@ -7,6 +7,7 @@ part of 'entreprise.dart';
 // **************************************************************************
 
 Entreprise _$EntrepriseFromJson(Map<String, dynamic> json) => Entreprise(
+      id: (json['id'] as num?)?.toInt(),
       serverId: (json['id'] as num?)?.toInt(),
       nom: json['nom'] as String,
       adresse: json['adresse'] as String?,

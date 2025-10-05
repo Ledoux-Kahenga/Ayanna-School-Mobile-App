@@ -1,13 +1,15 @@
+import 'package:ayanna_school/models/frais_details.dart';
 import 'package:ayanna_school/services/pdf_service.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import '../../theme/ayanna_theme.dart';
 import '../widgets/facture_recu_widget.dart';
 import 'package:printing/printing.dart';
-import 'package:pdf/widgets.dart' as pw;
-import '../../services/school_queries.dart';
-import '../../models/models.dart';
+import 'package:ayanna_school/models/entities/entities.dart';
+import 'package:ayanna_school/services/providers/providers.dart';
 
-class ClasseEleveDetailsScreen extends StatefulWidget {
+class ClasseEleveDetailsScreen extends ConsumerStatefulWidget {
   final Eleve eleve;
   final FraisScolaire? frais;
   const ClasseEleveDetailsScreen({
@@ -17,12 +19,13 @@ class ClasseEleveDetailsScreen extends StatefulWidget {
   });
 
   @override
-  State<ClasseEleveDetailsScreen> createState() =>
+  ConsumerState<ClasseEleveDetailsScreen> createState() =>
       _ClasseEleveDetailsScreenState();
 }
 
-class _ClasseEleveDetailsScreenState extends State<ClasseEleveDetailsScreen> {
-  EleveFraisDetails? _eleveDetails;
+class _ClasseEleveDetailsScreenState
+    extends ConsumerState<ClasseEleveDetailsScreen> {
+  List<FraisDetails> _fraisDetails = [];
   bool _loading = true;
 
   @override
@@ -33,9 +36,49 @@ class _ClasseEleveDetailsScreenState extends State<ClasseEleveDetailsScreen> {
 
   Future<void> _fetchEleveDetails() async {
     try {
-      final details = await SchoolQueries.getEleveFraisDetails(widget.eleve.id);
+      // Get all frais scolaires
+      final allFrais = await ref.read(fraisScolairesNotifierProvider.future);
+
+      // Get all paiements for this eleve
+      final allPaiements = await ref.read(
+        paiementsFraisNotifierProvider.future,
+      );
+      final elevePaiements = widget.eleve.id != null
+          ? allPaiements
+                .where((paiement) => paiement.eleveId == widget.eleve.id)
+                .toList()
+          : [];
+
+      // Create FraisDetails for each frais scolaire
+      final List<FraisDetails> fraisDetails = [];
+      for (final frais in allFrais) {
+        final paiementsPourCeFrais = elevePaiements
+            .where((paiement) => paiement.fraisScolaireId == frais.id)
+            .toList();
+
+        final totalPaye = paiementsPourCeFrais.fold<double>(
+          0.0,
+          (sum, paiement) => sum + paiement.montantPaye,
+        );
+        final restePayer = frais.montant - totalPaye;
+        final statut = restePayer <= 0
+            ? 'Payé'
+            : (totalPaye > 0 ? 'Partiellement payé' : 'Non payé');
+
+        final fraisDetail = FraisDetails(
+          fraisId: frais.id ?? 0,
+          nomFrais: frais.nom,
+          montant: frais.montant,
+          totalPaye: totalPaye,
+          restePayer: restePayer,
+          statut: statut,
+          historiquePaiements: paiementsPourCeFrais.cast<PaiementFrais>(),
+        );
+        fraisDetails.add(fraisDetail);
+      }
+
       setState(() {
-        _eleveDetails = details;
+        _fraisDetails = fraisDetails;
         _loading = false;
       });
     } catch (e) {
@@ -70,8 +113,6 @@ class _ClasseEleveDetailsScreenState extends State<ClasseEleveDetailsScreen> {
       ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
-          : _eleveDetails == null
-          ? const Center(child: Text('Impossible de charger les détails'))
           : SingleChildScrollView(
               padding: const EdgeInsets.all(16.0),
               child: Column(
@@ -87,7 +128,7 @@ class _ClasseEleveDetailsScreenState extends State<ClasseEleveDetailsScreen> {
                     ),
                   ),
                   const SizedBox(height: 8),
-                  ..._eleveDetails!.fraisDetails.map(
+                  ..._fraisDetails.map(
                     (fraisDetail) => _buildFraisCard(fraisDetail),
                   ),
                 ],
@@ -97,7 +138,7 @@ class _ClasseEleveDetailsScreenState extends State<ClasseEleveDetailsScreen> {
   }
 
   Widget _buildInfoCard() {
-    final eleve = _eleveDetails!.eleve;
+    final eleve = widget.eleve;
     return Card(
       color: AyannaColors.white,
       elevation: 2,
@@ -276,6 +317,8 @@ class _ClasseEleveDetailsScreenState extends State<ClasseEleveDetailsScreen> {
                           final pdfBytes = await PdfService.generateRecuPdf(
                             fraisDetail,
                             widget.eleve,
+                            entrepriseNom: 'Ayanna School',
+                            devise: 'CDF',
                           );
                           await Printing.layoutPdf(
                             onLayout: (format) async => pdfBytes,
@@ -373,7 +416,9 @@ class _ClasseEleveDetailsScreenState extends State<ClasseEleveDetailsScreen> {
                       paiements: fraisDetail.historiquePaiements
                           .map(
                             (p) => {
-                              'date': p.datePaiement,
+                              'date': DateFormat(
+                                'dd/MM/yyyy',
+                              ).format(p.datePaiement),
                               'montant': p.montantPaye.toStringAsFixed(0),
                               'caissier': 'Admin',
                             },
@@ -445,7 +490,7 @@ class _ClasseEleveDetailsScreenState extends State<ClasseEleveDetailsScreen> {
           const Icon(Icons.receipt, size: 16, color: AyannaColors.orange),
           const SizedBox(width: 8),
           Text(
-            paiement.datePaiement,
+            DateFormat('dd/MM/yyyy').format(paiement.datePaiement),
             style: const TextStyle(fontSize: 12, color: AyannaColors.darkGrey),
           ),
           const Spacer(),
@@ -515,11 +560,34 @@ class _ClasseEleveDetailsScreenState extends State<ClasseEleveDetailsScreen> {
                 }
 
                 try {
-                  await SchoolQueries.enregistrerPaiement(
-                    eleveId: widget.eleve.id,
-                    fraisId: fraisDetail.frais.id,
-                    montant: montant,
+                  // Get current user ID from auth state
+                  final authState = await ref.read(authNotifierProvider.future);
+                  final userId = authState.userId;
+
+                  // Create new payment
+                  final now = DateTime.now();
+                  final nouveauPaiement = PaiementFrais(
+                    id: null,
+                    serverId: null,
+                    isSync: false,
+                    eleveId: widget.eleve.id!,
+                    fraisScolaireId: fraisDetail.fraisId,
+                    montantPaye: montant,
+                    datePaiement: now,
+                    userId: userId,
+                    resteAPayer: montantRestant - montant,
+                    statut: (montantRestant - montant) <= 0
+                        ? 'Payé'
+                        : 'Partiellement payé',
+                    dateCreation: now,
+                    dateModification: now,
+                    updatedAt: now,
                   );
+
+                  // Add payment using the provider
+                  await ref
+                      .read(paiementsFraisNotifierProvider.notifier)
+                      .addPaiementFrais(nouveauPaiement);
 
                   Navigator.of(context).pop();
                   _fetchEleveDetails(); // Recharger les données

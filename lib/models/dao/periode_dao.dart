@@ -74,6 +74,9 @@ abstract class PeriodeDao {
   @delete
   Future<void> deletePeriode(Periode periode);
 
+  @Query('DELETE FROM periodes')
+  Future<void> deleteAllPeriodes();
+
   @Query('DELETE FROM periodes WHERE annee_scolaire_id = :anneeScolaireId')
   Future<void> deletePeriodesByAnnee(int anneeScolaireId);
 

@@ -7,6 +7,7 @@ part of 'responsable.dart';
 // **************************************************************************
 
 Responsable _$ResponsableFromJson(Map<String, dynamic> json) => Responsable(
+      id: (json['id'] as num?)?.toInt(),
       serverId: (json['id'] as num?)?.toInt(),
       nom: json['nom'] as String?,
       code: json['code'] as String?,

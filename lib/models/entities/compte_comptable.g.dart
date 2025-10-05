@@ -8,11 +8,12 @@ part of 'compte_comptable.dart';
 
 CompteComptable _$CompteComptableFromJson(Map<String, dynamic> json) =>
     CompteComptable(
+      id: (json['id'] as num?)?.toInt(),
       serverId: (json['id'] as num?)?.toInt(),
       numero: json['numero'] as String,
       nom: json['nom'] as String,
       libelle: json['libelle'] as String,
-      actif: json['actif'] as bool?,
+      actif: parseBool(json['actif']),
       classeComptableId: (json['classe_comptable_id'] as num).toInt(),
       dateCreation: DateTime.parse(json['date_creation'] as String),
       dateModification: DateTime.parse(json['date_modification'] as String),

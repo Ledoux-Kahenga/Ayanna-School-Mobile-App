@@ -1,17 +1,16 @@
 import 'dart:math' as math;
+import 'package:ayanna_school/models/entities/annee_scolaire.dart';
+import 'package:ayanna_school/models/entities/utilisateur.dart';
+import 'package:ayanna_school/vues/gestions%20frais/paiement_frais.dart';
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import '../../services/auth_service.dart';
-import '../../services/sync_manager.dart';
-import '../../services/database_service.dart';
-import '../../services/school_queries.dart';
-import '../../models/auth_result.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../services/providers/providers.dart';
+
 import '../../theme/ayanna_theme.dart';
 import '../widgets/ayanna_widgets.dart';
-import '../../models/models.dart';
-import 'package:ayanna_school/vues/gestions%20frais/paiement_frais.dart';
 
-class AuthScreen extends StatefulWidget {
+
+class AuthScreen extends ConsumerStatefulWidget {
   final bool navigateToClasses;
   final AnneeScolaire? anneeScolaire;
   const AuthScreen({
@@ -21,11 +20,13 @@ class AuthScreen extends StatefulWidget {
   });
 
   @override
-  State<AuthScreen> createState() => _AuthScreenState();
+  ConsumerState<AuthScreen> createState() => _AuthScreenState();
 }
 
-class _AuthScreenState extends State<AuthScreen> {
-  final _emailController = TextEditingController(text: 'admin@collegeleparadoxe.com');
+class _AuthScreenState extends ConsumerState<AuthScreen> {
+  final _emailController = TextEditingController(
+    text: 'admin@collegeleparadoxe.com',
+  );
   final _passwordController = TextEditingController(text: '123456');
   bool _isLoading = false;
   bool _isPasswordVisible = false;
@@ -35,9 +36,10 @@ class _AuthScreenState extends State<AuthScreen> {
   Future<bool> _isDatabaseEmpty() async {
     print('=== VÉRIFICATION BASE DE DONNÉES LOCALE ===');
     try {
-      final entreprises = await SchoolQueries.getAllEntreprises();
-      final utilisateurs = await SchoolQueries.getAllUtilisateurs();
-      final anneesScol = await SchoolQueries.getAllAnneesScolaires();
+      final db = ref.watch(databaseProvider);
+      final entreprises = await db.entrepriseDao.getAllEntreprises();
+      final utilisateurs = await db.utilisateurDao.getAllUtilisateurs();
+      final anneesScol = await db.anneeScolaireDao.getAllAnneesScolaires();
 
       bool isEmpty =
           entreprises.isEmpty && utilisateurs.isEmpty && anneesScol.isEmpty;
@@ -52,113 +54,12 @@ class _AuthScreenState extends State<AuthScreen> {
       return isEmpty;
     } catch (e) {
       print('❌ Erreur lors de la vérification BD: $e');
-      return true; // Considérer comme vide en cas d'erreur
+      rethrow; // Considérer comme vide en cas d'erreur
     }
   }
 
   /// Vérifie l'authentification dans la base locale
-  Future<bool> _authenticateLocally(String email, String password) async {
-    print('=== AUTHENTIFICATION LOCALE ===');
-    print('Email: $email');
-    print(
-      'Password: ${password.substring(0, math.min(10, password.length))}...',
-    );
-
-    try {
-      final utilisateurs = await SchoolQueries.getAllUtilisateurs();
-      print('📊 ${utilisateurs.length} utilisateurs dans la BD locale');
-
-      // Chercher l'utilisateur par nom (en supposant que le nom correspond à l'email)
-      Utilisateur? utilisateur;
-      for (final u in utilisateurs) {
-        if (u.nom.toLowerCase() == email.toLowerCase() ||
-            u.nom.toLowerCase() == email.split('@').first.toLowerCase()) {
-          utilisateur = u;
-          break;
-        }
-      }
-
-      if (utilisateur == null) {
-        print('❌ Utilisateur non trouvé localement');
-        return false;
-      }
-
-      print('✅ Utilisateur trouvé: ${utilisateur.nom}');
-      print('🔐 Vérification mot de passe...');
-
-      // Vérification du mot de passe
-      bool passwordMatch = utilisateur.motDePasse == password;
-
-      if (passwordMatch) {
-        print('✅ Authentification locale RÉUSSIE');
-        return true;
-      } else {
-        print('❌ Mot de passe incorrect');
-        return false;
-      }
-    } catch (e) {
-      print('❌ Erreur authentification locale: $e');
-      return false;
-    }
-  }
-
-  /// Authentification complète via l'API avec importation des données
-  Future<bool> _authenticateViaAPI(String email, String password) async {
-    print('=== AUTHENTIFICATION VIA API ===');
-
-    try {
-      final authService = Provider.of<AuthService>(context, listen: false);
-      final syncManager = Provider.of<SyncManager>(context, listen: false);
-
-      // Étape 1: Authentification avec l'API
-      print('🔐 Authentification avec l\'API...');
-      final authResult = await authService.login(email, password: password);
-
-      if (authResult is AuthSuccess) {
-        print('✅ Authentification API réussie');
-        print(
-          'Token reçu: ${authResult.token.length} caractères${authResult.token.length > 10 ? " (${authResult.token.substring(0, 10)}...)" : " (${authResult.token})"}',
-        );
-
-        // Étape 2: Configuration de l'authentification dans le SyncManager
-        syncManager.setAuth(authResult.token, email);
-
-        // Étape 3: Importation complète des données depuis le serveur
-        print('📥 Importation complète des données...');
-        final importSuccess = await syncManager.importAllDataFromServer(
-          clearExisting: true, // Vider les données existantes
-        );
-
-        if (!importSuccess) {
-          print('❌ Échec de l\'importation des données');
-          setState(() {
-            _errorMessage =
-                'Erreur lors de l\'importation des données depuis le serveur';
-          });
-          return false;
-        }
-
-        print('✅ Importation complète terminée avec succès');
-        return true;
-      } else if (authResult is AuthError) {
-        print('❌ Échec authentification API: ${authResult.message}');
-        setState(() {
-          _errorMessage = 'Erreur API: ${authResult.message}';
-        });
-        return false;
-      }
-    } catch (e, stackTrace) {
-      print('❌ Exception authentification API: $e');
-      print('Stack trace: $stackTrace');
-      setState(() {
-        _errorMessage = 'Erreur de connexion API: $e';
-      });
-      return false;
-    }
-
-    return false;
-  }
-
+  
   Future<void> _login() async {
     if (_emailController.text.trim().isEmpty) {
       setState(() {
@@ -185,55 +86,33 @@ class _AuthScreenState extends State<AuthScreen> {
 
       print('=== DÉBUT PROCESSUS DE CONNEXION ===');
       print('Email: $email');
+      final shpref=await ref.read(syncPreferencesNotifierProvider.notifier);
+     // shpref.clearSyncData();
+      final loginSuccess = await ref.watch(authNotifierProvider.notifier).login(email, password);
+      
+      if (loginSuccess) {
+        print('✅ Connexion réussie');
 
-      // Étape 1: Vérifier si la base de données est vide
-      final isDatabaseEmpty = await _isDatabaseEmpty();
-
-      if (isDatabaseEmpty) {
-        print('🗂️ BASE DE DONNÉES VIDE - Authentification via API');
-
-        // Base vide: authentifier directement via l'API et importer toutes les données
-        final apiAuthSuccess = await _authenticateViaAPI(email, password);
-
-        if (apiAuthSuccess) {
-          print('✅ CONNEXION RÉUSSIE (via API)');
-          if (mounted) {
-            // Navigation vers l'écran en fonction du contexte
-            if (widget.navigateToClasses) {
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => PaiementDesFrais()),
-              );
-            } else {
-              Navigator.of(context).pushReplacementNamed('/home');
-            }
-          }
-        }
-        // Si échec, le message d'erreur a déjà été défini dans _authenticateViaAPI
-      } else {
-        print('🗂️ BASE DE DONNÉES NON VIDE - Vérification locale en premier');
-
-        // Base non vide: vérifier d'abord localement
-        final localAuthSuccess = await _authenticateLocally(email, password);
-
-        if (localAuthSuccess) {
-          print('✅ CONNEXION RÉUSSIE (authentification locale)');
-          if (mounted) {
-            // Navigation vers l'écran en fonction du contexte
-            if (widget.navigateToClasses) {
-              Navigator.of(context).pushReplacement(
-                MaterialPageRoute(builder: (_) => PaiementDesFrais()),
-              );
-            } else {
-              Navigator.of(context).pushReplacementNamed('/home');
-            }
-          }
+        // Naviguer vers l'écran principal
+        if (widget.navigateToClasses && widget.anneeScolaire != null) {
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => PaiementDesFrais(
+                anneeScolaire: widget.anneeScolaire,
+              ),
+            ),
+          );
         } else {
-          print('❌ Authentification locale échouée');
-          setState(() {
-            _errorMessage = 'Email ou mot de passe incorrect';
-          });
+          Navigator.pushReplacementNamed(context, '/home');
         }
+      } else {
+        print('❌ Échec de la connexion');
+        setState(() {
+          _errorMessage = 'Échec de la connexion. Veuillez réessayer.';
+        });
       }
+
     } catch (e, stackTrace) {
       print('❌ ERREUR GÉNÉRALE LOGIN: $e');
       print('Stack trace: $stackTrace');
@@ -268,70 +147,26 @@ class _AuthScreenState extends State<AuthScreen> {
     });
 
     try {
-      final authService = Provider.of<AuthService>(context, listen: false);
-      print('AuthService récupéré, appel getUserFromServer...');
+      // TODO: Implémenter la récupération d'informations utilisateur
+      print('Fonctionnalité getUserFromServer temporairement désactivée');
 
-      final userData = await authService.getUserFromServer(
-        _emailController.text.trim(),
-      );
-
-      print('Réponse getUserFromServer: $userData');
-
-      if (userData != null) {
-        print('Données utilisateur reçues, affichage dialog...');
-        // Afficher les informations dans une boîte de dialogue
-        if (mounted) {
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: Text('Informations utilisateur'),
-              content: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Text('Nom: ${userData['nom'] ?? 'N/A'}'),
-                    Text('Prénom: ${userData['prenom'] ?? 'N/A'}'),
-                    Text('Email: ${userData['email'] ?? 'N/A'}'),
-                    Text('Rôle: ${userData['role'] ?? 'N/A'}'),
-                    Text('Actif: ${userData['actif'] == 1 ? 'Oui' : 'Non'}'),
-                    SizedBox(height: 8),
-                    Text('Hash du mot de passe:'),
-                    SelectableText(
-                      userData['mot_de_passe_hash'] ??
-                          userData['password'] ??
-                          'Non disponible',
-                      style: TextStyle(fontSize: 10, fontFamily: 'monospace'),
-                    ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    // Copier le hash dans le champ mot de passe pour test
-                    if (userData['mot_de_passe_hash'] != null) {
-                      _passwordController.text = userData['mot_de_passe_hash'];
-                    } else if (userData['password'] != null) {
-                      _passwordController.text = userData['password'];
-                    }
-                    Navigator.of(context).pop();
-                  },
-                  child: Text('Utiliser ce hash'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(),
-                  child: Text('Fermer'),
-                ),
-              ],
+      // Pour l'instant, afficher un message informatif
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('Information'),
+            content: Text(
+              'La fonctionnalité de récupération des informations utilisateur sera implémentée prochainement.',
             ),
-          );
-        }
-      } else {
-        print('Aucune donnée utilisateur reçue');
-        setState(() {
-          _errorMessage = 'Utilisateur non trouvé sur le serveur';
-        });
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text('OK'),
+              ),
+            ],
+          ),
+        );
       }
     } catch (e, stackTrace) {
       print('ERREUR dans _fetchUserInfo: $e');
@@ -384,21 +219,21 @@ class _AuthScreenState extends State<AuthScreen> {
     });
 
     try {
-      final db = await DatabaseService.database;
+      final db = ref.watch(databaseProvider);
 
       // Supprimer dans l'ordre inverse des dépendances
-      await db.delete('paiement_frais');
-      await db.delete('frais_scolaires');
-      await db.delete('comptes_comptables');
-      await db.delete('comptes_config');
-      await db.delete('journal_comptable');
-      await db.delete('depenses');
-      await db.delete('eleves');
-      await db.delete('responsables');
-      await db.delete('classes');
-      await db.delete('annees_scolaires');
-      await db.delete('utilisateurs');
-      await db.delete('entreprises');
+      await db.paiementFraisDao.deleteAllPaiementsFrais();
+      await db.fraisScolaireDao.deleteAllFraisScolaires();
+      await db.compteComptableDao.deleteAllComptesComptables();
+      await db.comptesConfigDao.deleteAllComptesConfigs();
+      await db.journalComptableDao.deleteAllJournauxComptables();
+      await db.depenseDao.deleteAllDepenses();
+      await db.eleveDao.deleteAllEleves();
+      await db.responsableDao.deleteAllResponsables();
+      await db.classeDao.deleteAllClasses();
+      await db.anneeScolaireDao.deleteAllAnneesScolaires();
+      await db.utilisateurDao.deleteAllUtilisateurs();
+      await db.entrepriseDao.deleteAllEntreprises();
 
       print('✅ Base de données vidée avec succès');
 

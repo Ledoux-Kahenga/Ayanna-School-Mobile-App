@@ -76,6 +76,9 @@ abstract class EcritureComptableDao {
   @delete
   Future<void> deleteEcritureComptable(EcritureComptable ecritureComptable);
 
+  @Query('DELETE FROM ecritures_comptables')
+  Future<void> deleteAllEcrituresComptables();
+  
   @Query('DELETE FROM ecritures_comptables WHERE journal_id = :journalId')
   Future<void> deleteEcrituresComptablesByJournal(int journalId);
 

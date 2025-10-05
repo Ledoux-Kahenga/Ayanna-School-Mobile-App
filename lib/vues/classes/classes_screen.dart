@@ -1,22 +1,22 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../theme/ayanna_theme.dart';
 import '../widgets/ayanna_appbar.dart';
 import '../widgets/ayanna_widgets.dart';
-import '../../services/school_queries.dart';
-import '../../services/app_preferences.dart';
-import '../../models/models.dart';
+import 'package:ayanna_school/models/entities/entities.dart';
+import 'package:ayanna_school/services/providers/providers.dart';
 import 'classe_eleves_screen.dart';
 import '../widgets/ayanna_drawer.dart';
 
-class ClassesScreen extends StatefulWidget {
+class ClassesScreen extends ConsumerStatefulWidget {
   final AnneeScolaire? anneeScolaire;
   const ClassesScreen({super.key, this.anneeScolaire});
 
   @override
-  State<ClassesScreen> createState() => _ClassesScreenState();
+  ConsumerState<ClassesScreen> createState() => _ClassesScreenState();
 }
 
-class _ClassesScreenState extends State<ClassesScreen> {
+class _ClassesScreenState extends ConsumerState<ClassesScreen> {
   List<Classe> _classes = [];
   List<Classe> _filteredClasses = [];
   Map<int, List<Eleve>> _classeEleves = {};
@@ -31,46 +31,66 @@ class _ClassesScreenState extends State<ClassesScreen> {
     _initData();
   }
 
-Future<void> _initData() async {
-  setState(() {
-    _loading = true;
-    _classes = [];
-    _filteredClasses = [];
-    _classeEleves = {};
-    _errorMessage = '';
-  });
-  try {
-    AnneeScolaire? anneeScolaireAUtiliser = widget.anneeScolaire;
-    anneeScolaireAUtiliser ??= await SchoolQueries.getCurrentAnneeScolaire();
-    if (anneeScolaireAUtiliser != null) {
-      final loadedClasses = await SchoolQueries.getClassesByAnnee(
-        anneeScolaireAUtiliser.id,
-      );
-      final Map<int, List<Eleve>> classeEleves = {};
-      for (final classe in loadedClasses) {
-        final eleves = await SchoolQueries.getElevesByClasse(classe.id);
-        classeEleves[classe.id] = eleves;
+  Future<void> _initData() async {
+    setState(() {
+      _loading = true;
+      _classes = [];
+      _filteredClasses = [];
+      _classeEleves = {};
+      _errorMessage = '';
+    });
+    try {
+      // Get current annee scolaire from config or widget parameter
+      AnneeScolaire? anneeScolaireAUtiliser = widget.anneeScolaire;
+
+      // If no annee scolaire provided, get the current one from config
+      if (anneeScolaireAUtiliser == null) {
+        anneeScolaireAUtiliser = await ref.read(
+          currentAnneeScolaireProvider.future,
+        );
       }
 
-      // AJOUTEZ CETTE LIGNE POUR TRIER LES CLASSES
-      loadedClasses.sort((a, b) => a.nom.compareTo(b.nom));
+      if (anneeScolaireAUtiliser != null) {
+        // Get all classes and filter by annee scolaire
+        final allClasses = await ref.read(classesNotifierProvider.future);
+        final loadedClasses = allClasses
+            .where(
+              (classe) => classe.anneeScolaireId == anneeScolaireAUtiliser!.id,
+            )
+            .toList();
 
+        final Map<int, List<Eleve>> classeEleves = {};
+
+        // Get all eleves and filter by classe
+        final allEleves = await ref.read(elevesNotifierProvider.future);
+        for (final classe in loadedClasses) {
+          if (classe.id != null) {
+            final eleves = allEleves
+                .where((eleve) => eleve.classeId == classe.id)
+                .toList();
+            classeEleves[classe.id!] = eleves;
+          }
+        }
+
+        // Sort classes by name
+        loadedClasses.sort((a, b) => a.nom.compareTo(b.nom));
+
+        setState(() {
+          _classes = loadedClasses;
+          _classeEleves = classeEleves;
+          _filteredClasses = loadedClasses;
+        });
+      }
+    } catch (e) {
       setState(() {
-        _classes = loadedClasses;
-        _classeEleves = classeEleves;
-        _filteredClasses = loadedClasses;
+        _errorMessage = 'Erreur lors du chargement des données: $e';
+      });
+    } finally {
+      setState(() {
+        _loading = false;
       });
     }
-  } catch (e) {
-    setState(() {
-      _errorMessage = 'Erreur lors du chargement des classes: $e';
-    });
-  } finally {
-    setState(() {
-      _loading = false;
-    });
   }
-}
 
   @override
   void dispose() {
@@ -78,24 +98,25 @@ Future<void> _initData() async {
     super.dispose();
   }
 
-void _filterClasses() {
-  final query = _searchController.text.trim().toLowerCase();
-  if (query.isEmpty) {
+  void _filterClasses() {
+    final query = _searchController.text.trim().toLowerCase();
+    if (query.isEmpty) {
+      setState(() {
+        _filteredClasses = _classes;
+      });
+      return;
+    }
+
+    final filtered = _classes.where((classe) {
+      return classe.nom.toLowerCase().contains(query) ||
+          (classe.niveau?.toLowerCase().contains(query) ?? false);
+    }).toList();
+
     setState(() {
-      _filteredClasses = _classes;
+      _filteredClasses = filtered;
     });
-    return;
   }
-  
-  final filtered = _classes.where((classe) {
-    return classe.nom.toLowerCase().contains(query) ||
-        (classe.niveau?.toLowerCase().contains(query) ?? false);
-  }).toList();
-  
-  setState(() {
-    _filteredClasses = filtered;
-  });
-}
+
   @override
   Widget build(BuildContext context) {
     int drawerIndex = 2;

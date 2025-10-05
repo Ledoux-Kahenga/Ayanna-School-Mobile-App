@@ -96,6 +96,8 @@ class _$AppDatabase extends AppDatabase {
 
   FraisScolaireDao? _fraisScolaireDaoInstance;
 
+  FraisClassesDao? _fraisClassesDaoInstance;
+
   CoursDao? _coursDaoInstance;
 
   NotePeriodeDao? _notePeriodeDaoInstance;
@@ -122,7 +124,7 @@ class _$AppDatabase extends AppDatabase {
     Callback? callback,
   ]) async {
     final databaseOptions = sqflite.OpenDatabaseOptions(
-      version: 1,
+      version: 4,
       onConfigure: (database) async {
         await database.execute('PRAGMA foreign_keys = ON');
         await callback?.onConfigure?.call(database);
@@ -138,49 +140,51 @@ class _$AppDatabase extends AppDatabase {
       },
       onCreate: (database, version) async {
         await database.execute(
-            'CREATE TABLE IF NOT EXISTS `entreprises` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `nom` TEXT NOT NULL, `adresse` TEXT, `numero_id` TEXT, `devise` TEXT, `telephone` TEXT, `email` TEXT, `logo` TEXT, `timezone` TEXT NOT NULL, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL)');
+            'CREATE TABLE IF NOT EXISTS `entreprises` (`id` INTEGER, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `nom` TEXT NOT NULL, `adresse` TEXT, `numero_id` TEXT, `devise` TEXT, `telephone` TEXT, `email` TEXT, `logo` TEXT, `timezone` TEXT NOT NULL, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, PRIMARY KEY (`id`))');
         await database.execute(
-            'CREATE TABLE IF NOT EXISTS `utilisateurs` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `nom` TEXT NOT NULL, `prenom` TEXT NOT NULL, `email` TEXT NOT NULL, `mot_de_passe_hash` TEXT NOT NULL, `role` TEXT NOT NULL, `actif` INTEGER, `entreprise_id` INTEGER NOT NULL, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`entreprise_id`) REFERENCES `entreprises` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)');
+            'CREATE TABLE IF NOT EXISTS `utilisateurs` (`id` INTEGER, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `nom` TEXT NOT NULL, `prenom` TEXT NOT NULL, `email` TEXT NOT NULL, `mot_de_passe_hash` TEXT NOT NULL, `role` TEXT NOT NULL, `actif` INTEGER, `entreprise_id` INTEGER NOT NULL, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`entreprise_id`) REFERENCES `entreprises` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, PRIMARY KEY (`id`))');
         await database.execute(
-            'CREATE TABLE IF NOT EXISTS `annees_scolaires` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `nom` TEXT NOT NULL, `date_debut` INTEGER NOT NULL, `date_fin` INTEGER NOT NULL, `entreprise_id` INTEGER NOT NULL, `en_cours` INTEGER, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`entreprise_id`) REFERENCES `entreprises` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)');
+            'CREATE TABLE IF NOT EXISTS `annees_scolaires` (`id` INTEGER, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `nom` TEXT NOT NULL, `date_debut` INTEGER NOT NULL, `date_fin` INTEGER NOT NULL, `entreprise_id` INTEGER NOT NULL, `en_cours` INTEGER, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`entreprise_id`) REFERENCES `entreprises` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, PRIMARY KEY (`id`))');
         await database.execute(
-            'CREATE TABLE IF NOT EXISTS `enseignants` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `matricule` TEXT, `nom` TEXT NOT NULL, `prenom` TEXT NOT NULL, `sexe` TEXT, `niveau` TEXT, `discipline` TEXT, `email` TEXT, `telephone` TEXT, `entreprise_id` INTEGER NOT NULL, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`entreprise_id`) REFERENCES `entreprises` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)');
+            'CREATE TABLE IF NOT EXISTS `enseignants` (`id` INTEGER, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `matricule` TEXT, `nom` TEXT NOT NULL, `prenom` TEXT NOT NULL, `sexe` TEXT, `niveau` TEXT, `discipline` TEXT, `email` TEXT, `telephone` TEXT, `entreprise_id` INTEGER NOT NULL, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`entreprise_id`) REFERENCES `entreprises` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, PRIMARY KEY (`id`))');
         await database.execute(
-            'CREATE TABLE IF NOT EXISTS `classes` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `code` TEXT, `nom` TEXT NOT NULL, `niveau` TEXT, `effectif` INTEGER, `annee_scolaire_id` INTEGER NOT NULL, `enseignant_id` INTEGER, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`annee_scolaire_id`) REFERENCES `annees_scolaires` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, FOREIGN KEY (`enseignant_id`) REFERENCES `enseignants` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)');
+            'CREATE TABLE IF NOT EXISTS `classes` (`id` INTEGER, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `code` TEXT, `nom` TEXT NOT NULL, `niveau` TEXT, `effectif` INTEGER, `annee_scolaire_id` INTEGER NOT NULL, `enseignant_id` INTEGER, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`annee_scolaire_id`) REFERENCES `annees_scolaires` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, FOREIGN KEY (`enseignant_id`) REFERENCES `enseignants` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, PRIMARY KEY (`id`))');
         await database.execute(
-            'CREATE TABLE IF NOT EXISTS `eleves` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `nom` TEXT NOT NULL, `postnom` TEXT, `prenom` TEXT NOT NULL, `sexe` TEXT, `statut` TEXT, `date_naissance` INTEGER, `lieu_naissance` TEXT, `matricule` TEXT, `numero_permanent` TEXT, `classe_id` INTEGER, `responsable_id` INTEGER, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`classe_id`) REFERENCES `classes` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, FOREIGN KEY (`responsable_id`) REFERENCES `responsables` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)');
+            'CREATE TABLE IF NOT EXISTS `eleves` (`id` INTEGER, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `nom` TEXT NOT NULL, `postnom` TEXT, `prenom` TEXT NOT NULL, `sexe` TEXT, `statut` TEXT, `date_naissance` INTEGER, `lieu_naissance` TEXT, `matricule` TEXT, `numero_permanent` TEXT, `classe_id` INTEGER, `responsable_id` INTEGER, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`classe_id`) REFERENCES `classes` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, FOREIGN KEY (`responsable_id`) REFERENCES `responsables` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, PRIMARY KEY (`id`))');
         await database.execute(
-            'CREATE TABLE IF NOT EXISTS `responsables` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `nom` TEXT, `code` TEXT, `telephone` TEXT, `adresse` TEXT, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL)');
+            'CREATE TABLE IF NOT EXISTS `responsables` (`id` INTEGER, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `nom` TEXT, `code` TEXT, `telephone` TEXT, `adresse` TEXT, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, PRIMARY KEY (`id`))');
         await database.execute(
-            'CREATE TABLE IF NOT EXISTS `classes_comptables` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `code` TEXT, `nom` TEXT NOT NULL, `libelle` TEXT NOT NULL, `type` TEXT NOT NULL, `entreprise_id` INTEGER NOT NULL, `actif` INTEGER, `document` TEXT, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`entreprise_id`) REFERENCES `entreprises` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)');
+            'CREATE TABLE IF NOT EXISTS `classes_comptables` (`id` INTEGER, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `code` TEXT, `nom` TEXT NOT NULL, `libelle` TEXT NOT NULL, `type` TEXT NOT NULL, `entreprise_id` INTEGER NOT NULL, `actif` INTEGER, `document` TEXT, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`entreprise_id`) REFERENCES `entreprises` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, PRIMARY KEY (`id`))');
         await database.execute(
-            'CREATE TABLE IF NOT EXISTS `comptes_comptables` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `numero` TEXT NOT NULL, `nom` TEXT NOT NULL, `libelle` TEXT NOT NULL, `actif` INTEGER, `classe_comptable_id` INTEGER NOT NULL, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`classe_comptable_id`) REFERENCES `classes_comptables` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)');
+            'CREATE TABLE IF NOT EXISTS `comptes_comptables` (`id` INTEGER, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `numero` TEXT NOT NULL, `nom` TEXT NOT NULL, `libelle` TEXT NOT NULL, `actif` INTEGER, `classe_comptable_id` INTEGER NOT NULL, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`classe_comptable_id`) REFERENCES `classes_comptables` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, PRIMARY KEY (`id`))');
         await database.execute(
-            'CREATE TABLE IF NOT EXISTS `licence` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `cle` TEXT NOT NULL, `type` TEXT NOT NULL, `date_activation` INTEGER NOT NULL, `date_expiration` INTEGER NOT NULL, `signature` TEXT NOT NULL, `active` INTEGER, `entreprise_id` INTEGER, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`entreprise_id`) REFERENCES `entreprises` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)');
+            'CREATE TABLE IF NOT EXISTS `licence` (`id` INTEGER, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `cle` TEXT NOT NULL, `type` TEXT NOT NULL, `date_activation` INTEGER NOT NULL, `date_expiration` INTEGER NOT NULL, `signature` TEXT NOT NULL, `active` INTEGER, `entreprise_id` INTEGER, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`entreprise_id`) REFERENCES `entreprises` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, PRIMARY KEY (`id`))');
         await database.execute(
-            'CREATE TABLE IF NOT EXISTS `periodes` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `code` TEXT, `nom` TEXT NOT NULL, `semestre` INTEGER NOT NULL, `poids` INTEGER, `date_debut` INTEGER, `date_fin` INTEGER, `annee_scolaire_id` INTEGER, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`annee_scolaire_id`) REFERENCES `annees_scolaires` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)');
+            'CREATE TABLE IF NOT EXISTS `periodes` (`id` INTEGER, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `code` TEXT, `nom` TEXT NOT NULL, `semestre` INTEGER NOT NULL, `poids` INTEGER, `date_debut` INTEGER, `date_fin` INTEGER, `annee_scolaire_id` INTEGER, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`annee_scolaire_id`) REFERENCES `annees_scolaires` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, PRIMARY KEY (`id`))');
         await database.execute(
-            'CREATE TABLE IF NOT EXISTS `frais_scolaires` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `nom` TEXT NOT NULL, `montant` REAL NOT NULL, `date_limite` INTEGER, `entreprise_id` INTEGER NOT NULL, `annee_scolaire_id` INTEGER NOT NULL, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`entreprise_id`) REFERENCES `entreprises` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, FOREIGN KEY (`annee_scolaire_id`) REFERENCES `annees_scolaires` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)');
+            'CREATE TABLE IF NOT EXISTS `frais_scolaires` (`id` INTEGER, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `nom` TEXT NOT NULL, `montant` REAL NOT NULL, `date_limite` INTEGER, `entreprise_id` INTEGER NOT NULL, `annee_scolaire_id` INTEGER NOT NULL, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`entreprise_id`) REFERENCES `entreprises` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, FOREIGN KEY (`annee_scolaire_id`) REFERENCES `annees_scolaires` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, PRIMARY KEY (`id`))');
         await database.execute(
-            'CREATE TABLE IF NOT EXISTS `cours` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `code` TEXT, `nom` TEXT NOT NULL, `coefficient` INTEGER, `enseignant_id` INTEGER NOT NULL, `classe_id` INTEGER NOT NULL, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`enseignant_id`) REFERENCES `enseignants` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, FOREIGN KEY (`classe_id`) REFERENCES `classes` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)');
+            'CREATE TABLE IF NOT EXISTS `frais_classes` (`id` INTEGER, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `frais_id` INTEGER NOT NULL, `classe_id` INTEGER NOT NULL, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`frais_id`) REFERENCES `frais_scolaires` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, FOREIGN KEY (`classe_id`) REFERENCES `classes` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, PRIMARY KEY (`id`))');
         await database.execute(
-            'CREATE TABLE IF NOT EXISTS `notes_periode` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `eleve_id` INTEGER NOT NULL, `cours_id` INTEGER NOT NULL, `periode_id` INTEGER NOT NULL, `valeur` REAL, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`eleve_id`) REFERENCES `eleves` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, FOREIGN KEY (`cours_id`) REFERENCES `cours` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, FOREIGN KEY (`periode_id`) REFERENCES `periodes` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)');
+            'CREATE TABLE IF NOT EXISTS `cours` (`id` INTEGER, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `code` TEXT, `nom` TEXT NOT NULL, `coefficient` INTEGER, `enseignant_id` INTEGER NOT NULL, `classe_id` INTEGER NOT NULL, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`enseignant_id`) REFERENCES `enseignants` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, FOREIGN KEY (`classe_id`) REFERENCES `classes` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, PRIMARY KEY (`id`))');
         await database.execute(
-            'CREATE TABLE IF NOT EXISTS `paiement_frais` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `eleve_id` INTEGER NOT NULL, `frais_scolaire_id` INTEGER NOT NULL, `montant_paye` REAL NOT NULL, `date_paiement` INTEGER NOT NULL, `user_id` INTEGER, `reste_a_payer` REAL, `statut` TEXT, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`eleve_id`) REFERENCES `eleves` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, FOREIGN KEY (`frais_scolaire_id`) REFERENCES `frais_scolaires` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, FOREIGN KEY (`user_id`) REFERENCES `utilisateurs` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)');
+            'CREATE TABLE IF NOT EXISTS `notes_periode` (`id` INTEGER, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `eleve_id` INTEGER NOT NULL, `cours_id` INTEGER NOT NULL, `periode_id` INTEGER NOT NULL, `valeur` REAL, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`eleve_id`) REFERENCES `eleves` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, FOREIGN KEY (`cours_id`) REFERENCES `cours` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, FOREIGN KEY (`periode_id`) REFERENCES `periodes` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, PRIMARY KEY (`id`))');
         await database.execute(
-            'CREATE TABLE IF NOT EXISTS `config_ecole` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `entreprise_id` INTEGER NOT NULL, `annee_scolaire_en_cours_id` INTEGER, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`entreprise_id`) REFERENCES `entreprises` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, FOREIGN KEY (`annee_scolaire_en_cours_id`) REFERENCES `annees_scolaires` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)');
+            'CREATE TABLE IF NOT EXISTS `paiement_frais` (`id` INTEGER, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `eleve_id` INTEGER NOT NULL, `frais_scolaire_id` INTEGER NOT NULL, `montant_paye` REAL NOT NULL, `date_paiement` INTEGER NOT NULL, `user_id` INTEGER, `reste_a_payer` REAL, `statut` TEXT, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`eleve_id`) REFERENCES `eleves` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, FOREIGN KEY (`frais_scolaire_id`) REFERENCES `frais_scolaires` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, FOREIGN KEY (`user_id`) REFERENCES `utilisateurs` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, PRIMARY KEY (`id`))');
         await database.execute(
-            'CREATE TABLE IF NOT EXISTS `comptes_config` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `entreprise_id` INTEGER NOT NULL, `compte_caisse_id` INTEGER NOT NULL, `compte_frais_id` INTEGER NOT NULL, `compte_client_id` INTEGER NOT NULL, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`compte_caisse_id`) REFERENCES `comptes_comptables` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, FOREIGN KEY (`compte_frais_id`) REFERENCES `comptes_comptables` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, FOREIGN KEY (`compte_client_id`) REFERENCES `comptes_comptables` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)');
+            'CREATE TABLE IF NOT EXISTS `config_ecole` (`id` INTEGER, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `entreprise_id` INTEGER NOT NULL, `annee_scolaire_en_cours_id` INTEGER, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`entreprise_id`) REFERENCES `entreprises` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, FOREIGN KEY (`annee_scolaire_en_cours_id`) REFERENCES `annees_scolaires` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, PRIMARY KEY (`id`))');
         await database.execute(
-            'CREATE TABLE IF NOT EXISTS `periodes_classes` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `classe_id` INTEGER NOT NULL, `periode_id` INTEGER NOT NULL, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`classe_id`) REFERENCES `classes` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, FOREIGN KEY (`periode_id`) REFERENCES `periodes` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)');
+            'CREATE TABLE IF NOT EXISTS `comptes_config` (`id` INTEGER, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `entreprise_id` INTEGER NOT NULL, `compte_caisse_id` INTEGER NOT NULL, `compte_frais_id` INTEGER NOT NULL, `compte_client_id` INTEGER NOT NULL, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`compte_caisse_id`) REFERENCES `comptes_comptables` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, FOREIGN KEY (`compte_frais_id`) REFERENCES `comptes_comptables` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, FOREIGN KEY (`compte_client_id`) REFERENCES `comptes_comptables` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, PRIMARY KEY (`id`))');
         await database.execute(
-            'CREATE TABLE IF NOT EXISTS `journaux_comptables` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `date_operation` INTEGER NOT NULL, `libelle` TEXT NOT NULL, `montant` REAL NOT NULL, `type_operation` TEXT NOT NULL, `paiement_frais_id` INTEGER, `entreprise_id` INTEGER NOT NULL, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`paiement_frais_id`) REFERENCES `paiement_frais` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, FOREIGN KEY (`entreprise_id`) REFERENCES `entreprises` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)');
+            'CREATE TABLE IF NOT EXISTS `periodes_classes` (`id` INTEGER, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `classe_id` INTEGER NOT NULL, `periode_id` INTEGER NOT NULL, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`classe_id`) REFERENCES `classes` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, FOREIGN KEY (`periode_id`) REFERENCES `periodes` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, PRIMARY KEY (`id`))');
         await database.execute(
-            'CREATE TABLE IF NOT EXISTS `depenses` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `libelle` TEXT NOT NULL, `montant` REAL NOT NULL, `date_depense` INTEGER NOT NULL, `entreprise_id` INTEGER NOT NULL, `observation` TEXT, `journal_id` INTEGER, `user_id` INTEGER, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`entreprise_id`) REFERENCES `entreprises` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, FOREIGN KEY (`journal_id`) REFERENCES `journaux_comptables` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, FOREIGN KEY (`user_id`) REFERENCES `utilisateurs` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)');
+            'CREATE TABLE IF NOT EXISTS `journaux_comptables` (`id` INTEGER, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `date_operation` INTEGER NOT NULL, `libelle` TEXT NOT NULL, `montant` REAL NOT NULL, `type_operation` TEXT NOT NULL, `paiement_frais_id` INTEGER, `entreprise_id` INTEGER NOT NULL, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`paiement_frais_id`) REFERENCES `paiement_frais` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, FOREIGN KEY (`entreprise_id`) REFERENCES `entreprises` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, PRIMARY KEY (`id`))');
         await database.execute(
-            'CREATE TABLE IF NOT EXISTS `ecritures_comptables` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `journal_id` INTEGER NOT NULL, `compte_comptable_id` INTEGER NOT NULL, `debit` REAL, `credit` REAL, `ordre` INTEGER NOT NULL, `date_ecriture` INTEGER NOT NULL, `libelle` TEXT, `reference` TEXT, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`journal_id`) REFERENCES `journaux_comptables` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, FOREIGN KEY (`compte_comptable_id`) REFERENCES `comptes_comptables` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)');
+            'CREATE TABLE IF NOT EXISTS `depenses` (`id` INTEGER, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `libelle` TEXT NOT NULL, `montant` REAL NOT NULL, `date_depense` INTEGER NOT NULL, `entreprise_id` INTEGER NOT NULL, `observation` TEXT, `journal_id` INTEGER, `user_id` INTEGER, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`entreprise_id`) REFERENCES `entreprises` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, FOREIGN KEY (`journal_id`) REFERENCES `journaux_comptables` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, FOREIGN KEY (`user_id`) REFERENCES `utilisateurs` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, PRIMARY KEY (`id`))');
         await database.execute(
-            'CREATE TABLE IF NOT EXISTS `creances` (`id` INTEGER PRIMARY KEY AUTOINCREMENT, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `eleve_id` INTEGER NOT NULL, `frais_scolaire_id` INTEGER NOT NULL, `montant` REAL NOT NULL, `date_echeance` INTEGER NOT NULL, `active` INTEGER, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`eleve_id`) REFERENCES `eleves` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, FOREIGN KEY (`frais_scolaire_id`) REFERENCES `frais_scolaires` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION)');
+            'CREATE TABLE IF NOT EXISTS `ecritures_comptables` (`id` INTEGER, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `journal_id` INTEGER NOT NULL, `compte_comptable_id` INTEGER NOT NULL, `debit` REAL, `credit` REAL, `ordre` INTEGER NOT NULL, `date_ecriture` INTEGER NOT NULL, `libelle` TEXT, `reference` TEXT, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`journal_id`) REFERENCES `journaux_comptables` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, FOREIGN KEY (`compte_comptable_id`) REFERENCES `comptes_comptables` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, PRIMARY KEY (`id`))');
+        await database.execute(
+            'CREATE TABLE IF NOT EXISTS `creances` (`id` INTEGER, `server_id` INTEGER, `is_sync` INTEGER NOT NULL, `eleve_id` INTEGER NOT NULL, `frais_scolaire_id` INTEGER NOT NULL, `montant` REAL NOT NULL, `date_echeance` INTEGER NOT NULL, `active` INTEGER, `date_creation` INTEGER NOT NULL, `date_modification` INTEGER NOT NULL, `updated_at` INTEGER NOT NULL, FOREIGN KEY (`eleve_id`) REFERENCES `eleves` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, FOREIGN KEY (`frais_scolaire_id`) REFERENCES `frais_scolaires` (`id`) ON UPDATE NO ACTION ON DELETE NO ACTION, PRIMARY KEY (`id`))');
         await database.execute(
             'CREATE UNIQUE INDEX `index_entreprises_server_id` ON `entreprises` (`server_id`)');
         await database.execute(
@@ -205,6 +209,8 @@ class _$AppDatabase extends AppDatabase {
             'CREATE UNIQUE INDEX `index_periodes_server_id` ON `periodes` (`server_id`)');
         await database.execute(
             'CREATE UNIQUE INDEX `index_frais_scolaires_server_id` ON `frais_scolaires` (`server_id`)');
+        await database.execute(
+            'CREATE UNIQUE INDEX `index_frais_classes_server_id` ON `frais_classes` (`server_id`)');
         await database.execute(
             'CREATE UNIQUE INDEX `index_cours_server_id` ON `cours` (`server_id`)');
         await database.execute(
@@ -296,6 +302,12 @@ class _$AppDatabase extends AppDatabase {
   FraisScolaireDao get fraisScolaireDao {
     return _fraisScolaireDaoInstance ??=
         _$FraisScolaireDao(database, changeListener);
+  }
+
+  @override
+  FraisClassesDao get fraisClassesDao {
+    return _fraisClassesDaoInstance ??=
+        _$FraisClassesDao(database, changeListener);
   }
 
   @override
@@ -528,6 +540,12 @@ class _$EntrepriseDao extends EntrepriseDao {
   }
 
   @override
+  Future<void> deleteEntrepriseById(int id) async {
+    await _queryAdapter.queryNoReturn('DELETE FROM entreprises WHERE id = ?1',
+        arguments: [id]);
+  }
+
+  @override
   Future<void> deleteAllEntreprises() async {
     await _queryAdapter.queryNoReturn('DELETE FROM entreprises');
   }
@@ -677,6 +695,17 @@ class _$UtilisateurDao extends UtilisateurDao {
   }
 
   @override
+  Future<Utilisateur?> loginLocalement(
+    String email,
+    String password,
+  ) async {
+    return _queryAdapter.query(
+        'SELECT * FROM utilisateurs WHERE email = ?1 AND mot_de_passe_hash = ?2 limit 1',
+        mapper: (Map<String, Object?> row) => Utilisateur(id: row['id'] as int?, serverId: row['server_id'] as int?, isSync: (row['is_sync'] as int) != 0, nom: row['nom'] as String, prenom: row['prenom'] as String, email: row['email'] as String, motDePasseHash: row['mot_de_passe_hash'] as String, role: row['role'] as String, actif: row['actif'] == null ? null : (row['actif'] as int) != 0, entrepriseId: row['entreprise_id'] as int, dateCreation: _dateTimeConverter.decode(row['date_creation'] as int), dateModification: _dateTimeConverter.decode(row['date_modification'] as int), updatedAt: _dateTimeConverter.decode(row['updated_at'] as int)),
+        arguments: [email, password]);
+  }
+
+  @override
   Future<Utilisateur?> getUtilisateurById(int id) async {
     return _queryAdapter.query('SELECT * FROM utilisateurs WHERE id = ?1',
         mapper: (Map<String, Object?> row) => Utilisateur(
@@ -764,6 +793,11 @@ class _$UtilisateurDao extends UtilisateurDao {
             dateModification:
                 _dateTimeConverter.decode(row['date_modification'] as int),
             updatedAt: _dateTimeConverter.decode(row['updated_at'] as int)));
+  }
+
+  @override
+  Future<void> deleteAllUtilisateurs() async {
+    await _queryAdapter.queryNoReturn('DELETE FROM utilisateurs');
   }
 
   @override
@@ -999,6 +1033,11 @@ class _$AnneeScolaireDao extends AnneeScolaireDao {
             dateModification:
                 _dateTimeConverter.decode(row['date_modification'] as int),
             updatedAt: _dateTimeConverter.decode(row['updated_at'] as int)));
+  }
+
+  @override
+  Future<void> deleteAllAnneesScolaires() async {
+    await _queryAdapter.queryNoReturn('DELETE FROM annees_scolaires');
   }
 
   @override
@@ -1414,6 +1453,11 @@ class _$EnseignantDao extends EnseignantDao {
   }
 
   @override
+  Future<void> deleteAllEnseignants() async {
+    await _queryAdapter.queryNoReturn('DELETE FROM enseignants');
+  }
+
+  @override
   Future<void> deleteEnseignantsByEntreprise(int entrepriseId) async {
     await _queryAdapter.queryNoReturn(
         'DELETE FROM enseignants WHERE entreprise_id = ?1',
@@ -1710,6 +1754,11 @@ class _$ClasseDao extends ClasseDao {
             dateModification:
                 _dateTimeConverter.decode(row['date_modification'] as int),
             updatedAt: _dateTimeConverter.decode(row['updated_at'] as int)));
+  }
+
+  @override
+  Future<void> deleteAllClasses() async {
+    await _queryAdapter.queryNoReturn('DELETE FROM classes');
   }
 
   @override
@@ -2168,6 +2217,11 @@ class _$EleveDao extends EleveDao {
   }
 
   @override
+  Future<void> deleteAllEleves() async {
+    await _queryAdapter.queryNoReturn('DELETE FROM eleves');
+  }
+
+  @override
   Future<void> deleteElevesByClasse(int classeId) async {
     await _queryAdapter.queryNoReturn('DELETE FROM eleves WHERE classe_id = ?1',
         arguments: [classeId]);
@@ -2527,6 +2581,11 @@ class _$ResponsableDao extends ResponsableDao {
   }
 
   @override
+  Future<void> deleteAllResponsables() async {
+    await _queryAdapter.queryNoReturn('DELETE FROM responsables');
+  }
+
+  @override
   Future<void> deleteResponsablesByType(String typeResponsable) async {
     await _queryAdapter.queryNoReturn(
         'DELETE FROM responsables WHERE type_responsable = ?1',
@@ -2843,6 +2902,11 @@ class _$ClasseComptableDao extends ClasseComptableDao {
   }
 
   @override
+  Future<void> deleteAllClassesComptables() async {
+    await _queryAdapter.queryNoReturn('DELETE FROM classes_comptables');
+  }
+
+  @override
   Future<void> deleteClassesComptablesByEntreprise(int entrepriseId) async {
     await _queryAdapter.queryNoReturn(
         'DELETE FROM classes_comptables WHERE entreprise_id = ?1',
@@ -3099,6 +3163,11 @@ class _$CompteComptableDao extends CompteComptableDao {
             dateModification:
                 _dateTimeConverter.decode(row['date_modification'] as int),
             updatedAt: _dateTimeConverter.decode(row['updated_at'] as int)));
+  }
+
+  @override
+  Future<void> deleteAllComptesComptables() async {
+    await _queryAdapter.queryNoReturn('DELETE FROM comptes_comptables');
   }
 
   @override
@@ -3484,6 +3553,11 @@ class _$LicenceDao extends LicenceDao {
             dateModification:
                 _dateTimeConverter.decode(row['date_modification'] as int),
             updatedAt: _dateTimeConverter.decode(row['updated_at'] as int)));
+  }
+
+  @override
+  Future<void> deleteAllLicences() async {
+    await _queryAdapter.queryNoReturn('DELETE FROM licence');
   }
 
   @override
@@ -3917,6 +3991,11 @@ class _$PeriodeDao extends PeriodeDao {
   }
 
   @override
+  Future<void> deleteAllPeriodes() async {
+    await _queryAdapter.queryNoReturn('DELETE FROM periodes');
+  }
+
+  @override
   Future<void> deletePeriodesByAnnee(int anneeScolaireId) async {
     await _queryAdapter.queryNoReturn(
         'DELETE FROM periodes WHERE annee_scolaire_id = ?1',
@@ -4235,6 +4314,11 @@ class _$FraisScolaireDao extends FraisScolaireDao {
   }
 
   @override
+  Future<void> deleteAllFraisScolaires() async {
+    await _queryAdapter.queryNoReturn('DELETE FROM frais_scolaires');
+  }
+
+  @override
   Future<void> deleteFraisScolairesByEntreprise(int entrepriseId) async {
     await _queryAdapter.queryNoReturn(
         'DELETE FROM frais_scolaires WHERE entreprise_id = ?1',
@@ -4292,6 +4376,278 @@ class _$FraisScolaireDao extends FraisScolaireDao {
   @override
   Future<void> deleteFraisScolaire(FraisScolaire fraisScolaire) async {
     await _fraisScolaireDeletionAdapter.delete(fraisScolaire);
+  }
+}
+
+class _$FraisClassesDao extends FraisClassesDao {
+  _$FraisClassesDao(
+    this.database,
+    this.changeListener,
+  )   : _queryAdapter = QueryAdapter(database),
+        _fraisClassesInsertionAdapter = InsertionAdapter(
+            database,
+            'frais_classes',
+            (FraisClasses item) => <String, Object?>{
+                  'id': item.id,
+                  'server_id': item.serverId,
+                  'is_sync': item.isSync ? 1 : 0,
+                  'frais_id': item.fraisId,
+                  'classe_id': item.classeId,
+                  'date_creation': _dateTimeConverter.encode(item.dateCreation),
+                  'date_modification':
+                      _dateTimeConverter.encode(item.dateModification),
+                  'updated_at': _dateTimeConverter.encode(item.updatedAt)
+                }),
+        _fraisClassesUpdateAdapter = UpdateAdapter(
+            database,
+            'frais_classes',
+            ['id'],
+            (FraisClasses item) => <String, Object?>{
+                  'id': item.id,
+                  'server_id': item.serverId,
+                  'is_sync': item.isSync ? 1 : 0,
+                  'frais_id': item.fraisId,
+                  'classe_id': item.classeId,
+                  'date_creation': _dateTimeConverter.encode(item.dateCreation),
+                  'date_modification':
+                      _dateTimeConverter.encode(item.dateModification),
+                  'updated_at': _dateTimeConverter.encode(item.updatedAt)
+                }),
+        _fraisClassesDeletionAdapter = DeletionAdapter(
+            database,
+            'frais_classes',
+            ['id'],
+            (FraisClasses item) => <String, Object?>{
+                  'id': item.id,
+                  'server_id': item.serverId,
+                  'is_sync': item.isSync ? 1 : 0,
+                  'frais_id': item.fraisId,
+                  'classe_id': item.classeId,
+                  'date_creation': _dateTimeConverter.encode(item.dateCreation),
+                  'date_modification':
+                      _dateTimeConverter.encode(item.dateModification),
+                  'updated_at': _dateTimeConverter.encode(item.updatedAt)
+                });
+
+  final sqflite.DatabaseExecutor database;
+
+  final StreamController<String> changeListener;
+
+  final QueryAdapter _queryAdapter;
+
+  final InsertionAdapter<FraisClasses> _fraisClassesInsertionAdapter;
+
+  final UpdateAdapter<FraisClasses> _fraisClassesUpdateAdapter;
+
+  final DeletionAdapter<FraisClasses> _fraisClassesDeletionAdapter;
+
+  @override
+  Future<List<FraisClasses>> getAllFraisClasses() async {
+    return _queryAdapter.queryList('SELECT * FROM frais_classes',
+        mapper: (Map<String, Object?> row) => FraisClasses(
+            id: row['id'] as int?,
+            serverId: row['server_id'] as int?,
+            isSync: (row['is_sync'] as int) != 0,
+            fraisId: row['frais_id'] as int,
+            classeId: row['classe_id'] as int,
+            dateCreation:
+                _dateTimeConverter.decode(row['date_creation'] as int),
+            dateModification:
+                _dateTimeConverter.decode(row['date_modification'] as int),
+            updatedAt: _dateTimeConverter.decode(row['updated_at'] as int)));
+  }
+
+  @override
+  Future<FraisClasses?> getFraisClasseById(int id) async {
+    return _queryAdapter.query('SELECT * FROM frais_classes WHERE id = ?1',
+        mapper: (Map<String, Object?> row) => FraisClasses(
+            id: row['id'] as int?,
+            serverId: row['server_id'] as int?,
+            isSync: (row['is_sync'] as int) != 0,
+            fraisId: row['frais_id'] as int,
+            classeId: row['classe_id'] as int,
+            dateCreation:
+                _dateTimeConverter.decode(row['date_creation'] as int),
+            dateModification:
+                _dateTimeConverter.decode(row['date_modification'] as int),
+            updatedAt: _dateTimeConverter.decode(row['updated_at'] as int)),
+        arguments: [id]);
+  }
+
+  @override
+  Future<FraisClasses?> getFraisClasseByServerId(int serverId) async {
+    return _queryAdapter.query(
+        'SELECT * FROM frais_classes WHERE server_id = ?1',
+        mapper: (Map<String, Object?> row) => FraisClasses(
+            id: row['id'] as int?,
+            serverId: row['server_id'] as int?,
+            isSync: (row['is_sync'] as int) != 0,
+            fraisId: row['frais_id'] as int,
+            classeId: row['classe_id'] as int,
+            dateCreation:
+                _dateTimeConverter.decode(row['date_creation'] as int),
+            dateModification:
+                _dateTimeConverter.decode(row['date_modification'] as int),
+            updatedAt: _dateTimeConverter.decode(row['updated_at'] as int)),
+        arguments: [serverId]);
+  }
+
+  @override
+  Future<List<FraisClasses>> getFraisClassesByFrais(int fraisId) async {
+    return _queryAdapter.queryList(
+        'SELECT * FROM frais_classes WHERE frais_id = ?1',
+        mapper: (Map<String, Object?> row) => FraisClasses(
+            id: row['id'] as int?,
+            serverId: row['server_id'] as int?,
+            isSync: (row['is_sync'] as int) != 0,
+            fraisId: row['frais_id'] as int,
+            classeId: row['classe_id'] as int,
+            dateCreation:
+                _dateTimeConverter.decode(row['date_creation'] as int),
+            dateModification:
+                _dateTimeConverter.decode(row['date_modification'] as int),
+            updatedAt: _dateTimeConverter.decode(row['updated_at'] as int)),
+        arguments: [fraisId]);
+  }
+
+  @override
+  Future<List<FraisClasses>> getFraisClassesByClasse(int classeId) async {
+    return _queryAdapter.queryList(
+        'SELECT * FROM frais_classes WHERE classe_id = ?1',
+        mapper: (Map<String, Object?> row) => FraisClasses(
+            id: row['id'] as int?,
+            serverId: row['server_id'] as int?,
+            isSync: (row['is_sync'] as int) != 0,
+            fraisId: row['frais_id'] as int,
+            classeId: row['classe_id'] as int,
+            dateCreation:
+                _dateTimeConverter.decode(row['date_creation'] as int),
+            dateModification:
+                _dateTimeConverter.decode(row['date_modification'] as int),
+            updatedAt: _dateTimeConverter.decode(row['updated_at'] as int)),
+        arguments: [classeId]);
+  }
+
+  @override
+  Future<FraisClasses?> getFraisClasseByFraisAndClasse(
+    int fraisId,
+    int classeId,
+  ) async {
+    return _queryAdapter.query(
+        'SELECT * FROM frais_classes WHERE frais_id = ?1 AND classe_id = ?2',
+        mapper: (Map<String, Object?> row) => FraisClasses(
+            id: row['id'] as int?,
+            serverId: row['server_id'] as int?,
+            isSync: (row['is_sync'] as int) != 0,
+            fraisId: row['frais_id'] as int,
+            classeId: row['classe_id'] as int,
+            dateCreation:
+                _dateTimeConverter.decode(row['date_creation'] as int),
+            dateModification:
+                _dateTimeConverter.decode(row['date_modification'] as int),
+            updatedAt: _dateTimeConverter.decode(row['updated_at'] as int)),
+        arguments: [fraisId, classeId]);
+  }
+
+  @override
+  Future<List<FraisClasses>> getUnsyncedFraisClasses() async {
+    return _queryAdapter.queryList(
+        'SELECT * FROM frais_classes WHERE is_sync = 0',
+        mapper: (Map<String, Object?> row) => FraisClasses(
+            id: row['id'] as int?,
+            serverId: row['server_id'] as int?,
+            isSync: (row['is_sync'] as int) != 0,
+            fraisId: row['frais_id'] as int,
+            classeId: row['classe_id'] as int,
+            dateCreation:
+                _dateTimeConverter.decode(row['date_creation'] as int),
+            dateModification:
+                _dateTimeConverter.decode(row['date_modification'] as int),
+            updatedAt: _dateTimeConverter.decode(row['updated_at'] as int)));
+  }
+
+  @override
+  Future<void> deleteFraisClasseById(int id) async {
+    await _queryAdapter.queryNoReturn('DELETE FROM frais_classes WHERE id = ?1',
+        arguments: [id]);
+  }
+
+  @override
+  Future<void> deleteFraisClasseByServerId(int serverId) async {
+    await _queryAdapter.queryNoReturn(
+        'DELETE FROM frais_classes WHERE server_id = ?1',
+        arguments: [serverId]);
+  }
+
+  @override
+  Future<void> markAsSynced(int id) async {
+    await _queryAdapter.queryNoReturn(
+        'UPDATE frais_classes SET is_sync = 1 WHERE id = ?1',
+        arguments: [id]);
+  }
+
+  @override
+  Future<void> markAsSyncedByServerId(int serverId) async {
+    await _queryAdapter.queryNoReturn(
+        'UPDATE frais_classes SET is_sync = 1 WHERE server_id = ?1',
+        arguments: [serverId]);
+  }
+
+  @override
+  Future<int?> getUnsyncedCount() async {
+    return _queryAdapter.query(
+        'SELECT COUNT(*) FROM frais_classes WHERE is_sync = 0',
+        mapper: (Map<String, Object?> row) => row.values.first as int);
+  }
+
+  @override
+  Future<int?> getTotalCount() async {
+    return _queryAdapter.query('SELECT COUNT(*) FROM frais_classes',
+        mapper: (Map<String, Object?> row) => row.values.first as int);
+  }
+
+  @override
+  Future<void> updateServerIdAndSync(
+    int id,
+    int serverId,
+  ) async {
+    await _queryAdapter.queryNoReturn(
+        'UPDATE frais_classes SET server_id = ?2, is_sync = 1 WHERE id = ?1',
+        arguments: [id, serverId]);
+  }
+
+  @override
+  Future<void> insertFraisClasse(FraisClasses fraisClasse) async {
+    await _fraisClassesInsertionAdapter.insert(
+        fraisClasse, OnConflictStrategy.replace);
+  }
+
+  @override
+  Future<void> insertFraisClasses(List<FraisClasses> fraisClasses) async {
+    await _fraisClassesInsertionAdapter.insertList(
+        fraisClasses, OnConflictStrategy.replace);
+  }
+
+  @override
+  Future<void> updateFraisClasse(FraisClasses fraisClasse) async {
+    await _fraisClassesUpdateAdapter.update(
+        fraisClasse, OnConflictStrategy.replace);
+  }
+
+  @override
+  Future<void> updateFraisClasses(List<FraisClasses> fraisClasses) async {
+    await _fraisClassesUpdateAdapter.updateList(
+        fraisClasses, OnConflictStrategy.replace);
+  }
+
+  @override
+  Future<void> deleteFraisClasse(FraisClasses fraisClasse) async {
+    await _fraisClassesDeletionAdapter.delete(fraisClasse);
+  }
+
+  @override
+  Future<void> deleteFraisClasses(List<FraisClasses> fraisClasses) async {
+    await _fraisClassesDeletionAdapter.deleteList(fraisClasses);
   }
 }
 
@@ -4527,6 +4883,11 @@ class _$CoursDao extends CoursDao {
             dateModification:
                 _dateTimeConverter.decode(row['date_modification'] as int),
             updatedAt: _dateTimeConverter.decode(row['updated_at'] as int)));
+  }
+
+  @override
+  Future<void> deleteAllCours() async {
+    await _queryAdapter.queryNoReturn('DELETE FROM cours');
   }
 
   @override
@@ -4890,10 +5251,14 @@ class _$NotePeriodeDao extends NotePeriodeDao {
   }
 
   @override
-  Future<void> deleteNotesByEleve(int eleveId) async {
-    await _queryAdapter.queryNoReturn(
-        'DELETE FROM notes_periode WHERE eleve_id = ?1',
-        arguments: [eleveId]);
+  Future<void> deleteNotePeriodeById(int id) async {
+    await _queryAdapter.queryNoReturn('DELETE FROM notes_periode WHERE id = ?1',
+        arguments: [id]);
+  }
+
+  @override
+  Future<void> deleteAllNotesPeriode() async {
+    await _queryAdapter.queryNoReturn('DELETE FROM notes_periode');
   }
 
   @override
@@ -5327,6 +5692,11 @@ class _$PaiementFraisDao extends PaiementFraisDao {
   }
 
   @override
+  Future<void> deleteAllPaiementsFrais() async {
+    await _queryAdapter.queryNoReturn('DELETE FROM paiement_frais');
+  }
+
+  @override
   Future<void> deletePaiementsByEleve(int eleveId) async {
     await _queryAdapter.queryNoReturn(
         'DELETE FROM paiement_frais WHERE eleve_id = ?1',
@@ -5543,6 +5913,11 @@ class _$ConfigEcoleDao extends ConfigEcoleDao {
             dateModification:
                 _dateTimeConverter.decode(row['date_modification'] as int),
             updatedAt: _dateTimeConverter.decode(row['updated_at'] as int)));
+  }
+
+  @override
+  Future<void> deleteAllConfigsEcole() async {
+    await _queryAdapter.queryNoReturn('DELETE FROM config_ecole');
   }
 
   @override
@@ -5771,6 +6146,11 @@ class _$ComptesConfigDao extends ComptesConfigDao {
             dateModification:
                 _dateTimeConverter.decode(row['date_modification'] as int),
             updatedAt: _dateTimeConverter.decode(row['updated_at'] as int)));
+  }
+
+  @override
+  Future<void> deleteAllComptesConfigs() async {
+    await _queryAdapter.queryNoReturn('DELETE FROM comptes_config');
   }
 
   @override
@@ -6081,6 +6461,11 @@ class _$PeriodesClassesDao extends PeriodesClassesDao {
             dateModification:
                 _dateTimeConverter.decode(row['date_modification'] as int),
             updatedAt: _dateTimeConverter.decode(row['updated_at'] as int)));
+  }
+
+  @override
+  Future<void> deleteAllPeriodesClasses() async {
+    await _queryAdapter.queryNoReturn('DELETE FROM periodes_classes');
   }
 
   @override
@@ -6458,6 +6843,11 @@ class _$JournalComptableDao extends JournalComptableDao {
   }
 
   @override
+  Future<void> deleteAllJournauxComptables() async {
+    await _queryAdapter.queryNoReturn('DELETE FROM journaux_comptables');
+  }
+
+  @override
   Future<void> deleteJournauxComptablesByEntreprise(int entrepriseId) async {
     await _queryAdapter.queryNoReturn(
         'DELETE FROM journaux_comptables WHERE entreprise_id = ?1',
@@ -6800,6 +7190,11 @@ class _$DepenseDao extends DepenseDao {
   }
 
   @override
+  Future<void> deleteAllDepenses() async {
+    await _queryAdapter.queryNoReturn('DELETE FROM depenses');
+  }
+
+  @override
   Future<void> deleteDepensesByEntreprise(int entrepriseId) async {
     await _queryAdapter.queryNoReturn(
         'DELETE FROM depenses WHERE entreprise_id = ?1',
@@ -7129,6 +7524,11 @@ class _$EcritureComptableDao extends EcritureComptableDao {
   }
 
   @override
+  Future<void> deleteAllEcrituresComptables() async {
+    await _queryAdapter.queryNoReturn('DELETE FROM ecritures_comptables');
+  }
+
+  @override
   Future<void> deleteEcrituresComptablesByJournal(int journalId) async {
     await _queryAdapter.queryNoReturn(
         'DELETE FROM ecritures_comptables WHERE journal_id = ?1',
@@ -7432,6 +7832,11 @@ class _$CreanceDao extends CreanceDao {
         'SELECT SUM(montant) FROM creances WHERE eleve_id = ?1 AND active = 1',
         mapper: (Map<String, Object?> row) => row.values.first as double,
         arguments: [eleveId]);
+  }
+
+  @override
+  Future<void> deleteAllCreances() async {
+    await _queryAdapter.queryNoReturn('DELETE FROM creances');
   }
 
   @override

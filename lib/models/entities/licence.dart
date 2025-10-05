@@ -1,12 +1,13 @@
 import 'package:floor/floor.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'entreprise.dart';
+import '../helpers/parse_helper.dart';
 
 part 'licence.g.dart';
 
 @Entity(
   tableName: 'licence',
-    indices: [
+  indices: [
     // Contrainte d'unicité sur server_id pour éviter les doublons
     // Permet la gestion automatique des conflits
     Index(value: ['server_id'], unique: true),
@@ -21,10 +22,9 @@ part 'licence.g.dart';
 )
 @JsonSerializable()
 class Licence {
-  @PrimaryKey(autoGenerate: true)
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @PrimaryKey(autoGenerate: false)
+  @JsonKey(includeToJson: false)
   final int? id;
-
   @ColumnInfo(name: 'server_id')
   @JsonKey(name: 'id')
   int? serverId;
@@ -45,6 +45,8 @@ class Licence {
   DateTime dateExpiration;
 
   String signature;
+
+  @JsonKey(name: 'actif', fromJson: parseBool)
   bool? active;
 
   @ColumnInfo(name: 'entreprise_id')

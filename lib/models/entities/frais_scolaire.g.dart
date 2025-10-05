@@ -8,6 +8,7 @@ part of 'frais_scolaire.dart';
 
 FraisScolaire _$FraisScolaireFromJson(Map<String, dynamic> json) =>
     FraisScolaire(
+      id: (json['id'] as num?)?.toInt(),
       serverId: (json['id'] as num?)?.toInt(),
       nom: json['nom'] as String,
       montant: (json['montant'] as num).toDouble(),

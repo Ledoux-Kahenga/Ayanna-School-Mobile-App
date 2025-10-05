@@ -33,6 +33,9 @@ abstract class ComptesConfigDao {
   @delete
   Future<void> deleteComptesConfig(ComptesConfig comptesConfig);
 
+  @Query('DELETE FROM comptes_config')
+  Future<void> deleteAllComptesConfigs();
+  
   @Query('DELETE FROM comptes_config WHERE entreprise_id = :entrepriseId')
   Future<void> deleteComptesConfigsByEntreprise(int entrepriseId);
 

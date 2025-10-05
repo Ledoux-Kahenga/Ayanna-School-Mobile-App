@@ -59,6 +59,9 @@ abstract class EnseignantDao {
   @update
   Future<void> updateEnseignant(Enseignant enseignant);
 
+  @Query('DELETE FROM enseignants')
+  Future<void> deleteAllEnseignants();
+
   @update
   Future<void> updateEnseignants(List<Enseignant> enseignants);
 

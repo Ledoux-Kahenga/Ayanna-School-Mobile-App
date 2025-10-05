@@ -30,6 +30,9 @@ abstract class EntrepriseDao {
   @delete
   Future<void> deleteEntreprise(Entreprise entreprise);
 
+  @Query('DELETE FROM entreprises WHERE id = :id')
+  Future<void> deleteEntrepriseById(int id);  
+
   @Query('DELETE FROM entreprises')
   Future<void> deleteAllEntreprises();
 

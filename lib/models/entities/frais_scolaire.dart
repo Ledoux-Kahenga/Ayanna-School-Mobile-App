@@ -7,7 +7,7 @@ part 'frais_scolaire.g.dart';
 
 @Entity(
   tableName: 'frais_scolaires',
-    indices: [
+  indices: [
     // Contrainte d'unicité sur server_id pour éviter les doublons
     // Permet la gestion automatique des conflits
     Index(value: ['server_id'], unique: true),
@@ -27,10 +27,9 @@ part 'frais_scolaire.g.dart';
 )
 @JsonSerializable()
 class FraisScolaire {
-  @PrimaryKey(autoGenerate: true)
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @PrimaryKey(autoGenerate: false)
+  @JsonKey(includeToJson: false)
   final int? id;
-
   @ColumnInfo(name: 'server_id')
   @JsonKey(name: 'id')
   int? serverId;

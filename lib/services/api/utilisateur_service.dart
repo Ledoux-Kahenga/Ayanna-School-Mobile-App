@@ -3,7 +3,7 @@ import '../../models/entities/utilisateur.dart';
 
 part 'utilisateur_service.chopper.dart';
 
-@ChopperApi(baseUrl: '/utilisateurs')
+@ChopperApi(baseUrl: '/auth')
 abstract class UtilisateurService extends ChopperService {
   @GET()
   Future<Response<List<Map<String, dynamic>>>> getUtilisateurs();

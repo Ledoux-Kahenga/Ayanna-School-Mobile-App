@@ -70,8 +70,11 @@ abstract class NotePeriodeDao {
   @delete
   Future<void> deleteNotePeriode(NotePeriode notePeriode);
 
-  @Query('DELETE FROM notes_periode WHERE eleve_id = :eleveId')
-  Future<void> deleteNotesByEleve(int eleveId);
+  @Query('DELETE FROM notes_periode WHERE id = :id')
+  Future<void> deleteNotePeriodeById(int id);
+
+  @Query('DELETE FROM notes_periode')
+  Future<void> deleteAllNotesPeriode();
 
   @Query('DELETE FROM notes_periode WHERE cours_id = :coursId')
   Future<void> deleteNotesByCours(int coursId);

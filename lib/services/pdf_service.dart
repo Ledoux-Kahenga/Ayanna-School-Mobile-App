@@ -1,6 +1,6 @@
 import 'dart:typed_data';
-import 'package:ayanna_school/models/models.dart';
-import 'package:ayanna_school/services/app_preferences.dart';
+import 'package:ayanna_school/models/entities/eleve.dart';
+import 'package:ayanna_school/models/frais_details.dart';
 import 'package:intl/intl.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
@@ -8,11 +8,14 @@ import 'package:pdf/widgets.dart' as pw;
 class PdfService {
   static Future<Uint8List> generateRecuPdf(
     FraisDetails fraisDetail,
-    Eleve eleve,
-  ) async {
+    Eleve eleve, {
+    String? entrepriseNom,
+    String? devise,
+  }) async {
     final doc = pw.Document();
-    final entreprise = AppPreferences().entreprise;
-    final devise = AppPreferences().devise;
+    // Valeurs par défaut si non fournies
+    final entrepriseNomFinal = entrepriseNom ?? 'Ayanna School';
+    final deviseFinal = devise ?? 'CDF';
     final dateFormat = DateFormat('dd/MM/yyyy');
 
     // J'ai ajouté ces couleurs pour un style plus professionnel
@@ -43,7 +46,7 @@ class PdfService {
                       'Logo',
                       style: pw.TextStyle(
                         color: PdfColors.white,
-                        
+
                         fontWeight: pw.FontWeight.bold,
                       ),
                     ),
@@ -53,30 +56,13 @@ class PdfService {
               pw.SizedBox(height: 8),
 
               // En-tête de l'école
-              if (entreprise != null) ...[
-                pw.Text(
-                  entreprise.nom,
-                  style: pw.TextStyle(
-                    fontWeight: pw.FontWeight.bold,
-                    fontSize: 18,
-                  ),
+              pw.Text(
+                entrepriseNomFinal,
+                style: pw.TextStyle(
+                  fontWeight: pw.FontWeight.bold,
+                  fontSize: 18,
                 ),
-                if (entreprise.adresse != null)
-                  pw.Text(
-                    entreprise.adresse!,
-                    style: const pw.TextStyle(color: PdfColors.grey700),
-                  ),
-                if (entreprise.telephone != null)
-                  pw.Text(
-                    'Tel : ${entreprise.telephone!}',
-                    style: const pw.TextStyle(color: PdfColors.grey700),
-                  ),
-                if (entreprise.email != null)
-                  pw.Text(
-                    'Email : ${entreprise.email!}',
-                    style: const pw.TextStyle(color: PdfColors.grey700),
-                  ),
-              ],
+              ),
               pw.Divider(thickness: 2, height: 20, color: accentColor),
 
               // Titre
@@ -116,7 +102,7 @@ class PdfService {
                 ),
               ),
               pw.SizedBox(height: 8),
-              pw.Table.fromTextArray(
+              pw.TableHelper.fromTextArray(
                 cellAlignment: pw.Alignment.centerLeft,
                 headerStyle: pw.TextStyle(
                   fontWeight: pw.FontWeight.bold,
@@ -128,7 +114,7 @@ class PdfService {
                     .map(
                       (p) => [
                         p.datePaiement,
-                        '${NumberFormat("#,##0", "fr_FR").format(p.montantPaye)} $devise',
+                        '${NumberFormat("#,##0", "fr_FR").format(p.montantPaye)} $deviseFinal',
                         'Admin',
                       ],
                     )
@@ -155,7 +141,7 @@ class PdfService {
                     crossAxisAlignment: pw.CrossAxisAlignment.end,
                     children: [
                       pw.Text(
-                        'Total Paye : ${NumberFormat("#,##0", "fr_FR").format(fraisDetail.montantPaye)} $devise',
+                        'Total Paye : ${NumberFormat("#,##0", "fr_FR").format(fraisDetail.montantPaye)} $deviseFinal',
                         style: pw.TextStyle(
                           fontSize: 12,
                           fontWeight: pw.FontWeight.bold,
@@ -163,7 +149,7 @@ class PdfService {
                       ),
                       pw.SizedBox(height: 4),
                       pw.Text(
-                        'Reste a Payer : ${NumberFormat("#,##0", "fr_FR").format(fraisDetail.resteAPayer)} $devise',
+                        'Reste a Payer : ${NumberFormat("#,##0", "fr_FR").format(fraisDetail.resteAPayer)} $deviseFinal',
                         style: pw.TextStyle(
                           fontSize: 12,
                           fontWeight: pw.FontWeight.bold,

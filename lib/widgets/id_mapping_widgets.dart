@@ -158,19 +158,18 @@ class IdMappingResultWidget extends StatelessWidget {
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         subtitle: Text('${mappings.length} élément(s) mappé(s)'),
-        children:
-            mappings
-                .map(
-                  (mapping) => ListTile(
-                    dense: true,
-                    leading: Icon(Icons.arrow_forward, size: 16),
-                    title: Text(
-                      'ID Local: ${mapping.idLocal} → ID Serveur: ${mapping.idServeur}',
-                      style: TextStyle(fontFamily: 'monospace', fontSize: 12),
-                    ),
-                  ),
-                )
-                .toList(),
+        children: mappings
+            .map(
+              (mapping) => ListTile(
+                dense: true,
+                leading: Icon(Icons.arrow_forward, size: 16),
+                title: Text(
+                  'ID Local: ${mapping.idLocal} → ID Serveur: ${mapping.idServeur}',
+                  style: TextStyle(fontFamily: 'monospace', fontSize: 12),
+                ),
+              ),
+            )
+            .toList(),
       );
     }).toList();
   }
@@ -197,6 +196,8 @@ class IdMappingResultWidget extends StatelessWidget {
         return Icons.calendar_today;
       case 'frais_scolaires':
         return Icons.attach_money;
+      case 'frais_classes':
+        return Icons.class_;
       case 'paiements':
         return Icons.payment;
       case 'utilisateurs':
@@ -255,8 +256,9 @@ class IdMappingHistoryWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final responsesWithMapping =
-        uploadHistory.where((response) => response.hasIdMapping).toList();
+    final responsesWithMapping = uploadHistory
+        .where((response) => response.hasIdMapping)
+        .toList();
 
     if (responsesWithMapping.isEmpty) {
       return Card(
@@ -330,22 +332,21 @@ class IdMappingHistoryWidget extends StatelessWidget {
   void _showMappingDetails(BuildContext context, SyncUploadResponse response) {
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Text('Détails du mapping'),
-            content: SingleChildScrollView(
-              child: IdMappingResultWidget(
-                uploadResponse: response,
-                showDetails: true,
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text('Fermer'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: Text('Détails du mapping'),
+        content: SingleChildScrollView(
+          child: IdMappingResultWidget(
+            uploadResponse: response,
+            showDetails: true,
           ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: Text('Fermer'),
+          ),
+        ],
+      ),
     );
   }
 }

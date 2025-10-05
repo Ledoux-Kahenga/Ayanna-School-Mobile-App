@@ -8,6 +8,7 @@ part of 'annee_scolaire.dart';
 
 AnneeScolaire _$AnneeScolaireFromJson(Map<String, dynamic> json) =>
     AnneeScolaire(
+      id: (json['id'] as num?)?.toInt(),
       serverId: (json['id'] as num?)?.toInt(),
       nom: json['nom'] as String,
       dateDebut: DateTime.parse(json['date_debut'] as String),

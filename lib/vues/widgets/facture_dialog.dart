@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../models/models.dart';
+import '../../models/entities/eleve.dart';
+import '../../models/frais_details.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:pdf/pdf.dart';
 import 'package:printing/printing.dart';

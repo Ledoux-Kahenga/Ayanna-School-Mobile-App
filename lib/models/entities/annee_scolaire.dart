@@ -21,8 +21,8 @@ part 'annee_scolaire.g.dart';
 )
 @JsonSerializable()
 class AnneeScolaire {
-  @PrimaryKey(autoGenerate: true)
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @PrimaryKey(autoGenerate: false)
+  @JsonKey(includeToJson: false)
   final int? id;
 
   @ColumnInfo(name: 'server_id')

@@ -2,6 +2,14 @@ import 'package:json_annotation/json_annotation.dart';
 
 part 'sync_response.g.dart';
 
+/// Fonction utilitaire pour convertir int/bool en bool
+bool _parseBool(dynamic value) {
+  if (value is bool) return value;
+  if (value is int) return value != 0;
+  if (value is String) return value.toLowerCase() == 'true';
+  return false;
+}
+
 @JsonSerializable()
 class SyncResponse {
   final bool success;

@@ -8,6 +8,7 @@ part of 'ecriture_comptable.dart';
 
 EcritureComptable _$EcritureComptableFromJson(Map<String, dynamic> json) =>
     EcritureComptable(
+      id: (json['id'] as num?)?.toInt(),
       serverId: (json['id'] as num?)?.toInt(),
       journalId: (json['journal_id'] as num).toInt(),
       compteComptableId: (json['compte_comptable_id'] as num).toInt(),

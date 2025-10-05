@@ -1,12 +1,12 @@
 import 'package:floor/floor.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'entreprise.dart';
-
+import '../helpers/parse_helper.dart';
 part 'classe_comptable.g.dart';
 
 @Entity(
   tableName: 'classes_comptables',
-    indices: [
+  indices: [
     // Contrainte d'unicité sur server_id pour éviter les doublons
     // Permet la gestion automatique des conflits
     Index(value: ['server_id'], unique: true),
@@ -21,9 +21,10 @@ part 'classe_comptable.g.dart';
 )
 @JsonSerializable()
 class ClasseComptable {
-  @PrimaryKey(autoGenerate: true)
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @PrimaryKey(autoGenerate: false)
+  @JsonKey(includeToJson: false)
   final int? id;
+ 
 
   @ColumnInfo(name: 'server_id')
   @JsonKey(name: 'id')
@@ -42,6 +43,7 @@ class ClasseComptable {
   @JsonKey(name: 'entreprise_id')
   int entrepriseId;
 
+  @JsonKey(name: 'actif', fromJson: parseBool)
   bool? actif;
   String? document;
 

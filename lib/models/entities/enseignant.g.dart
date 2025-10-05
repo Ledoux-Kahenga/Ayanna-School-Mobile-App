@@ -7,6 +7,7 @@ part of 'enseignant.dart';
 // **************************************************************************
 
 Enseignant _$EnseignantFromJson(Map<String, dynamic> json) => Enseignant(
+      id: (json['id'] as num?)?.toInt(),
       serverId: (json['id'] as num?)?.toInt(),
       matricule: json['matricule'] as String?,
       nom: json['nom'] as String,

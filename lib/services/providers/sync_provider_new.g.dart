@@ -6,7 +6,7 @@ part of 'sync_provider_new.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$syncServiceHash() => r'1414f301bb70b333fd85dfd5c91260024a976d33';
+String _$syncServiceHash() => r'9bd1e552daf3dd7f22f04dc7251e8b11466f0e84';
 
 /// Provider pour le service de synchronisation
 ///
@@ -38,7 +38,7 @@ final syncManagerProvider = AutoDisposeProvider<SyncManager>.internal(
 );
 
 typedef SyncManagerRef = AutoDisposeProviderRef<SyncManager>;
-String _$syncStateNotifierHash() => r'2a93aa23ee6b523ae37fed4f00f77f88ece3a0af';
+String _$syncStateNotifierHash() => r'8fc59ec9a34080b596d3d0b8f91e77fc0cdbe2ec';
 
 /// Provider pour l'état de synchronisation
 ///

@@ -7,13 +7,14 @@ part of 'utilisateur.dart';
 // **************************************************************************
 
 Utilisateur _$UtilisateurFromJson(Map<String, dynamic> json) => Utilisateur(
+      id: (json['id'] as num?)?.toInt(),
       serverId: (json['id'] as num?)?.toInt(),
       nom: json['nom'] as String,
       prenom: json['prenom'] as String,
       email: json['email'] as String,
       motDePasseHash: json['mot_de_passe_hash'] as String,
       role: json['role'] as String,
-      actif: json['actif'] as bool?,
+      actif: parseBool(json['actif']),
       entrepriseId: (json['entreprise_id'] as num).toInt(),
       dateCreation: DateTime.parse(json['date_creation'] as String),
       dateModification: DateTime.parse(json['date_modification'] as String),

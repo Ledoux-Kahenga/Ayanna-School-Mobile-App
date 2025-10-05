@@ -14,6 +14,7 @@ import 'entities/compte_comptable.dart';
 import 'entities/licence.dart';
 import 'entities/periode.dart';
 import 'entities/frais_scolaire.dart';
+import 'entities/frais_classes.dart';
 import 'entities/cours.dart';
 import 'entities/note_periode.dart';
 import 'entities/paiement_frais.dart';
@@ -38,6 +39,7 @@ import 'dao/compte_comptable_dao.dart';
 import 'dao/licence_dao.dart';
 import 'dao/periode_dao.dart';
 import 'dao/frais_scolaire_dao.dart';
+import 'dao/frais_classes_dao.dart';
 import 'dao/cours_dao.dart';
 import 'dao/notes_periode_dao.dart';
 import 'dao/paiement_frais_dao.dart';
@@ -53,7 +55,7 @@ part 'app_database.g.dart';
 
 @TypeConverters([DateTimeConverter, DateTimeNullableConverter])
 @Database(
-  version: 1,
+  version: 4,
   entities: [
     Entreprise,
     Utilisateur,
@@ -67,6 +69,7 @@ part 'app_database.g.dart';
     Licence,
     Periode,
     FraisScolaire,
+    FraisClasses,
     Cours,
     NotePeriode,
     PaiementFrais,
@@ -92,6 +95,7 @@ abstract class AppDatabase extends FloorDatabase {
   LicenceDao get licenceDao;
   PeriodeDao get periodeDao;
   FraisScolaireDao get fraisScolaireDao;
+  FraisClassesDao get fraisClassesDao;
   CoursDao get coursDao;
   NotePeriodeDao get notePeriodeDao;
   PaiementFraisDao get paiementFraisDao;

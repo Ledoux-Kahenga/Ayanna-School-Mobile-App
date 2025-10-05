@@ -1,28 +1,19 @@
-// lib/services/app_preferences.dart
-
-import '../models/models.dart';
-import 'school_queries.dart';
-
+/// Service pour gérer les préférences de l'application
 class AppPreferences {
-  // Singleton pour une instance unique
   static final AppPreferences _instance = AppPreferences._internal();
-  factory AppPreferences() => _instance;
+
+  factory AppPreferences() {
+    return _instance;
+  }
+
   AppPreferences._internal();
 
-  Entreprise? _currentEntreprise;
+  /// Devise utilisée dans l'application
+  String get devise => 'CDF';
 
+  /// Initialisation des préférences
   Future<void> init() async {
-    // Supposons que l'entreprise avec l'ID 2 est l'entreprise active
-    // Idéalement, cet ID devrait être stocké après la connexion de l'utilisateur
-    _currentEntreprise = await SchoolQueries.getEntrepriseById(2);
-  }
-
-  String get devise {
-    // Retourne la devise de l'entreprise ou '$' par défaut
-    return _currentEntreprise?.devise ?? '\$';
-  }
-
-  Entreprise? get entreprise {
-    return _currentEntreprise;
+    // Pour l'instant, pas besoin d'initialisation spéciale
+    // À implémenter si nécessaire avec shared_preferences
   }
 }

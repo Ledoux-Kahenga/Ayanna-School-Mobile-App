@@ -6,7 +6,7 @@ part of 'database_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
-String _$databaseHash() => r'480a61928ec72fd7c0b63584aebd5f1cb5ca62e4';
+String _$databaseHash() => r'26cc129bcd29cb84f5b38f700da1599e575d5a90';
 
 /// See also [database].
 @ProviderFor(database)
@@ -168,7 +168,7 @@ final periodeDaoProvider = AutoDisposeProvider<PeriodeDao>.internal(
 );
 
 typedef PeriodeDaoRef = AutoDisposeProviderRef<PeriodeDao>;
-String _$fraisScolaireDaoHash() => r'1df83c3df3462f83bfb5a0fb0c174665d6467cf5';
+String _$fraisScolaireDaoHash() => r'b07321a84d9284eb2186ecfd7e121a6fe9be60c8';
 
 /// See also [fraisScolaireDao].
 @ProviderFor(fraisScolaireDao)
@@ -355,5 +355,20 @@ final periodesClassesDaoProvider =
 );
 
 typedef PeriodesClassesDaoRef = AutoDisposeProviderRef<PeriodesClassesDao>;
+String _$fraisClassesDaoHash() => r'53ccc287d4f1449d99ee589bb6fe0af8478da85b';
+
+/// See also [fraisClassesDao].
+@ProviderFor(fraisClassesDao)
+final fraisClassesDaoProvider = AutoDisposeProvider<FraisClassesDao>.internal(
+  fraisClassesDao,
+  name: r'fraisClassesDaoProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$fraisClassesDaoHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef FraisClassesDaoRef = AutoDisposeProviderRef<FraisClassesDao>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member

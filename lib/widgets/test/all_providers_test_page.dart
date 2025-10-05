@@ -162,7 +162,7 @@ class AllProvidersTestPage extends ConsumerWidget {
               ),
               _buildProviderItem(
                 'ConnectivityProvider',
-                () => ref.read(connectivityProvider),
+                () => ref.read(connectivityNotifierProvider),
               ),
               _buildProviderItem(
                 'SyncStateNotifier',

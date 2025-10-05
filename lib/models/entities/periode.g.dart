@@ -7,6 +7,7 @@ part of 'periode.dart';
 // **************************************************************************
 
 Periode _$PeriodeFromJson(Map<String, dynamic> json) => Periode(
+      id: (json['id'] as num?)?.toInt(),
       serverId: (json['id'] as num?)?.toInt(),
       code: json['code'] as String?,
       nom: json['nom'] as String,

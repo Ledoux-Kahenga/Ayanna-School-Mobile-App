@@ -8,6 +8,7 @@ part of 'periodes_classes.dart';
 
 PeriodesClasses _$PeriodesClassesFromJson(Map<String, dynamic> json) =>
     PeriodesClasses(
+      id: (json['id'] as num?)?.toInt(),
       serverId: (json['id'] as num?)?.toInt(),
       classeId: (json['classe_id'] as num).toInt(),
       periodeId: (json['periode_id'] as num).toInt(),

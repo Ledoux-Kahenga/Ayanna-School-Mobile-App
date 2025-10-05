@@ -46,6 +46,9 @@ abstract class CoursDao {
 
   @delete
   Future<void> deleteCours(Cours cours);
+  
+  @Query('DELETE FROM cours')
+  Future<void> deleteAllCours();
 
   @Query('DELETE FROM cours WHERE classe_id = :classeId')
   Future<void> deleteCoursByClasse(int classeId);

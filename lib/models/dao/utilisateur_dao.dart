@@ -6,6 +6,11 @@ abstract class UtilisateurDao {
   @Query('SELECT * FROM utilisateurs')
   Future<List<Utilisateur>> getAllUtilisateurs();
 
+  @Query(
+    'SELECT * FROM utilisateurs WHERE email = :email AND mot_de_passe_hash = :password limit 1',
+  )
+  Future<Utilisateur?> loginLocalement(String email, String password);
+
   @Query('SELECT * FROM utilisateurs WHERE id = :id')
   Future<Utilisateur?> getUtilisateurById(int id);
 
@@ -32,6 +37,9 @@ abstract class UtilisateurDao {
 
   @delete
   Future<void> deleteUtilisateur(Utilisateur utilisateur);
+
+  @Query('DELETE FROM utilisateurs')
+  Future<void> deleteAllUtilisateurs();
 
   @Query('DELETE FROM utilisateurs WHERE entreprise_id = :entrepriseId')
   Future<void> deleteUtilisateursByEntreprise(int entrepriseId);

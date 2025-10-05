@@ -20,6 +20,7 @@ import 'package:ayanna_school/models/dao/licence_dao.dart';
 import 'package:ayanna_school/models/dao/config_ecole_dao.dart';
 import 'package:ayanna_school/models/dao/comptes_config_dao.dart';
 import 'package:ayanna_school/models/dao/periodes_classes_dao.dart';
+import 'package:ayanna_school/models/dao/frais_classes_dao.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import '../../models/app_database.dart';
 
@@ -35,9 +36,6 @@ void initializeDatabase() async {
 @riverpod
 AppDatabase database(DatabaseRef ref) {
   // Dispose de la base de données quand le provider n'est plus utilisé
-  ref.onDispose(() async {
-    await floorDb.close();
-  });
   return floorDb;
 }
 
@@ -172,4 +170,10 @@ ComptesConfigDao comptesConfigDao(ComptesConfigDaoRef ref) {
 PeriodesClassesDao periodesClassesDao(PeriodesClassesDaoRef ref) {
   final db = ref.watch(databaseProvider);
   return db.periodesClassesDao;
+}
+
+@riverpod
+FraisClassesDao fraisClassesDao(FraisClassesDaoRef ref) {
+  final db = ref.watch(databaseProvider);
+  return db.fraisClassesDao;
 }

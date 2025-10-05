@@ -7,6 +7,7 @@ part of 'note_periode.dart';
 // **************************************************************************
 
 NotePeriode _$NotePeriodeFromJson(Map<String, dynamic> json) => NotePeriode(
+      id: (json['id'] as num?)?.toInt(),
       serverId: (json['id'] as num?)?.toInt(),
       eleveId: (json['eleve_id'] as num).toInt(),
       coursId: (json['cours_id'] as num).toInt(),

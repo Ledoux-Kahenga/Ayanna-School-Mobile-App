@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
-import '../../models/models.dart';
-import '../../services/school_queries.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ayanna_school/models/entities/entities.dart';
+import 'package:ayanna_school/services/providers/providers.dart';
 import '../../theme/ayanna_theme.dart';
 
-class EditEleveScreen extends StatefulWidget {
+class EditEleveScreen extends ConsumerStatefulWidget {
   final Eleve eleve;
   const EditEleveScreen({super.key, required this.eleve});
 
   @override
-  State<EditEleveScreen> createState() => _EditEleveScreenState();
+  ConsumerState<EditEleveScreen> createState() => _EditEleveScreenState();
 }
 
-class _EditEleveScreenState extends State<EditEleveScreen> {
+class _EditEleveScreenState extends ConsumerState<EditEleveScreen> {
   final _formKey = GlobalKey<FormState>();
 
   // Élève
@@ -43,67 +44,111 @@ class _EditEleveScreenState extends State<EditEleveScreen> {
   Future<void> _loadAllData() async {
     setState(() => isLoading = true);
 
-    // Charger les infos de l'élève
-    final eleve = widget.eleve;
-    nom = eleve.nom;
-    prenom = eleve.prenom;
-    postnom = eleve.postnom ?? '';
-    sexe = eleve.sexe;
-    if (sexe == 'Masculin') {
-      sexe = 'M';
-    } else if (sexe == 'Féminin') {
-      sexe = 'F';
-    }
-    dateNaissance = eleve.dateNaissance;
-    lieuNaissance = eleve.lieuNaissance;
-    numeroPermanent = eleve.numeroPermanent;
-    classeId = eleve.classeId;
-    statut = eleve.statut ?? 'actif';
+    try {
+      final eleve = widget.eleve;
+      nom = eleve.nom;
+      prenom = eleve.prenom;
+      postnom = eleve.postnom ?? '';
+      sexe = eleve.sexe;
+      if (sexe == 'Masculin') {
+        sexe = 'M';
+      } else if (sexe == 'Féminin') {
+        sexe = 'F';
+      }
+      dateNaissance = eleve.dateNaissance?.toIso8601String().split('T')[0];
+      lieuNaissance = eleve.lieuNaissance;
+      numeroPermanent = eleve.numeroPermanent;
+      classeId = eleve.classeId;
+      statut = eleve.statut ?? 'actif';
 
-    // Charger le responsable
-    if (eleve.responsableId != null) {
-      responsable = await SchoolQueries.getResponsableById(eleve.responsableId ?? 0);
-    }
-    responsableNom = responsable?.nom ?? '';
-    responsableTelephone = responsable?.telephone ?? '';
-    responsableAdresse = responsable?.adresse ?? '';
+      // Charger le responsable
+      if (eleve.responsableId != null) {
+        final allResponsables = await ref.read(
+          responsablesNotifierProvider.future,
+        );
+        responsable = allResponsables.firstWhere(
+          (r) => r.id == eleve.responsableId,
+          orElse: () => Responsable(
+            id: null,
+            serverId: null,
+            isSync: false,
+            nom: null,
+            code: null,
+            telephone: null,
+            adresse: null,
+            dateCreation: DateTime.now(),
+            dateModification: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        );
+      }
+      responsableNom = responsable?.nom ?? '';
+      responsableTelephone = responsable?.telephone ?? '';
+      responsableAdresse = responsable?.adresse ?? '';
 
-    // Charger les classes de l'année scolaire en cours
-    final annee = await SchoolQueries.getCurrentAnneeScolaire();
-    if (annee != null) {
-      classesDisponibles = await SchoolQueries.getClassesByAnnee(annee.id);
+      // Charger les classes de l'année scolaire en cours
+      final annee = await ref.read(currentAnneeScolaireProvider.future);
+      if (annee != null) {
+        final allClasses = await ref.read(classesNotifierProvider.future);
+        classesDisponibles = allClasses
+            .where((classe) => classe.anneeScolaireId == annee.id)
+            .toList();
+      }
+    } catch (e) {
+      print('Erreur chargement donnees: $e');
+    } finally {
+      if (mounted) setState(() => isLoading = false);
     }
-
-    if (mounted) setState(() => isLoading = false);
   }
 
   Future<void> _updateEleve() async {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
 
-      // 1. Mettre à jour le responsable
-      if (responsable != null) {
-        await SchoolQueries.updateResponsable(responsable!.id, {
-          'nom': responsableNom,
-          'telephone': responsableTelephone,
-          'adresse': responsableAdresse,
-        });
+      try {
+        // 1. Mettre à jour le responsable
+        if (responsable != null && responsable!.id != null) {
+          final updatedResponsable = responsable!.copyWith(
+            nom: responsableNom,
+            telephone: responsableTelephone,
+            adresse: responsableAdresse,
+            dateModification: DateTime.now(),
+            updatedAt: DateTime.now(),
+          );
+          await ref
+              .read(responsablesNotifierProvider.notifier)
+              .updateResponsable(updatedResponsable);
+        }
+
+        // 2. Mettre à jour l'élève
+        final updatedEleve = widget.eleve.copyWith(
+          nom: nom,
+          prenom: prenom,
+          postnom: postnom,
+          sexe: sexe,
+          dateNaissance: dateNaissance != null
+              ? DateTime.tryParse(dateNaissance!)
+              : null,
+          lieuNaissance: lieuNaissance,
+          numeroPermanent: numeroPermanent,
+          classeId: classeId,
+          statut: statut,
+          dateModification: DateTime.now(),
+          updatedAt: DateTime.now(),
+        );
+        await ref
+            .read(elevesNotifierProvider.notifier)
+            .updateEleve(updatedEleve);
+
+        if (mounted) Navigator.of(context).pop(true);
+      } catch (e) {
+        print('Erreur mise a jour eleve: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Erreur: $e')));
+        }
       }
-
-      // 2. Mettre à jour l'élève
-      await SchoolQueries.updateEleve(widget.eleve.id, {
-        'nom': nom,
-        'prenom': prenom,
-        'postnom': postnom,
-        'sexe': sexe,
-        'date_naissance': dateNaissance,
-        'lieu_naissance': lieuNaissance,
-        'numero_permanent': numeroPermanent,
-        'classe_id': classeId,
-        'statut': statut,
-      });
-
-      if (mounted) Navigator.of(context).pop(true);
     }
   }
 
@@ -119,7 +164,6 @@ class _EditEleveScreenState extends State<EditEleveScreen> {
       borderSide: BorderSide(color: AyannaColors.orange, width: 1.0),
     ),
   );
-
 
   @override
   Widget build(BuildContext context) {
@@ -159,7 +203,8 @@ class _EditEleveScreenState extends State<EditEleveScreen> {
                                 decoration: _formFieldDecoration.copyWith(
                                   labelText: 'Nom',
                                 ),
-                                validator: (v) => v!.isEmpty ? 'Champ requis' : null,
+                                validator: (v) =>
+                                    v!.isEmpty ? 'Champ requis' : null,
                                 onSaved: (v) => nom = v!,
                               ),
                               const SizedBox(height: 12),
@@ -185,8 +230,14 @@ class _EditEleveScreenState extends State<EditEleveScreen> {
                                   labelText: 'Sexe',
                                 ),
                                 items: const [
-                                  DropdownMenuItem(value: 'M', child: Text('Masculin')),
-                                  DropdownMenuItem(value: 'F', child: Text('Féminin')),
+                                  DropdownMenuItem(
+                                    value: 'M',
+                                    child: Text('Masculin'),
+                                  ),
+                                  DropdownMenuItem(
+                                    value: 'F',
+                                    child: Text('Féminin'),
+                                  ),
                                 ],
                                 onChanged: (v) => setState(() => sexe = v),
                               ),
@@ -221,10 +272,16 @@ class _EditEleveScreenState extends State<EditEleveScreen> {
                                   labelText: 'Classe',
                                 ),
                                 items: classesDisponibles
-                                    .map((c) => DropdownMenuItem(value: c.id, child: Text(c.nom)))
+                                    .map(
+                                      (c) => DropdownMenuItem(
+                                        value: c.id,
+                                        child: Text(c.nom),
+                                      ),
+                                    )
                                     .toList(),
                                 onChanged: (v) => setState(() => classeId = v),
-                                validator: (v) => v == null ? 'Classe requise' : null,
+                                validator: (v) =>
+                                    v == null ? 'Classe requise' : null,
                               ),
                             ],
                           ),

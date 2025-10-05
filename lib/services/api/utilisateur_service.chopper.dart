@@ -19,7 +19,7 @@ final class _$UtilisateurService extends UtilisateurService {
 
   @override
   Future<Response<List<Map<String, dynamic>>>> getUtilisateurs() {
-    final Uri $url = Uri.parse('/utilisateurs');
+    final Uri $url = Uri.parse('/auth');
     final Request $request = Request(
       'GET',
       $url,
@@ -31,7 +31,7 @@ final class _$UtilisateurService extends UtilisateurService {
 
   @override
   Future<Response<Map<String, dynamic>>> getUtilisateur(int id) {
-    final Uri $url = Uri.parse('/utilisateurs/${id}');
+    final Uri $url = Uri.parse('/auth/${id}');
     final Request $request = Request(
       'GET',
       $url,
@@ -43,7 +43,7 @@ final class _$UtilisateurService extends UtilisateurService {
   @override
   Future<Response<Map<String, dynamic>>> createUtilisateur(
       Map<String, dynamic> utilisateur) {
-    final Uri $url = Uri.parse('/utilisateurs');
+    final Uri $url = Uri.parse('/auth');
     final $body = utilisateur;
     final Request $request = Request(
       'POST',
@@ -59,7 +59,7 @@ final class _$UtilisateurService extends UtilisateurService {
     int id,
     Map<String, dynamic> utilisateur,
   ) {
-    final Uri $url = Uri.parse('/utilisateurs/${id}');
+    final Uri $url = Uri.parse('/auth/${id}');
     final $body = utilisateur;
     final Request $request = Request(
       'PUT',
@@ -72,7 +72,7 @@ final class _$UtilisateurService extends UtilisateurService {
 
   @override
   Future<Response<void>> deleteUtilisateur(int id) {
-    final Uri $url = Uri.parse('/utilisateurs/${id}');
+    final Uri $url = Uri.parse('/auth/${id}');
     final Request $request = Request(
       'DELETE',
       $url,
@@ -84,7 +84,7 @@ final class _$UtilisateurService extends UtilisateurService {
   @override
   Future<Response<Map<String, dynamic>>> login(
       Map<String, dynamic> credentials) {
-    final Uri $url = Uri.parse('/utilisateurs/login');
+    final Uri $url = Uri.parse('/auth/login');
     final $body = credentials;
     final Request $request = Request(
       'POST',
@@ -97,7 +97,7 @@ final class _$UtilisateurService extends UtilisateurService {
 
   @override
   Future<Response<void>> logout() {
-    final Uri $url = Uri.parse('/utilisateurs/logout');
+    final Uri $url = Uri.parse('/auth/logout');
     final Request $request = Request(
       'POST',
       $url,
@@ -109,7 +109,7 @@ final class _$UtilisateurService extends UtilisateurService {
   @override
   Future<Response<Map<String, dynamic>>> changePassword(
       Map<String, dynamic> passwordData) {
-    final Uri $url = Uri.parse('/utilisateurs/change-password');
+    final Uri $url = Uri.parse('/auth/change-password');
     final $body = passwordData;
     final Request $request = Request(
       'POST',
@@ -122,7 +122,7 @@ final class _$UtilisateurService extends UtilisateurService {
 
   @override
   Future<Response<Map<String, dynamic>>> getUtilisateurByEmail(String email) {
-    final Uri $url = Uri.parse('/utilisateurs/by-email/${email}');
+    final Uri $url = Uri.parse('/auth/by-email/${email}');
     final Request $request = Request(
       'GET',
       $url,
@@ -134,7 +134,7 @@ final class _$UtilisateurService extends UtilisateurService {
   @override
   Future<Response<List<Map<String, dynamic>>>> syncUtilisateurs(
       List<Map<String, dynamic>> utilisateurs) {
-    final Uri $url = Uri.parse('/utilisateurs/sync');
+    final Uri $url = Uri.parse('/auth/sync');
     final $body = utilisateurs;
     final Request $request = Request(
       'POST',

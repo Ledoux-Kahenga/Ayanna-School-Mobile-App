@@ -8,6 +8,7 @@ part of 'journal_comptable.dart';
 
 JournalComptable _$JournalComptableFromJson(Map<String, dynamic> json) =>
     JournalComptable(
+      id: (json['id'] as num?)?.toInt(),
       serverId: (json['id'] as num?)?.toInt(),
       dateOperation: DateTime.parse(json['date_operation'] as String),
       libelle: json['libelle'] as String,

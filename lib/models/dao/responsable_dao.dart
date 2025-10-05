@@ -56,6 +56,9 @@ abstract class ResponsableDao {
   @delete
   Future<void> deleteResponsable(Responsable responsable);
 
+  @Query('DELETE FROM responsables')
+  Future<void> deleteAllResponsables();
+  
   @Query('DELETE FROM responsables WHERE type_responsable = :typeResponsable')
   Future<void> deleteResponsablesByType(String typeResponsable);
 

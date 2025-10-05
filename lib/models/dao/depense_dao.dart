@@ -62,6 +62,9 @@ abstract class DepenseDao {
   @delete
   Future<void> deleteDepense(Depense depense);
 
+  @Query('DELETE FROM depenses')
+  Future<void> deleteAllDepenses();
+  
   @Query('DELETE FROM depenses WHERE entreprise_id = :entrepriseId')
   Future<void> deleteDepensesByEntreprise(int entrepriseId);
 

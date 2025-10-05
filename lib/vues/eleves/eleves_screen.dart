@@ -1,22 +1,23 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../widgets/ayanna_appbar.dart';
 import '../widgets/ayanna_drawer.dart';
-import '../../models/models.dart';
+import 'package:ayanna_school/models/entities/entities.dart';
 import 'package:pdf/widgets.dart' as pw;
 import 'package:printing/printing.dart';
 import '../../theme/ayanna_theme.dart';
-import '../../services/school_queries.dart';
-import 'edit_eleve_screen.dart'; // Assurez-vous d'importer l'écran de modification
+import 'package:ayanna_school/services/providers/providers.dart';
+import 'edit_eleve_screen.dart';
 
-class ElevesScreen extends StatefulWidget {
+class ElevesScreen extends ConsumerStatefulWidget {
   final AnneeScolaire? anneeScolaire;
   const ElevesScreen({super.key, this.anneeScolaire});
 
   @override
-  State<ElevesScreen> createState() => _ElevesScreenState();
+  ConsumerState<ElevesScreen> createState() => _ElevesScreenState();
 }
 
-class _ElevesScreenState extends State<ElevesScreen> {
+class _ElevesScreenState extends ConsumerState<ElevesScreen> {
   String searchQuery = '';
   Classe? selectedClasse;
   String? selectedStatut;
@@ -32,34 +33,49 @@ class _ElevesScreenState extends State<ElevesScreen> {
     _initData(); // Appel de la nouvelle fonction de chargement
   }
 
-  // MODIFIÉ : Nouvelle fonction centralisée pour charger toutes les données nécessaires
+  // Fonction centralisée pour charger toutes les données nécessaires
   Future<void> _initData() async {
     setState(() => isLoading = true);
 
-    // 1. Détermine quelle année scolaire utiliser
-    AnneeScolaire? anneeScolaireAUtiliser = widget.anneeScolaire;
-    anneeScolaireAUtiliser ??= await SchoolQueries.getCurrentAnneeScolaire();
-
-    // 2. Si une année scolaire est trouvée, charge les classes et les élèves
-    if (anneeScolaireAUtiliser != null) {
-      final loadedClasses = await SchoolQueries.getClassesByAnnee(
-        anneeScolaireAUtiliser.id,
-      );
-      final loadedEleves = await SchoolQueries.getElevesByAnnee(
-        anneeScolaireAUtiliser.id,
-      );
-
-      if (mounted) {
-        setState(() {
-          classes = loadedClasses;
-          eleves = loadedEleves;
-          filteredEleves = eleves;
-        });
+    try {
+      // 1. Détermine quelle année scolaire utiliser
+      AnneeScolaire? anneeScolaireAUtiliser = widget.anneeScolaire;
+      if (anneeScolaireAUtiliser == null) {
+        anneeScolaireAUtiliser = await ref.read(
+          currentAnneeScolaireProvider.future,
+        );
       }
-    }
 
-    if (mounted) {
-      setState(() => isLoading = false);
+      if (anneeScolaireAUtiliser != null) {
+        // 2. Charge les classes filtrées par année scolaire
+        final allClasses = await ref.read(classesNotifierProvider.future);
+        final loadedClasses = allClasses
+            .where(
+              (classe) => classe.anneeScolaireId == anneeScolaireAUtiliser!.id,
+            )
+            .toList();
+
+        // 3. Charge les élèves filtrés par année scolaire (via les classes)
+        final allEleves = await ref.read(elevesNotifierProvider.future);
+        final classeIds = loadedClasses.map((c) => c.id).toSet();
+        final loadedEleves = allEleves
+            .where((eleve) => classeIds.contains(eleve.classeId))
+            .toList();
+
+        if (mounted) {
+          setState(() {
+            classes = loadedClasses;
+            eleves = loadedEleves;
+            filteredEleves = eleves;
+          });
+        }
+      }
+    } catch (e) {
+      print('Erreur lors du chargement des données: $e');
+    } finally {
+      if (mounted) {
+        setState(() => isLoading = false);
+      }
     }
   }
 
@@ -80,6 +96,11 @@ class _ElevesScreenState extends State<ElevesScreen> {
   }
 
   Future<void> _exportPDF() async {
+    // Charger les responsables et classes pour le PDF
+    final allResponsables = await ref.read(responsablesNotifierProvider.future);
+    final responsablesMap = {for (var r in allResponsables) r.id: r};
+    final classesMap = {for (var c in classes) c.id: c};
+
     final pdf = pw.Document();
     pdf.addPage(
       pw.Page(
@@ -104,18 +125,23 @@ class _ElevesScreenState extends State<ElevesScreen> {
                   'Responsable',
                   'Tél Responsable',
                 ],
-                data: filteredEleves
-                    .map(
-                      (e) => [
-                        e.nom,
-                        e.postnom,
-                        e.prenom,
-                        e.classeNom ?? '-',
-                        e.responsableNom,
-                        e.responsableTelephone ?? '-',
-                      ],
-                    )
-                    .toList(),
+                data: filteredEleves.map((e) {
+                  final responsable = e.responsableId != null
+                      ? responsablesMap[e.responsableId]
+                      : null;
+                  final classe = e.classeId != null
+                      ? classesMap[e.classeId]
+                      : null;
+
+                  return [
+                    e.nom,
+                    e.postnom ?? '-',
+                    e.prenom,
+                    classe?.nom ?? '-',
+                    responsable?.nom ?? '-',
+                    responsable?.telephone ?? '-',
+                  ];
+                }).toList(),
               ),
             ],
           );
@@ -148,33 +174,30 @@ class _ElevesScreenState extends State<ElevesScreen> {
         padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 16.0),
         child: Column(
           children: [
-           Container(
-                decoration: const BoxDecoration(
-                  border: Border(
-                    bottom: BorderSide(
-                      color: AyannaColors.orange,
-                      width: 2.0,
-                    ),
-                  ),
+            Container(
+              decoration: const BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(color: AyannaColors.orange, width: 2.0),
                 ),
+              ),
               child: TextField(
                 decoration: InputDecoration(
-                      hintText: 'Rechercher un élève',
-                      hintStyle: const TextStyle(color: Color(0xFF666666)),
-                      prefixIcon: const Icon(
-                        Icons.search,
-                        color: AyannaColors.orange,
-                      ),
-                      filled: true,
-                      fillColor: AyannaColors.white,
-                      contentPadding: const EdgeInsets.symmetric(
-                        vertical: 15,
-                        horizontal: 16,
-                      ),
-                      enabledBorder: InputBorder.none,
-                      focusedBorder: InputBorder.none,
-                    ),
-                  
+                  hintText: 'Rechercher un élève',
+                  hintStyle: const TextStyle(color: Color(0xFF666666)),
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    color: AyannaColors.orange,
+                  ),
+                  filled: true,
+                  fillColor: AyannaColors.white,
+                  contentPadding: const EdgeInsets.symmetric(
+                    vertical: 15,
+                    horizontal: 16,
+                  ),
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                ),
+
                 onChanged: (value) {
                   searchQuery = value;
                   _filterEleves();
@@ -192,18 +215,27 @@ class _ElevesScreenState extends State<ElevesScreen> {
                       labelText: 'Classe',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.zero,
-                        borderSide: const BorderSide(color: AyannaColors.orange, width: 0.5),
+                        borderSide: const BorderSide(
+                          color: AyannaColors.orange,
+                          width: 0.5,
+                        ),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.zero,
-                        borderSide: const BorderSide(color: AyannaColors.orange, width: 0.5),
+                        borderSide: const BorderSide(
+                          color: AyannaColors.orange,
+                          width: 0.5,
+                        ),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.zero,
-                        borderSide: const BorderSide(color: AyannaColors.orange, width: 1.0),
+                        borderSide: const BorderSide(
+                          color: AyannaColors.orange,
+                          width: 1.0,
+                        ),
                       ),
                     ),
-                    
+
                     hint: const Text('Toutes les classes'),
                     items: [
                       const DropdownMenuItem<Classe?>(
@@ -232,15 +264,24 @@ class _ElevesScreenState extends State<ElevesScreen> {
                       labelText: 'Statut',
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.zero,
-                        borderSide: const BorderSide(color: AyannaColors.orange, width: 0.5),
+                        borderSide: const BorderSide(
+                          color: AyannaColors.orange,
+                          width: 0.5,
+                        ),
                       ),
                       enabledBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.zero,
-                        borderSide: const BorderSide(color: AyannaColors.orange, width: 0.5),
+                        borderSide: const BorderSide(
+                          color: AyannaColors.orange,
+                          width: 0.5,
+                        ),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.zero,
-                        borderSide: const BorderSide(color: AyannaColors.orange, width: 1.0),
+                        borderSide: const BorderSide(
+                          color: AyannaColors.orange,
+                          width: 1.0,
+                        ),
                       ),
                     ),
                     hint: const Text('Tous les statuts'),
@@ -269,67 +310,65 @@ class _ElevesScreenState extends State<ElevesScreen> {
               child: isLoading
                   ? const Center(child: CircularProgressIndicator())
                   : filteredEleves.isEmpty
-                      ? const Center(child: Text('Aucun élève trouvé.'))
-                      : SingleChildScrollView(
-                          child: Table(
-                            border: TableBorder.all(
-                              color: AyannaColors.lightGrey,
+                  ? const Center(child: Text('Aucun élève trouvé.'))
+                  : SingleChildScrollView(
+                      child: Table(
+                        border: TableBorder.all(color: AyannaColors.lightGrey),
+                        columnWidths: const {
+                          0: FlexColumnWidth(0.5),
+                          1: FlexColumnWidth(2.5),
+                          2: FlexColumnWidth(1.5),
+                        },
+                        children: [
+                          const TableRow(
+                            decoration: BoxDecoration(
+                              color: AyannaColors.orange,
                             ),
-                            columnWidths: const {
-                              0: FlexColumnWidth(0.5),
-                              1: FlexColumnWidth(2.5),
-                              2: FlexColumnWidth(1.5),
-                            },
                             children: [
-                              const TableRow(
-                                decoration: BoxDecoration(
-                                  color: AyannaColors.orange,
-                                ),
-                                children: [
-                                  _HeaderCell('N°'),
-                                  _HeaderCell('Nom complet'),
-                                  _HeaderCell('Classe'),
-                                ],
-                              ),
-                              ...filteredEleves.asMap().entries.map(
-                                (entry) {
-                                  final index = entry.key;
-                                  final eleve = entry.value;
-                                  return TableRow(
-                                    children: [
-                                      _DataCell((index + 1).toString()),
-                                      GestureDetector(
-                                        onTap: () async {
-                                          final result = await Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                              builder: (context) =>
-                                                  EditEleveScreen(eleve: eleve),
-                                            ),
-                                          );
-                                          if (result == true) {
-                                            _initData();
-                                          }
-                                        },
-                                        child: _DataCell(
-                                          '${eleve.nom.toUpperCase()}${eleve.postnom != null && eleve.postnom!.isNotEmpty ? ' ${eleve.postnom!.toUpperCase()}' : ''} ${eleve.prenomCapitalized}',
-                                        ),
-                                      ),
-                                      _DataCell(eleve.classeNom ?? '-'),
-                                    ],
-                                  );
-                                },
-                              ),
+                              _HeaderCell('N°'),
+                              _HeaderCell('Nom complet'),
+                              _HeaderCell('Classe'),
                             ],
                           ),
-                        ),
+                          ...filteredEleves.asMap().entries.map((entry) {
+                            final index = entry.key;
+                            final eleve = entry.value;
+                            return TableRow(
+                              children: [
+                                _DataCell((index + 1).toString()),
+                                GestureDetector(
+                                  onTap: () async {
+                                    final result = await Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            EditEleveScreen(eleve: eleve),
+                                      ),
+                                    );
+                                    if (result == true) {
+                                      _initData();
+                                    }
+                                  },
+                                  child: _DataCell(
+                                    '${eleve.nom.toUpperCase()}${eleve.postnom != null && eleve.postnom!.isNotEmpty ? ' ${eleve.postnom!.toUpperCase()}' : ''} ${eleve.prenomCapitalized}',
+                                  ),
+                                ),
+                                _DataCell(eleve.classeNom ?? '-'),
+                              ],
+                            );
+                          }),
+                        ],
+                      ),
+                    ),
             ),
           ],
         ),
       ),
       floatingActionButton: FloatingActionButton(
         onPressed: () async {
-          final result = await Navigator.of(context).pushNamed('/add-eleve', arguments: selectedClasse?.id);
+          final result = await Navigator.of(
+            context,
+          ).pushNamed('/add-eleve', arguments: selectedClasse?.id);
           if (result == true) {
             _initData();
           }

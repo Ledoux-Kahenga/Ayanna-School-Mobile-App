@@ -47,6 +47,9 @@ abstract class CreanceDao {
   @delete
   Future<void> deleteCreance(Creance creance);
 
+  @Query('DELETE FROM creances')
+  Future<void> deleteAllCreances();
+  
   @Query('DELETE FROM creances WHERE eleve_id = :eleveId')
   Future<void> deleteCreancesByEleve(int eleveId);
 

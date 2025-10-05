@@ -52,6 +52,9 @@ abstract class LicenceDao {
   @delete
   Future<void> deleteLicence(Licence licence);
 
+  @Query('DELETE FROM licence')
+  Future<void> deleteAllLicences();
+  
   @Query('DELETE FROM licence WHERE entreprise_id = :entrepriseId')
   Future<void> deleteLicencesByEntreprise(int entrepriseId);
 

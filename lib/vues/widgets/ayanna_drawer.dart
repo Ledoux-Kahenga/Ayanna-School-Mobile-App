@@ -2,14 +2,15 @@
 import 'package:ayanna_school/vues/eleves/eleves_screen.dart';
 import 'package:ayanna_school/theme/ayanna_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../classes/classes_screen.dart';
 import '../configuration_screen.dart';
 import '../gestions frais/paiement_frais.dart';
 import '../gestions frais/journal_caisse.dart';
 import '../synchronisation/sync_status_screen.dart';
-import '../../services/school_queries.dart';
+import '../../services/providers/providers.dart';
 
-class AyannaDrawer extends StatelessWidget {
+class AyannaDrawer extends ConsumerWidget {
   final int selectedIndex;
   final Function(int) onItemSelected;
   const AyannaDrawer({
@@ -19,7 +20,7 @@ class AyannaDrawer extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     return Drawer(
       child: Container(
         color: Theme.of(context).scaffoldBackgroundColor,
@@ -65,21 +66,30 @@ class AyannaDrawer extends StatelessWidget {
                       ),
                     ),
                     const SizedBox(height: 4),
-                    FutureBuilder<String>(
-                      future: SchoolQueries.getNomEcole(),
-                      builder: (context, snapshot) {
-                        if (snapshot.hasData) {
-                          return Text(
-                            snapshot.data!,
-                            style: TextStyle(
-                              color: Colors.white.withOpacity(0.9),
-                              fontSize: 14,
-                              fontWeight: FontWeight.w400,
-                            ),
-                            textAlign: TextAlign.center,
-                          );
-                        }
-                        return const SizedBox.shrink();
+                    Consumer(
+                      builder: (context, ref, child) {
+                        final entreprisesAsync = ref.watch(
+                          entreprisesNotifierProvider,
+                        );
+                        return entreprisesAsync.when(
+                          data: (entreprises) {
+                            if (entreprises.isNotEmpty) {
+                              final entreprise = entreprises.first;
+                              return Text(
+                                entreprise.nom,
+                                style: TextStyle(
+                                  color: Colors.white.withOpacity(0.9),
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w400,
+                                ),
+                                textAlign: TextAlign.center,
+                              );
+                            }
+                            return const SizedBox.shrink();
+                          },
+                          loading: () => const SizedBox.shrink(),
+                          error: (_, __) => const SizedBox.shrink(),
+                        );
                       },
                     ),
                   ],

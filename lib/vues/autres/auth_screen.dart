@@ -2,7 +2,7 @@ import 'package:ayanna_school/vues/eleves/eleves_screen.dart';
 import 'package:flutter/material.dart';
 import '../../theme/ayanna_theme.dart';
 import '../widgets/ayanna_widgets.dart';
-import '../../models/models.dart';
+import 'package:ayanna_school/models/entities/entities.dart';
 
 class AuthScreen extends StatefulWidget {
   final bool navigateToClasses;

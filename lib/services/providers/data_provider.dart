@@ -22,9 +22,12 @@ import '../../models/entities/comptes_config.dart';
 import '../../models/entities/ecriture_comptable.dart';
 import '../../models/entities/journal_comptable.dart';
 import '../../models/entities/periode.dart';
+import '../../models/entities/frais_classes.dart';
+import '../../models/frais_details.dart';
 import 'database_provider.dart';
 import 'connectivity_provider.dart';
 import 'sync_provider_new.dart';
+import 'auth_provider.dart';
 
 part 'data_provider.g.dart';
 
@@ -768,6 +771,129 @@ class PaiementsFraisNotifier extends _$PaiementsFraisNotifier {
     await dao.deletePaiementFrais(paiement);
     ref.invalidateSelf();
   }
+
+  /// Récupère les détails des frais pour un élève donné
+  Future<List<FraisDetails>> getEleveFraisDetails(int eleveId) async {
+    final paiementDao = ref.watch(paiementFraisDaoProvider);
+    final fraisDao = ref.watch(fraisScolaireDaoProvider);
+    final fraisClassesDao = ref.watch(fraisClassesDaoProvider);
+    final eleveDao = ref.watch(eleveDaoProvider);
+
+    try {
+      // Récupérer l'élève pour connaître sa classe
+      final eleve = await eleveDao.getEleveById(eleveId);
+      if (eleve == null) {
+        return [];
+      }
+
+      final classeId = eleve.classeId;
+      if (classeId == null) {
+        return [];
+      }
+
+      // Récupérer tous les frais de la classe
+      final fraisClassesList = await fraisClassesDao.getFraisClassesByClasse(
+        classeId,
+      );
+
+      // Pour chaque frais de la classe, récupérer les détails
+      final List<FraisDetails> fraisDetails = [];
+
+      for (final fraisClasse in fraisClassesList) {
+        final frais = await fraisDao.getFraisScolaireById(fraisClasse.fraisId);
+        if (frais == null) continue;
+
+        // Récupérer tous les paiements pour ce frais et cet élève
+        final paiements = await paiementDao.getPaiementsFraisByEleve(eleveId);
+        final paiementsPourCeFrais = paiements
+            .where((p) => p.fraisScolaireId == frais.id)
+            .toList();
+
+        // Calculer le total payé
+        double totalPaye = 0;
+        for (final p in paiementsPourCeFrais) {
+          totalPaye += p.montantPaye;
+        }
+
+        // Calculer le reste à payer
+        final montantFrais = frais.montant;
+        final resteAPayer = montantFrais - totalPaye;
+
+        // Déterminer le statut
+        String statut;
+        if (resteAPayer <= 0) {
+          statut = 'en_ordre';
+        } else if (totalPaye > 0) {
+          statut = 'partiellement_paye';
+        } else {
+          statut = 'pas_en_ordre';
+        }
+
+        fraisDetails.add(
+          FraisDetails(
+            fraisId: frais.id!,
+            nomFrais: frais.nom,
+            montant: montantFrais,
+            totalPaye: totalPaye,
+            restePayer: resteAPayer,
+            statut: statut,
+            historiquePaiements: paiementsPourCeFrais,
+          ),
+        );
+      }
+
+      return fraisDetails;
+    } catch (e) {
+      print('Erreur lors de la récupération des détails des frais: $e');
+      return [];
+    }
+  }
+
+  /// Enregistre un nouveau paiement de frais
+  Future<void> enregistrerPaiement({
+    required int eleveId,
+    required int fraisId,
+    required double montant,
+  }) async {
+    final paiementDao = ref.watch(paiementFraisDaoProvider);
+    final isConnected = ref.read(isConnectedProvider);
+    final syncNotifier = ref.read(syncStateNotifierProvider.notifier);
+
+    try {
+      final now = DateTime.now();
+
+      final nouveauPaiement = PaiementFrais(
+        eleveId: eleveId,
+        fraisScolaireId: fraisId,
+        montantPaye: montant,
+        datePaiement: now,
+        statut: 'validé',
+        isSync: false,
+        dateCreation: now,
+        dateModification: now,
+        updatedAt: now,
+      );
+
+      await paiementDao.insertPaiementFrais(nouveauPaiement);
+      ref.invalidateSelf();
+
+      if (isConnected) {
+        try {
+          await syncNotifier.uploadSingleEntity(
+            nouveauPaiement,
+            'paiements_frais',
+            'create',
+            userEmail: 'admin@testschool.com',
+          );
+        } catch (e) {
+          print('Erreur lors de l\'upload du paiement: $e');
+        }
+      }
+    } catch (e) {
+      print('Erreur lors de l\'enregistrement du paiement: $e');
+      rethrow;
+    }
+  }
 }
 
 /// Provider pour la liste des notes par période
@@ -944,6 +1070,61 @@ class ConfigEcolesNotifier extends _$ConfigEcolesNotifier {
     await dao.deleteConfigEcole(config);
     ref.invalidateSelf();
   }
+
+  /// Met à jour l'année scolaire en cours dans la configuration
+  Future<void> updateCurrentAnneeScolaire(int anneeScolaireId) async {
+    final dao = ref.watch(configEcoleDaoProvider);
+    final authState = await ref.read(authNotifierProvider.future);
+
+    if (authState.entrepriseId == null) {
+      throw Exception('Entreprise non définie');
+    }
+
+    try {
+      await dao.updateAnneeScolaireEnCours(
+        authState.entrepriseId!,
+        anneeScolaireId,
+      );
+
+      // Invalider le provider pour recharger la configuration
+      ref.invalidateSelf();
+      ref.invalidate(currentAnneeScolaireProvider);
+    } catch (e) {
+      print('Erreur lors de la mise à jour de l\'année scolaire en cours: $e');
+      rethrow;
+    }
+  }
+}
+
+/// Provider pour obtenir l'année scolaire en cours
+/// Ce provider récupère la configuration de l'école et retourne l'année scolaire active
+@riverpod
+Future<AnneeScolaire?> currentAnneeScolaire(Ref ref) async {
+  // Get current entreprise ID from auth
+  final authState = await ref.watch(authNotifierProvider.future);
+  final entrepriseId = authState.entrepriseId;
+
+  if (entrepriseId == null) {
+    return null;
+  }
+
+  // Get config ecole for this entreprise
+  final configDao = ref.watch(configEcoleDaoProvider);
+  final configEcole = await configDao.getConfigEcoleByEntreprise(entrepriseId);
+
+  if (configEcole == null || configEcole.anneeScolaireEnCoursId == null) {
+    // Fallback: return the first annee scolaire if no config
+    final anneesScolaires = await ref.watch(
+      anneesScolairesNotifierProvider.future,
+    );
+    return anneesScolaires.isNotEmpty ? anneesScolaires.first : null;
+  }
+
+  // Get the annee scolaire by its ID
+  final anneeScolaireDao = ref.watch(anneeScolaireDaoProvider);
+  return await anneeScolaireDao.getAnneeScolaireById(
+    configEcole.anneeScolaireEnCoursId!,
+  );
 }
 
 /// Provider pour la liste des cours
@@ -1922,6 +2103,142 @@ class JournauxComptablesNotifier extends _$JournauxComptablesNotifier {
     await dao.deleteJournalComptable(journal);
     ref.invalidateSelf();
   }
+
+  /// Récupère les entrées du journal pour une date donnée avec filtre optionnel
+  Future<List<JournalComptable>> getJournalEntries(
+    DateTime date, {
+    String filter = 'Tous',
+  }) async {
+    final dao = ref.watch(journalComptableDaoProvider);
+    final authState = await ref.read(authNotifierProvider.future);
+
+    if (authState.entrepriseId == null) {
+      return [];
+    }
+
+    try {
+      // Définir le début et la fin du jour sélectionné
+      final dateDebut = DateTime(date.year, date.month, date.day, 0, 0, 0);
+      final dateFin = DateTime(date.year, date.month, date.day, 23, 59, 59);
+
+      // Récupérer toutes les entrées de la période
+      final entries = await dao.getJournauxComptablesByPeriode(
+        dateDebut,
+        dateFin,
+        authState.entrepriseId!,
+      );
+
+      // Appliquer le filtre si nécessaire
+      if (filter == 'Tous') {
+        return entries;
+      } else if (filter == 'Entrée' || filter == 'Entrées') {
+        return entries
+            .where((e) => e.typeOperation.toLowerCase() == 'entrée')
+            .toList();
+      } else if (filter == 'Sortie' || filter == 'Sorties') {
+        return entries
+            .where((e) => e.typeOperation.toLowerCase() == 'sortie')
+            .toList();
+      }
+
+      return entries;
+    } catch (e) {
+      print('Erreur lors de la récupération des entrées du journal: $e');
+      return [];
+    }
+  }
+
+  /// Calcule le solde actuel de la caisse
+  Future<double> getSoldeCaisse() async {
+    final dao = ref.watch(journalComptableDaoProvider);
+    final authState = await ref.read(authNotifierProvider.future);
+
+    if (authState.entrepriseId == null) {
+      return 0.0;
+    }
+
+    try {
+      // Récupérer toutes les entrées
+      final totalEntrees =
+          await dao.getTotalByTypeOperation(
+            'Entrée',
+            authState.entrepriseId!,
+          ) ??
+          0.0;
+
+      // Récupérer toutes les sorties
+      final totalSorties =
+          await dao.getTotalByTypeOperation(
+            'Sortie',
+            authState.entrepriseId!,
+          ) ??
+          0.0;
+
+      return totalEntrees - totalSorties;
+    } catch (e) {
+      print('Erreur lors du calcul du solde de caisse: $e');
+      return 0.0;
+    }
+  }
+
+  /// Enregistre une sortie de caisse (dépense)
+  Future<void> insertSortieCaisse({
+    required int entrepriseId,
+    required double montant,
+    required String libelle,
+    required int compteDestinationId,
+    String? pieceJustification,
+    String? observation,
+    required int userId,
+  }) async {
+    final dao = ref.watch(journalComptableDaoProvider);
+    final isConnected = ref.read(isConnectedProvider);
+    final syncNotifier = ref.read(syncStateNotifierProvider.notifier);
+
+    try {
+      final now = DateTime.now();
+
+      // Construire le libellé complet avec les informations additionnelles
+      String libelleComplet = libelle;
+      if (pieceJustification != null && pieceJustification.isNotEmpty) {
+        libelleComplet += ' (Ref: $pieceJustification)';
+      }
+      if (observation != null && observation.isNotEmpty) {
+        libelleComplet += ' - $observation';
+      }
+
+      final nouveauJournal = JournalComptable(
+        entrepriseId: entrepriseId,
+        typeOperation: 'Sortie',
+        montant: montant,
+        libelle: libelleComplet,
+        dateOperation: now,
+        isSync: false,
+        dateCreation: now,
+        dateModification: now,
+        updatedAt: now,
+      );
+
+      await dao.insertJournalComptable(nouveauJournal);
+      ref.invalidateSelf();
+
+      if (isConnected) {
+        try {
+          await syncNotifier.uploadSingleEntity(
+            nouveauJournal,
+            'journaux_comptables',
+            'create',
+            userEmail: 'admin@testschool.com',
+          );
+        } catch (e) {
+          print('Erreur lors de l\'upload de la sortie de caisse: $e');
+        }
+      }
+    } catch (e) {
+      print('Erreur lors de l\'enregistrement de la sortie de caisse: $e');
+      rethrow;
+    }
+  }
 }
 
 /// Provider pour la liste des périodes
@@ -2008,6 +2325,93 @@ class PeriodesNotifier extends _$PeriodesNotifier {
     }
 
     await dao.deletePeriode(periode);
+    ref.invalidateSelf();
+  }
+}
+
+@riverpod
+class FraisClassesNotifier extends _$FraisClassesNotifier {
+  @override
+  Future<List<FraisClasses>> build() async {
+    final dao = ref.watch(fraisClassesDaoProvider);
+    return await dao.getAllFraisClasses();
+  }
+
+  Future<void> refresh(List<FraisClasses> fraisClasses) async {
+    final dao = ref.watch(fraisClassesDaoProvider);
+    try {
+      await dao.insertFraisClasses(fraisClasses);
+      ref.invalidateSelf();
+    } catch (e) {
+      print('Erreur lors du rafraîchissement des frais classes: $e');
+    }
+  }
+
+  Future<void> addFraisClasse(FraisClasses fraisClasse) async {
+    final dao = ref.watch(fraisClassesDaoProvider);
+    final isConnected = ref.read(isConnectedProvider);
+    final syncNotifier = ref.read(syncStateNotifierProvider.notifier);
+
+    fraisClasse.isSync = false;
+    await dao.insertFraisClasse(fraisClasse);
+    ref.invalidateSelf();
+
+    if (isConnected) {
+      try {
+        await syncNotifier.uploadSingleEntity(
+          fraisClasse,
+          'frais_classes',
+          'create',
+          userEmail: 'admin@testschool.com',
+        );
+      } catch (e) {
+        print('Erreur lors de l\'upload du frais classe: $e');
+      }
+    }
+  }
+
+  Future<void> updateFraisClasse(FraisClasses fraisClasse) async {
+    final dao = ref.watch(fraisClassesDaoProvider);
+    final isConnected = ref.read(isConnectedProvider);
+    final syncNotifier = ref.read(syncStateNotifierProvider.notifier);
+
+    fraisClasse.isSync = false;
+    await dao.updateFraisClasse(fraisClasse);
+    ref.invalidateSelf();
+
+    if (isConnected) {
+      try {
+        await syncNotifier.uploadSingleEntity(
+          fraisClasse,
+          'frais_classes',
+          'update',
+          userEmail: 'admin@testschool.com',
+        );
+      } catch (e) {
+        print('Erreur lors de l\'upload du frais classe: $e');
+      }
+    }
+  }
+
+  Future<void> deleteFraisClasse(FraisClasses fraisClasse) async {
+    final dao = ref.watch(fraisClassesDaoProvider);
+    final isConnected = ref.read(isConnectedProvider);
+    final syncNotifier = ref.read(syncStateNotifierProvider.notifier);
+
+    if (isConnected) {
+      try {
+        await syncNotifier.uploadSingleEntity(
+          fraisClasse,
+          'frais_classes',
+          'delete',
+          userEmail: 'admin@testschool.com',
+        );
+      } catch (e) {
+        print('Erreur lors de la suppression du frais classe via API: $e');
+      }
+    }
+
+    await dao.deleteFraisClasse(fraisClasse);
     ref.invalidateSelf();
   }
 }

@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
-import '../../services/school_queries.dart';
-import '../../models/models.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../models/entities/annee_scolaire.dart';
+import '../../services/providers/providers.dart';
 
-class SchoolYearSelector extends StatefulWidget {
+class SchoolYearSelector extends ConsumerStatefulWidget {
   final void Function(AnneeScolaire) onSelected;
   const SchoolYearSelector({required this.onSelected, super.key});
 
   @override
-  State<SchoolYearSelector> createState() => _SchoolYearSelectorState();
+  ConsumerState<SchoolYearSelector> createState() => _SchoolYearSelectorState();
 }
 
-class _SchoolYearSelectorState extends State<SchoolYearSelector> {
+class _SchoolYearSelectorState extends ConsumerState<SchoolYearSelector> {
   List<AnneeScolaire> _annees = [];
   int? _selectedId;
   bool _loading = true;
@@ -23,8 +24,8 @@ class _SchoolYearSelectorState extends State<SchoolYearSelector> {
 
   Future<void> _fetchAnnees() async {
     try {
-      final annees = await SchoolQueries.getAllAnneesScolaires();
-      final current = await SchoolQueries.getCurrentAnneeScolaire();
+      final annees = await ref.read(anneesScolairesNotifierProvider.future);
+      final current = await ref.read(currentAnneeScolaireProvider.future);
 
       setState(() {
         _annees = annees;

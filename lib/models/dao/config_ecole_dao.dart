@@ -33,6 +33,9 @@ abstract class ConfigEcoleDao {
   @delete
   Future<void> deleteConfigEcole(ConfigEcole configEcole);
 
+  @Query('DELETE FROM config_ecole')
+  Future<void> deleteAllConfigsEcole();
+  
   @Query('DELETE FROM config_ecole WHERE entreprise_id = :entrepriseId')
   Future<void> deleteConfigsEcoleByEntreprise(int entrepriseId);
 

@@ -7,14 +7,12 @@ part 'classe.g.dart';
 
 @Entity(
   tableName: 'classes',
-    indices: [
+  indices: [
     // Contrainte d'unicité sur server_id pour éviter les doublons
     // Permet la gestion automatique des conflits
     Index(value: ['server_id'], unique: true),
   ],
   foreignKeys: [
-    
-
     ForeignKey(
       childColumns: ['annee_scolaire_id'],
       parentColumns: ['id'],
@@ -29,9 +27,10 @@ part 'classe.g.dart';
 )
 @JsonSerializable()
 class Classe {
-  @PrimaryKey(autoGenerate: true)
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @PrimaryKey(autoGenerate: false)
+  @JsonKey(includeToJson: false)
   final int? id;
+  
 
   @ColumnInfo(name: 'server_id')
   @JsonKey(name: 'id')

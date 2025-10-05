@@ -1,18 +1,20 @@
 import 'package:ayanna_school/vues/widgets/ayanna_drawer.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/ayanna_theme.dart';
-import '../services/school_queries.dart';
-import '../models/models.dart';
+import '../models/entities/annee_scolaire.dart';
+import '../services/providers/providers.dart';
 
-class ConfigurationScreen extends StatefulWidget {
+class ConfigurationScreen extends ConsumerStatefulWidget {
   final bool isFirstSetup;
   const ConfigurationScreen({this.isFirstSetup = true, super.key});
 
   @override
-  State<ConfigurationScreen> createState() => _ConfigurationScreenState();
+  ConsumerState<ConfigurationScreen> createState() =>
+      _ConfigurationScreenState();
 }
 
-class _ConfigurationScreenState extends State<ConfigurationScreen> {
+class _ConfigurationScreenState extends ConsumerState<ConfigurationScreen> {
   List<AnneeScolaire> _annees = [];
   AnneeScolaire? _selectedYear;
   bool _loading = true;
@@ -29,8 +31,8 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
       _loading = true;
     });
     try {
-      final annees = await SchoolQueries.getAllAnneesScolaires();
-      final currentYear = await SchoolQueries.getCurrentAnneeScolaire();
+      final annees = await ref.read(anneesScolairesNotifierProvider.future);
+      final currentYear = await ref.read(currentAnneeScolaireProvider.future);
 
       setState(() {
         _annees = annees;
@@ -41,12 +43,14 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
         }
       });
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erreur chargement des données: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur chargement des données: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
       setState(() {
         _loading = false;
@@ -69,21 +73,27 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
       _saving = true;
     });
     try {
-      await SchoolQueries.updateCurrentAnneeScolaire(_selectedYear!.id);
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Configuration sauvegardée avec succès.'),
-          backgroundColor: Colors.green,
-        ),
-      );
+      await ref
+          .read(configEcolesNotifierProvider.notifier)
+          .updateCurrentAnneeScolaire(_selectedYear!.id!);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Configuration sauvegardée avec succès.'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erreur lors de la sauvegarde: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors de la sauvegarde: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     } finally {
       setState(() {
         _saving = false;
@@ -101,9 +111,9 @@ class _ConfigurationScreenState extends State<ConfigurationScreen> {
         foregroundColor: AyannaColors.white,
       ),
       drawer: AyannaDrawer(
-          selectedIndex: drawerIndex,
-          onItemSelected: (i) => setState(() => drawerIndex = i),
-        ),
+        selectedIndex: drawerIndex,
+        onItemSelected: (i) => setState(() => drawerIndex = i),
+      ),
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(

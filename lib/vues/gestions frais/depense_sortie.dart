@@ -1,20 +1,20 @@
 // Fichier : lib/vues/depense_sortie.dart
 
-import 'package:ayanna_school/models/models.dart';
 import 'package:ayanna_school/services/app_preferences.dart';
-import 'package:ayanna_school/services/school_queries.dart';
+import 'package:ayanna_school/services/providers/providers.dart';
 import 'package:ayanna_school/theme/ayanna_theme.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
-class DepenseSortiePage extends StatefulWidget {
+class DepenseSortiePage extends ConsumerStatefulWidget {
   const DepenseSortiePage({super.key});
 
   @override
-  State<DepenseSortiePage> createState() => _DepenseSortiePageState();
+  ConsumerState<DepenseSortiePage> createState() => _DepenseSortiePageState();
 }
 
-class _DepenseSortiePageState extends State<DepenseSortiePage> {
+class _DepenseSortiePageState extends ConsumerState<DepenseSortiePage> {
   final _formKey = GlobalKey<FormState>();
   String? compteSelectionne;
   final TextEditingController _libelleController = TextEditingController();
@@ -27,15 +27,17 @@ class _DepenseSortiePageState extends State<DepenseSortiePage> {
   double _soldeCaisse = 0.0;
   bool _soldeLoading = true;
 
-   @override
+  @override
   void initState() {
     super.initState();
     _fetchSoldeCaisse(); // Charger le solde au démarrage
   }
 
-   Future<void> _fetchSoldeCaisse() async {
+  Future<void> _fetchSoldeCaisse() async {
     try {
-      final solde = await SchoolQueries.getSoldeCaisse();
+      final solde = await ref
+          .read(journauxComptablesNotifierProvider.notifier)
+          .getSoldeCaisse();
       if (mounted) {
         setState(() {
           _soldeCaisse = solde;
@@ -54,63 +56,74 @@ class _DepenseSortiePageState extends State<DepenseSortiePage> {
     }
   }
 
- Future<void> _enregistrerDepense() async {
-  if (_formKey.currentState!.validate()) {
-    // 1. Get the amount to be spent
-    final double montantDepense = double.parse(_montantController.text);
-    
-    // 2. Refresh the cash balance before the transaction
-    await _fetchSoldeCaisse();
+  Future<void> _enregistrerDepense() async {
+    if (_formKey.currentState!.validate()) {
+      // 1. Get the amount to be spent
+      final double montantDepense = double.parse(_montantController.text);
 
-    // 3. Check if the cash balance is sufficient
-    if (_soldeCaisse < montantDepense) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Le montant de la dépense est supérieur au solde de la caisse.'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return; // Stop the execution here if the balance is insufficient
-    }
+      // 2. Refresh the cash balance before the transaction
+      await _fetchSoldeCaisse();
 
-    setState(() {
-      _isLoading = true;
-    });
+      // 3. Check if the cash balance is sufficient
+      if (_soldeCaisse < montantDepense) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Le montant de la dépense est supérieur au solde de la caisse.',
+            ),
+            backgroundColor: Colors.orange,
+          ),
+        );
+        return; // Stop the execution here if the balance is insufficient
+      }
 
-    try {
-      await SchoolQueries.insertSortieCaisse(
-        entrepriseId: 2, // Remplacez par l'ID de votre entreprise
-        montant: montantDepense,
-        libelle: _libelleController.text,
-        compteDestinationId: int.parse(compteSelectionne!),
-        pieceJustification: _pieceJustificationController.text.isNotEmpty
-            ? _pieceJustificationController.text
-            : null,
-        observation: _observationController.text.isNotEmpty
-            ? _observationController.text
-            : null,
-        userId: 2, // Remplacez par l'ID de l'utilisateur connecté
-      );
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Dépense enregistrée avec succès'),
-          backgroundColor: Colors.green,
-        ),
-      );
-      
-      Navigator.of(context).pop(true);
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
-      );
-    } finally {
       setState(() {
-        _isLoading = false;
+        _isLoading = true;
       });
+
+      try {
+        final authState = await ref.read(authNotifierProvider.future);
+
+        await ref
+            .read(journauxComptablesNotifierProvider.notifier)
+            .insertSortieCaisse(
+              entrepriseId: authState.entrepriseId ?? 2,
+              montant: montantDepense,
+              libelle: _libelleController.text,
+              compteDestinationId: int.parse(compteSelectionne!),
+              pieceJustification: _pieceJustificationController.text.isNotEmpty
+                  ? _pieceJustificationController.text
+                  : null,
+              observation: _observationController.text.isNotEmpty
+                  ? _observationController.text
+                  : null,
+              userId: authState.userId ?? 2,
+            );
+
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Dépense enregistrée avec succès'),
+              backgroundColor: Colors.green,
+            ),
+          );
+
+          Navigator.of(context).pop(true);
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+          );
+        }
+      } finally {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
-}
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -127,45 +140,46 @@ class _DepenseSortiePageState extends State<DepenseSortiePage> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
               // Dropdown pour le compte de destination
-              FutureBuilder<List<CompteComptable>>(
-                future: SchoolQueries.getComptesComptables(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (snapshot.hasError) {
-                    return Text("Erreur de chargement: ${snapshot.error}");
-                  }
-                  if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                    return const Text("Aucun compte de charge disponible.");
-                  }
-                  final comptes = snapshot.data!;
-                  // ADD a 'return' statement here
-                  return DropdownButtonFormField<String>(
-                    // Ajoutez la propriété 'value' ici
-                    value: compteSelectionne,
-                    decoration: const InputDecoration(
-                      labelText: 'Compte de destination (Charge)',
-                    ),
-                    isExpanded: true,
-                    items: comptes.map((compte) {
-                      return DropdownMenuItem<String>(
-                        value: compte.id.toString(),
-                        child: Text(
-                          '${compte.numero} - ${compte.libelle}',
-                          overflow: TextOverflow.ellipsis,
+              Consumer(
+                builder: (context, ref, child) {
+                  final comptesAsync = ref.watch(
+                    comptesComptablesNotifierProvider,
+                  );
+
+                  return comptesAsync.when(
+                    data: (comptes) {
+                      if (comptes.isEmpty) {
+                        return const Text("Aucun compte de charge disponible.");
+                      }
+
+                      return DropdownButtonFormField<String>(
+                        value: compteSelectionne,
+                        decoration: const InputDecoration(
+                          labelText: 'Compte de destination (Charge)',
                         ),
+                        isExpanded: true,
+                        items: comptes.map((compte) {
+                          return DropdownMenuItem<String>(
+                            value: compte.id.toString(),
+                            child: Text(
+                              '${compte.numero} - ${compte.libelle}',
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            compteSelectionne = value;
+                          });
+                        },
+                        validator: (value) => value == null
+                            ? 'Veuillez sélectionner un compte'
+                            : null,
                       );
-                    }).toList(),
-                    onChanged: (value) {
-                      // Utilisez setState pour mettre à jour l'état
-                      setState(() {
-                        compteSelectionne = value;
-                      });
                     },
-                    validator: (value) => value == null
-                        ? 'Veuillez sélectionner un compte'
-                        : null,
+                    loading: () =>
+                        const Center(child: CircularProgressIndicator()),
+                    error: (error, _) => Text("Erreur de chargement: $error"),
                   );
                 },
               ),
@@ -197,14 +211,16 @@ class _DepenseSortiePageState extends State<DepenseSortiePage> {
                   return null;
                 },
               ),
-                Padding(
+              Padding(
                 padding: const EdgeInsets.only(top: 8.0),
                 child: _soldeLoading
                     ? const Center(child: Text("Chargement du solde..."))
                     : Text(
                         'Disponible en caisse : ${NumberFormat("#,##0", "fr_FR").format(_soldeCaisse)} ${AppPreferences().devise}',
                         style: TextStyle(
-                          color: _soldeCaisse > 0 ? Colors.green.shade800 : Colors.red,
+                          color: _soldeCaisse > 0
+                              ? Colors.green.shade800
+                              : Colors.red,
                           fontStyle: FontStyle.italic,
                         ),
                       ),

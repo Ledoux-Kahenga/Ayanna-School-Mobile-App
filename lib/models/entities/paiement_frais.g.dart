@@ -8,6 +8,7 @@ part of 'paiement_frais.dart';
 
 PaiementFrais _$PaiementFraisFromJson(Map<String, dynamic> json) =>
     PaiementFrais(
+      id: (json['id'] as num?)?.toInt(),
       serverId: (json['id'] as num?)?.toInt(),
       eleveId: (json['eleve_id'] as num).toInt(),
       fraisScolaireId: (json['frais_scolaire_id'] as num).toInt(),

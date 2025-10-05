@@ -7,6 +7,7 @@ part of 'classe.dart';
 // **************************************************************************
 
 Classe _$ClasseFromJson(Map<String, dynamic> json) => Classe(
+      id: (json['id'] as num?)?.toInt(),
       serverId: (json['id'] as num?)?.toInt(),
       code: json['code'] as String?,
       nom: json['nom'] as String,

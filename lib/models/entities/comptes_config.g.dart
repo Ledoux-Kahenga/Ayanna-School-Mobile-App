@@ -8,6 +8,7 @@ part of 'comptes_config.dart';
 
 ComptesConfig _$ComptesConfigFromJson(Map<String, dynamic> json) =>
     ComptesConfig(
+      id: (json['id'] as num?)?.toInt(),
       serverId: (json['id'] as num?)?.toInt(),
       entrepriseId: (json['entreprise_id'] as num).toInt(),
       compteCaisseId: (json['compte_caisse_id'] as num).toInt(),

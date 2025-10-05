@@ -7,6 +7,7 @@ part of 'depense.dart';
 // **************************************************************************
 
 Depense _$DepenseFromJson(Map<String, dynamic> json) => Depense(
+      id: (json['id'] as num?)?.toInt(),
       serverId: (json['id'] as num?)?.toInt(),
       libelle: json['libelle'] as String,
       montant: (json['montant'] as num).toDouble(),

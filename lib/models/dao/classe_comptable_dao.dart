@@ -52,6 +52,9 @@ abstract class ClasseComptableDao {
 
   @delete
   Future<void> deleteClasseComptable(ClasseComptable classeComptable);
+  
+  @Query('DELETE FROM classes_comptables')
+  Future<void> deleteAllClassesComptables();
 
   @Query('DELETE FROM classes_comptables WHERE entreprise_id = :entrepriseId')
   Future<void> deleteClassesComptablesByEntreprise(int entrepriseId);

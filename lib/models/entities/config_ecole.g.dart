@@ -7,6 +7,7 @@ part of 'config_ecole.dart';
 // **************************************************************************
 
 ConfigEcole _$ConfigEcoleFromJson(Map<String, dynamic> json) => ConfigEcole(
+      id: (json['id'] as num?)?.toInt(),
       serverId: (json['id'] as num?)?.toInt(),
       entrepriseId: (json['entreprise_id'] as num).toInt(),
       anneeScolaireEnCoursId:

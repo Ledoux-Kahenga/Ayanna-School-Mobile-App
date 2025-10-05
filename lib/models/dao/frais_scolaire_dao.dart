@@ -69,6 +69,9 @@ abstract class FraisScolaireDao {
   @delete
   Future<void> deleteFraisScolaire(FraisScolaire fraisScolaire);
 
+  @Query('DELETE FROM frais_scolaires')
+  Future<void> deleteAllFraisScolaires();
+  
   @Query('DELETE FROM frais_scolaires WHERE entreprise_id = :entrepriseId')
   Future<void> deleteFraisScolairesByEntreprise(int entrepriseId);
 

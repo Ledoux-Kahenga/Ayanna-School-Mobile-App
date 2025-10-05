@@ -6,6 +6,26 @@ part of 'data_provider.dart';
 // RiverpodGenerator
 // **************************************************************************
 
+String _$currentAnneeScolaireHash() =>
+    r'9eeeaf7ec431940b58247abd06e13763520ee5d5';
+
+/// Provider pour obtenir l'année scolaire en cours
+/// Ce provider récupère la configuration de l'école et retourne l'année scolaire active
+///
+/// Copied from [currentAnneeScolaire].
+@ProviderFor(currentAnneeScolaire)
+final currentAnneeScolaireProvider =
+    AutoDisposeFutureProvider<AnneeScolaire?>.internal(
+  currentAnneeScolaire,
+  name: r'currentAnneeScolaireProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$currentAnneeScolaireHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef CurrentAnneeScolaireRef = AutoDisposeFutureProviderRef<AnneeScolaire?>;
 String _$elevesNotifierHash() => r'a644ebbe878cf0ad6e1933f9bbed3996617a27cc';
 
 /// Provider pour la liste des élèves
@@ -140,7 +160,7 @@ final fraisScolairesNotifierProvider = AutoDisposeAsyncNotifierProvider<
 typedef _$FraisScolairesNotifier
     = AutoDisposeAsyncNotifier<List<FraisScolaire>>;
 String _$paiementsFraisNotifierHash() =>
-    r'94718686516439e756d5b99eee92e0bfb6297561';
+    r'c27c74ce9b4079d49232aebda7664512e9e792af';
 
 /// Provider pour la liste des paiements de frais
 ///
@@ -179,7 +199,7 @@ final notesPeriodesNotifierProvider = AutoDisposeAsyncNotifierProvider<
 
 typedef _$NotesPeriodesNotifier = AutoDisposeAsyncNotifier<List<NotePeriode>>;
 String _$configEcolesNotifierHash() =>
-    r'e6aefc098ac545e6a7c20137c8626f4c51b46535';
+    r'3794ac8267a16cde1b0a7e4b24620d2a0ddaa857';
 
 /// Provider pour la liste des configurations d'école
 ///
@@ -389,7 +409,7 @@ final ecrituresComptablesNotifierProvider = AutoDisposeAsyncNotifierProvider<
 typedef _$EcrituresComptablesNotifier
     = AutoDisposeAsyncNotifier<List<EcritureComptable>>;
 String _$journauxComptablesNotifierHash() =>
-    r'0dcd46ba39122dade2d7f71e15cdc63b9790a06d';
+    r'3dd22722362003a654ef8dd3e83955113c99c05d';
 
 /// Provider pour la liste des journaux comptables
 ///
@@ -426,5 +446,22 @@ final periodesNotifierProvider =
 );
 
 typedef _$PeriodesNotifier = AutoDisposeAsyncNotifier<List<Periode>>;
+String _$fraisClassesNotifierHash() =>
+    r'829e737b6f668504f373000dba5882ed67a31701';
+
+/// See also [FraisClassesNotifier].
+@ProviderFor(FraisClassesNotifier)
+final fraisClassesNotifierProvider = AutoDisposeAsyncNotifierProvider<
+    FraisClassesNotifier, List<FraisClasses>>.internal(
+  FraisClassesNotifier.new,
+  name: r'fraisClassesNotifierProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$fraisClassesNotifierHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef _$FraisClassesNotifier = AutoDisposeAsyncNotifier<List<FraisClasses>>;
 // ignore_for_file: type=lint
 // ignore_for_file: subtype_of_sealed_class, invalid_use_of_internal_member, invalid_use_of_visible_for_testing_member

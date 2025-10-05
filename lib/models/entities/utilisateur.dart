@@ -1,12 +1,13 @@
 import 'package:floor/floor.dart';
 import 'package:json_annotation/json_annotation.dart';
 import 'entreprise.dart';
+import '../helpers/parse_helper.dart';
 
 part 'utilisateur.g.dart';
 
 @Entity(
   tableName: 'utilisateurs',
-    indices: [
+  indices: [
     // Contrainte d'unicité sur server_id pour éviter les doublons
     // Permet la gestion automatique des conflits
     Index(value: ['server_id'], unique: true),
@@ -21,10 +22,9 @@ part 'utilisateur.g.dart';
 )
 @JsonSerializable()
 class Utilisateur {
-  @PrimaryKey(autoGenerate: true)
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @PrimaryKey(autoGenerate: false)
+  @JsonKey(includeToJson: false)
   final int? id;
-
   @ColumnInfo(name: 'server_id')
   @JsonKey(name: 'id')
   int? serverId;
@@ -42,6 +42,7 @@ class Utilisateur {
   String motDePasseHash;
 
   String role;
+  @JsonKey(name: 'actif', fromJson: parseBool)
   bool? actif;
 
   @ColumnInfo(name: 'entreprise_id')

@@ -81,6 +81,12 @@ class IdMappingHelper {
           mapping.idServeur,
         );
         break;
+      case 'frais_classes':
+        await database.fraisClassesDao.updateServerIdAndSync(
+          mapping.idLocal,
+          mapping.idServeur,
+        );
+        break;
       case 'paiements_frais':
         await database.paiementFraisDao.updateServerIdAndSync(
           mapping.idLocal,

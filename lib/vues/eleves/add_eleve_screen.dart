@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
-import '../../models/models.dart';
-import '../../services/school_queries.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ayanna_school/models/entities/entities.dart';
+import 'package:ayanna_school/services/providers/providers.dart';
 import '../../theme/ayanna_theme.dart';
 
-class AddEleveScreen extends StatefulWidget {
+class AddEleveScreen extends ConsumerStatefulWidget {
   final int? classeId;
   const AddEleveScreen({super.key, this.classeId});
 
   @override
-  State<AddEleveScreen> createState() => _AddEleveScreenState();
+  ConsumerState<AddEleveScreen> createState() => _AddEleveScreenState();
 }
 
-class _AddEleveScreenState extends State<AddEleveScreen> {
+class _AddEleveScreenState extends ConsumerState<AddEleveScreen> {
   final _formKey = GlobalKey<FormState>();
   String nom = '';
   String postnom = '';
@@ -40,12 +41,19 @@ class _AddEleveScreenState extends State<AddEleveScreen> {
   }
 
   Future<void> _chargerClasses() async {
-    final anneeScolaire = await SchoolQueries.getCurrentAnneeScolaire();
-    if (anneeScolaire != null) {
-      final classes = await SchoolQueries.getClassesByAnnee(anneeScolaire.id);
-      setState(() {
-        classesDisponibles = classes;
-      });
+    try {
+      final anneeScolaire = await ref.read(currentAnneeScolaireProvider.future);
+      if (anneeScolaire != null) {
+        final allClasses = await ref.read(classesNotifierProvider.future);
+        final classes = allClasses
+            .where((classe) => classe.anneeScolaireId == anneeScolaire.id)
+            .toList();
+        setState(() {
+          classesDisponibles = classes;
+        });
+      }
+    } catch (e) {
+      print('Erreur chargement classes: $e');
     }
   }
 
@@ -59,44 +67,78 @@ class _AddEleveScreenState extends State<AddEleveScreen> {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
 
-      // Créer le responsable d'abord si les informations sont fournies
-      int? finalResponsableId = responsableId;
-      if (responsableNom.trim().isNotEmpty) {
-        print('🔄 Création du responsable: $responsableNom');
-        finalResponsableId = await SchoolQueries.insertResponsable({
-          'nom': responsableNom.trim(),
-          'telephone': responsableTelephone.trim().isNotEmpty
-              ? responsableTelephone.trim()
+      try {
+        int? finalResponsableId = responsableId;
+        if (responsableNom.trim().isNotEmpty) {
+          final now = DateTime.now();
+          final nouveauResponsable = Responsable(
+            id: null,
+            serverId: null,
+            isSync: false,
+            nom: responsableNom.trim(),
+            telephone: responsableTelephone.trim().isNotEmpty
+                ? responsableTelephone.trim()
+                : null,
+            adresse: responsableAdresse.trim().isNotEmpty
+                ? responsableAdresse.trim()
+                : null,
+            code: null,
+            dateCreation: now,
+            dateModification: now,
+            updatedAt: now,
+          );
+
+          await ref
+              .read(responsablesNotifierProvider.notifier)
+              .addResponsable(nouveauResponsable);
+
+          final allResponsables = await ref.read(
+            responsablesNotifierProvider.future,
+          );
+          final createdResponsable = allResponsables.lastWhere(
+            (r) => r.nom == responsableNom.trim(),
+          );
+          finalResponsableId = createdResponsable.id;
+        }
+
+        final now = DateTime.now();
+        final nouvelEleve = Eleve(
+          id: null,
+          serverId: null,
+          isSync: false,
+          nom: nom.trim().toUpperCase(),
+          prenom: _formatPrenom(prenom.trim()),
+          postnom: postnom.trim().isNotEmpty
+              ? postnom.trim().toUpperCase()
               : null,
-          'adresse': responsableAdresse.trim().isNotEmpty
-              ? responsableAdresse.trim()
+          sexe: sexe,
+          dateNaissance: dateNaissance != null
+              ? DateTime.tryParse(dateNaissance!)
               : null,
-          'code': null, // Code généré automatiquement par la DB
-        });
-        print('✅ Responsable créé avec ID: $finalResponsableId');
+          lieuNaissance: lieuNaissance,
+          numeroPermanent: numeroPermanent,
+          classeId: classeId,
+          responsableId: finalResponsableId,
+          matricule: matricule,
+          statut: statut,
+          dateCreation: now,
+          dateModification: now,
+          updatedAt: now,
+        );
+
+        await ref.read(elevesNotifierProvider.notifier).addEleve(nouvelEleve);
+
+        if (mounted) {
+          Navigator.of(context).pop(true);
+        }
+      } catch (e) {
+        print('Erreur creation eleve: $e');
+        if (mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Erreur: $e')));
+        }
       }
-
-      // Créer l'élève avec l'ID du responsable et formatage correct des noms
-      await SchoolQueries.insertEleve({
-        'nom': nom.trim().toUpperCase(), // NOM en MAJUSCULES
-        'prenom': _formatPrenom(
-          prenom.trim(),
-        ), // Prénom avec première lettre majuscule
-        'postnom': postnom.trim().isNotEmpty
-            ? postnom.trim().toUpperCase()
-            : null, // POST-NOM en MAJUSCULES
-        'sexe': sexe,
-        'date_naissance': dateNaissance,
-        'lieu_naissance': lieuNaissance,
-        'numero_permanent': numeroPermanent,
-        'classe_id': classeId,
-        'responsable_id': finalResponsableId,
-        'matricule': matricule,
-        'statut': statut,
-      });
-
-      print('✅ Élève créé avec responsable_id: $finalResponsableId');
-      Navigator.of(context).pop(true);
     }
   }
 

@@ -7,7 +7,7 @@ part 'eleve.g.dart';
 
 @Entity(
   tableName: 'eleves',
-    indices: [
+  indices: [
     // Contrainte d'unicité sur server_id pour éviter les doublons
     // Permet la gestion automatique des conflits
     Index(value: ['server_id'], unique: true),
@@ -27,10 +27,9 @@ part 'eleve.g.dart';
 )
 @JsonSerializable()
 class Eleve {
-  @PrimaryKey(autoGenerate: true)
-  @JsonKey(includeFromJson: false, includeToJson: false)
+  @PrimaryKey(autoGenerate: false)
+  @JsonKey(includeToJson: false)
   final int? id;
-
   @ColumnInfo(name: 'server_id')
   @JsonKey(name: 'id')
   int? serverId;
@@ -113,6 +112,25 @@ class Eleve {
   static List<Map<String, dynamic>> toJsonList(List<Eleve> eleves) {
     return eleves.map((eleve) => eleve.toJson()).toList();
   }
+
+  /// Méthodes utilitaires pour l'affichage
+  String get prenomCapitalized => prenom.isEmpty
+      ? ''
+      : prenom[0].toUpperCase() + prenom.substring(1).toLowerCase();
+
+  String get nomPostnomMaj {
+    String result = nom.toUpperCase();
+    if (postnom != null && postnom!.isNotEmpty) {
+      result += ' ${postnom!.toUpperCase()}';
+    }
+    return result;
+  }
+
+  /// Nom de classe temporaire (sera remplacé par une jointure avec Classe)
+  String? get classeNom => null; // À implémenter avec jointure
+
+  /// Nom complet formaté
+  String get nomComplet => '$prenomCapitalized $nomPostnomMaj';
 
   Eleve copyWith({
     int? id,

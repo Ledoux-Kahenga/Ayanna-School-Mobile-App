@@ -1,0 +1,15 @@
+[Desktop Entry]
+Version=1.0
+Type=Application
+Name=Ayanna School
+Name[fr]=Ayanna School - Gestion Scolaire
+Comment=Application de gestion scolaire complète
+Comment[fr]=Système de gestion scolaire pour établissements éducatifs
+Exec=ayanna_school
+Icon=ayanna_school
+Terminal=false
+Categories=Education;Office;
+StartupNotify=true
+MimeType=application/x-ayanna-school;
+Keywords=école;gestion;étudiants;notes;présence;comptabilité;
+Keywords[en]=school;management;students;grades;attendance;accounting;

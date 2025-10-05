@@ -82,6 +82,9 @@ abstract class JournalComptableDao {
   @delete
   Future<void> deleteJournalComptable(JournalComptable journalComptable);
 
+  @Query('DELETE FROM journaux_comptables')
+  Future<void> deleteAllJournauxComptables();
+  
   @Query('DELETE FROM journaux_comptables WHERE entreprise_id = :entrepriseId')
   Future<void> deleteJournauxComptablesByEntreprise(int entrepriseId);
 

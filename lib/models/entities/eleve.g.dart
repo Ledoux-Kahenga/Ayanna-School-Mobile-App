@@ -7,6 +7,7 @@ part of 'eleve.dart';
 // **************************************************************************
 
 Eleve _$EleveFromJson(Map<String, dynamic> json) => Eleve(
+      id: (json['id'] as num?)?.toInt(),
       serverId: (json['id'] as num?)?.toInt(),
       nom: json['nom'] as String,
       postnom: json['postnom'] as String?,

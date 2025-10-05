@@ -106,7 +106,7 @@ class SimpleTestPage extends ConsumerWidget {
                     ElevatedButton.icon(
                       onPressed: () {
                         ref
-                            .read(connectivityProvider.notifier)
+                            .read(connectivityNotifierProvider.notifier)
                             .checkConnectivity();
                       },
                       icon: const Icon(Icons.refresh),
@@ -327,7 +327,7 @@ class SimpleTestPage extends ConsumerWidget {
         onPressed: () {
           // Rafraîchir tous les états
           ref.invalidate(authNotifierProvider);
-          ref.read(connectivityProvider.notifier).checkConnectivity();
+          ref.read(connectivityNotifierProvider.notifier).checkConnectivity();
 
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(

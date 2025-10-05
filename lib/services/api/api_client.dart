@@ -1,4 +1,7 @@
+import 'package:ayanna_school/models/sync_response.dart';
 import 'package:chopper/chopper.dart';
+import 'package:json_serializable_chopper_converter/json_serializable_chopper_converter.dart';
+import 'package:pretty_chopper_logger/pretty_chopper_logger.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:async';
 
@@ -24,9 +27,10 @@ import 'licence_service.dart';
 import 'config_ecole_service.dart';
 import 'comptes_config_service.dart';
 import 'periodes_classes_service.dart';
+import 'sync_service.dart';
 
 class ApiClient {
-  static const String baseUrl = 'https://your-api-url.com/api';
+  static const String baseUrl = 'https://apischool.ayanna.cloud';
 
   late final ChopperClient _client;
 
@@ -53,6 +57,7 @@ class ApiClient {
   late final ConfigEcoleService _configEcoleService;
   late final ComptesConfigService _comptesConfigService;
   late final PeriodesClassesService _periodesClassesService;
+  late final SyncService _syncService;
 
   ApiClient() {
     _client = ChopperClient(
@@ -80,9 +85,17 @@ class ApiClient {
         ConfigEcoleService.create(),
         ComptesConfigService.create(),
         PeriodesClassesService.create(),
+        SyncService.create(),
       ],
-      converter: const JsonConverter(),
-      interceptors: [HttpLoggingInterceptor(), AuthInterceptor()],
+      converter:    JsonSerializableConverter({
+        SyncResponse: SyncResponse.fromJson,
+        SyncUploadResponse: SyncUploadResponse.fromJson,
+      }),
+      interceptors: [
+        HttpLoggingInterceptor(),
+        AuthInterceptor(),
+        PrettyChopperLogger(),
+      ],
     );
 
     // Initialize all services
@@ -108,6 +121,7 @@ class ApiClient {
     _configEcoleService = _client.getService<ConfigEcoleService>();
     _comptesConfigService = _client.getService<ComptesConfigService>();
     _periodesClassesService = _client.getService<PeriodesClassesService>();
+    _syncService = _client.getService<SyncService>();
   }
 
   // Getters for all services
@@ -135,6 +149,7 @@ class ApiClient {
   ConfigEcoleService get configEcoleService => _configEcoleService;
   ComptesConfigService get comptesConfigService => _comptesConfigService;
   PeriodesClassesService get periodesClassesService => _periodesClassesService;
+  SyncService get syncService => _syncService;
 
   void dispose() {
     _client.dispose();
@@ -153,12 +168,11 @@ class AuthInterceptor implements Interceptor {
     // Ajouter le token d'authentification si nécessaire
     String? token = await _getAuthToken();
 
-    final newRequest =
-        token != null
-            ? request.copyWith(
-              headers: {...request.headers, 'Authorization': 'Bearer $token'},
-            )
-            : request;
+    final newRequest = token != null
+        ? request.copyWith(
+            headers: {...request.headers, 'Authorization': 'Bearer $token'},
+          )
+        : request;
 
     return chain.proceed(newRequest);
   }
