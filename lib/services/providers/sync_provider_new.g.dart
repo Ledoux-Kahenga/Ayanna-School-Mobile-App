@@ -38,7 +38,7 @@ final syncManagerProvider = AutoDisposeProvider<SyncManager>.internal(
 );
 
 typedef SyncManagerRef = AutoDisposeProviderRef<SyncManager>;
-String _$syncStateNotifierHash() => r'8fc59ec9a34080b596d3d0b8f91e77fc0cdbe2ec';
+String _$syncStateNotifierHash() => r'ba52bd63a25c77e9dd4f59543b1c0a664248b759';
 
 /// Provider pour l'état de synchronisation
 ///

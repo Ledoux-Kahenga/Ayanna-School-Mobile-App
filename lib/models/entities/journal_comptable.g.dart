@@ -22,7 +22,12 @@ JournalComptable _$JournalComptableFromJson(Map<String, dynamic> json) =>
     );
 
 Map<String, dynamic> _$JournalComptableToJson(JournalComptable instance) {
-  final val = <String, dynamic>{};
+  final val = <String, dynamic>{
+    'date_operation': instance.dateOperation.toIso8601String(),
+    'libelle': instance.libelle,
+    'montant': instance.montant,
+    'type_operation': instance.typeOperation,
+  };
 
   void writeNotNull(String key, dynamic value) {
     if (value != null) {
@@ -30,11 +35,6 @@ Map<String, dynamic> _$JournalComptableToJson(JournalComptable instance) {
     }
   }
 
-  writeNotNull('id', instance.serverId);
-  val['date_operation'] = instance.dateOperation.toIso8601String();
-  val['libelle'] = instance.libelle;
-  val['montant'] = instance.montant;
-  val['type_operation'] = instance.typeOperation;
   writeNotNull('paiement_frais_id', instance.paiementFraisId);
   val['entreprise_id'] = instance.entrepriseId;
   val['date_creation'] = instance.dateCreation.toIso8601String();

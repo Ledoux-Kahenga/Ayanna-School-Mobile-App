@@ -32,143 +32,148 @@ class IdMappingHelper {
     AppDatabase database,
     IdMapping mapping,
   ) async {
+    if (mapping.idLocal == null || mapping.idServeur == null) {
+      print(
+          'Mapping ID invalide pour ${mapping.table}: idLocal ou idServeur est null');
+      return;
+    }
     switch (mapping.table) {
       case 'eleves':
         await database.eleveDao.updateServerIdAndSync(
-          mapping.idLocal,
-          mapping.idServeur,
+          mapping.idLocal!,
+          mapping.idServeur!,
         );
         break;
       case 'enseignants':
         await database.enseignantDao.updateServerIdAndSync(
-          mapping.idLocal,
-          mapping.idServeur,
+          mapping.idLocal!,
+          mapping.idServeur!,
         );
         break;
       case 'classes':
         await database.classeDao.updateServerIdAndSync(
-          mapping.idLocal,
-          mapping.idServeur,
+          mapping.idLocal!,
+          mapping.idServeur!,
         );
         break;
       case 'annees_scolaires':
         await database.anneeScolaireDao.updateServerIdAndSync(
-          mapping.idLocal,
-          mapping.idServeur,
+          mapping.idLocal!,
+          mapping.idServeur!,
         );
         break;
       case 'responsables':
         await database.responsableDao.updateServerIdAndSync(
-          mapping.idLocal,
-          mapping.idServeur,
+          mapping.idLocal!,
+          mapping.idServeur!,
         );
         break;
       case 'utilisateurs':
         await database.utilisateurDao.updateServerIdAndSync(
-          mapping.idLocal,
-          mapping.idServeur,
+          mapping.idLocal!,
+          mapping.idServeur!,
         );
         break;
       case 'entreprises':
         await database.entrepriseDao.updateServerIdAndSync(
-          mapping.idLocal,
-          mapping.idServeur,
+          mapping.idLocal!,
+          mapping.idServeur!,
         );
         break;
       case 'frais_scolaires':
         await database.fraisScolaireDao.updateServerIdAndSync(
-          mapping.idLocal,
-          mapping.idServeur,
+          mapping.idLocal!,
+          mapping.idServeur!,
         );
         break;
       case 'frais_classes':
         await database.fraisClassesDao.updateServerIdAndSync(
-          mapping.idLocal,
-          mapping.idServeur,
+          mapping.idLocal!,
+          mapping.idServeur!,
         );
         break;
-      case 'paiements_frais':
+      case 'paiement_frais':
         await database.paiementFraisDao.updateServerIdAndSync(
-          mapping.idLocal,
-          mapping.idServeur,
+          mapping.idLocal!,
+          mapping.idServeur!,
         );
         break;
       case 'notes_periodes':
         await database.notePeriodeDao.updateServerIdAndSync(
-          mapping.idLocal,
-          mapping.idServeur,
+          mapping.idLocal!,
+          mapping.idServeur!,
         );
         break;
       case 'cours':
         await database.coursDao.updateServerIdAndSync(
-          mapping.idLocal,
-          mapping.idServeur,
+          mapping.idLocal!,
+          mapping.idServeur!,
         );
         break;
       case 'periodes':
         await database.periodeDao.updateServerIdAndSync(
-          mapping.idLocal,
-          mapping.idServeur,
+          mapping.idLocal!,
+          mapping.idServeur!,
         );
         break;
       case 'creances':
         await database.creanceDao.updateServerIdAndSync(
-          mapping.idLocal,
-          mapping.idServeur,
+          mapping.idLocal!,
+          mapping.idServeur!,
         );
         break;
       case 'classes_comptables':
         await database.classeComptableDao.updateServerIdAndSync(
-          mapping.idLocal,
-          mapping.idServeur,
+          mapping.idLocal!,
+          mapping.idServeur!,
         );
         break;
       case 'comptes_comptables':
         await database.compteComptableDao.updateServerIdAndSync(
-          mapping.idLocal,
-          mapping.idServeur,
+          mapping.idLocal!,
+          mapping.idServeur!,
         );
         break;
       case 'licences':
         await database.licenceDao.updateServerIdAndSync(
-          mapping.idLocal,
-          mapping.idServeur,
+          mapping.idLocal!,
+          mapping.idServeur!,
         );
         break;
       case 'configs_ecole':
         await database.configEcoleDao.updateServerIdAndSync(
-          mapping.idLocal,
-          mapping.idServeur,
+          mapping.idLocal!,
+          mapping.idServeur!,
         );
         break;
       case 'comptes_configs':
         await database.comptesConfigDao.updateServerIdAndSync(
-          mapping.idLocal,
-          mapping.idServeur,
+          mapping.idLocal!,
+          mapping.idServeur!,
         );
         break;
       case 'periodes_classes':
         await database.periodesClassesDao.updateServerIdAndSync(
-          mapping.idLocal,
-          mapping.idServeur,
+          mapping.idLocal!,
+          mapping.idServeur!,
         );
         break;
       case 'journaux_comptables':
         await database.journalComptableDao.updateServerIdAndSync(
-          mapping.idLocal,
-          mapping.idServeur,
+          mapping.idLocal!,
+          mapping.idServeur!,
         );
         break;
       case 'depenses':
         await database.depenseDao.updateServerIdAndSync(
-          mapping.idLocal,
-          mapping.idServeur,
+          mapping.idLocal!,
+          mapping.idServeur!,
         );
         break;
       case 'ecritures_comptables':
         await database.ecritureComptableDao.updateServerIdAndSync(
-          mapping.idLocal,
-          mapping.idServeur,
+          mapping.idLocal!,
+          mapping.idServeur!,
         );
         break;
       default:

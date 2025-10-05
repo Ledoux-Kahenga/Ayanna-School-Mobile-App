@@ -23,7 +23,10 @@ FraisScolaire _$FraisScolaireFromJson(Map<String, dynamic> json) =>
     );
 
 Map<String, dynamic> _$FraisScolaireToJson(FraisScolaire instance) {
-  final val = <String, dynamic>{};
+  final val = <String, dynamic>{
+    'nom': instance.nom,
+    'montant': instance.montant,
+  };
 
   void writeNotNull(String key, dynamic value) {
     if (value != null) {
@@ -31,9 +34,6 @@ Map<String, dynamic> _$FraisScolaireToJson(FraisScolaire instance) {
     }
   }
 
-  writeNotNull('id', instance.serverId);
-  val['nom'] = instance.nom;
-  val['montant'] = instance.montant;
   writeNotNull('date_limite', instance.dateLimite?.toIso8601String());
   val['entreprise_id'] = instance.entrepriseId;
   val['annee_scolaire_id'] = instance.anneeScolaireId;

@@ -69,12 +69,22 @@ Map<String, dynamic> _$SyncUploadResponseToJson(SyncUploadResponse instance) {
 
 IdMapping _$IdMappingFromJson(Map<String, dynamic> json) => IdMapping(
       table: json['table'] as String,
-      idLocal: (json['id_local'] as num).toInt(),
-      idServeur: (json['id_serveur'] as num).toInt(),
+      idLocal: (json['id_local'] as num?)?.toInt(),
+      idServeur: (json['id_serveur'] as num?)?.toInt(),
     );
 
-Map<String, dynamic> _$IdMappingToJson(IdMapping instance) => <String, dynamic>{
-      'table': instance.table,
-      'id_local': instance.idLocal,
-      'id_serveur': instance.idServeur,
-    };
+Map<String, dynamic> _$IdMappingToJson(IdMapping instance) {
+  final val = <String, dynamic>{
+    'table': instance.table,
+  };
+
+  void writeNotNull(String key, dynamic value) {
+    if (value != null) {
+      val[key] = value;
+    }
+  }
+
+  writeNotNull('id_local', instance.idLocal);
+  writeNotNull('id_serveur', instance.idServeur);
+  return val;
+}

@@ -20,7 +20,12 @@ Creance _$CreanceFromJson(Map<String, dynamic> json) => Creance(
     );
 
 Map<String, dynamic> _$CreanceToJson(Creance instance) {
-  final val = <String, dynamic>{};
+  final val = <String, dynamic>{
+    'eleve_id': instance.eleveId,
+    'frais_scolaire_id': instance.fraisScolaireId,
+    'montant': instance.montant,
+    'date_echeance': instance.dateEcheance.toIso8601String(),
+  };
 
   void writeNotNull(String key, dynamic value) {
     if (value != null) {
@@ -28,11 +33,6 @@ Map<String, dynamic> _$CreanceToJson(Creance instance) {
     }
   }
 
-  writeNotNull('id', instance.serverId);
-  val['eleve_id'] = instance.eleveId;
-  val['frais_scolaire_id'] = instance.fraisScolaireId;
-  val['montant'] = instance.montant;
-  val['date_echeance'] = instance.dateEcheance.toIso8601String();
   writeNotNull('actif', instance.active);
   val['date_creation'] = instance.dateCreation.toIso8601String();
   val['date_modification'] = instance.dateModification.toIso8601String();

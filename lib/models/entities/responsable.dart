@@ -14,10 +14,10 @@ part 'responsable.g.dart';
 @JsonSerializable()
 class Responsable {
   @PrimaryKey(autoGenerate: false)
-  @JsonKey(includeToJson: false)
+  @JsonKey(name: 'id', includeToJson: false, includeFromJson: true)
   final int? id;
   @ColumnInfo(name: 'server_id')
-  @JsonKey(name: 'id')
+  @JsonKey(name: 'id', includeToJson: false, includeFromJson: true)
   int? serverId;
 
   @ColumnInfo(name: 'is_sync')
@@ -56,7 +56,17 @@ class Responsable {
 
   factory Responsable.fromJson(Map<String, dynamic> json) =>
       _$ResponsableFromJson(json);
-  Map<String, dynamic> toJson() => _$ResponsableToJson(this);
+
+  Map<String, dynamic> toJson() {
+    final json = _$ResponsableToJson(this);
+    // Logique conditionnelle: utiliser serverId si disponible, sinon id
+    if (serverId != null) {
+      json['id'] = serverId;
+    } else {
+      json['id'] = id;
+    }
+    return json;
+  }
 
   /// Convertir une liste de JSON en liste d'objets Responsable
   static List<Responsable> fromJsonList(List<dynamic> jsonList) {

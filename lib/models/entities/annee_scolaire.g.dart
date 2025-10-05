@@ -21,7 +21,12 @@ AnneeScolaire _$AnneeScolaireFromJson(Map<String, dynamic> json) =>
     );
 
 Map<String, dynamic> _$AnneeScolaireToJson(AnneeScolaire instance) {
-  final val = <String, dynamic>{};
+  final val = <String, dynamic>{
+    'nom': instance.nom,
+    'date_debut': instance.dateDebut.toIso8601String(),
+    'date_fin': instance.dateFin.toIso8601String(),
+    'entreprise_id': instance.entrepriseId,
+  };
 
   void writeNotNull(String key, dynamic value) {
     if (value != null) {
@@ -29,11 +34,6 @@ Map<String, dynamic> _$AnneeScolaireToJson(AnneeScolaire instance) {
     }
   }
 
-  writeNotNull('id', instance.serverId);
-  val['nom'] = instance.nom;
-  val['date_debut'] = instance.dateDebut.toIso8601String();
-  val['date_fin'] = instance.dateFin.toIso8601String();
-  val['entreprise_id'] = instance.entrepriseId;
   writeNotNull('en_cours', instance.enCours);
   val['date_creation'] = instance.dateCreation.toIso8601String();
   val['date_modification'] = instance.dateModification.toIso8601String();

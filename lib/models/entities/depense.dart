@@ -34,10 +34,10 @@ part 'depense.g.dart';
 @JsonSerializable()
 class Depense {
   @PrimaryKey(autoGenerate: false)
-  @JsonKey(includeToJson: false)
+  @JsonKey(name: 'id', includeToJson: false, includeFromJson: true)
   final int? id;
   @ColumnInfo(name: 'server_id')
-  @JsonKey(name: 'id')
+  @JsonKey(name: 'id', includeToJson: false, includeFromJson: true)
   int? serverId;
 
   @ColumnInfo(name: 'is_sync')
@@ -95,7 +95,17 @@ class Depense {
 
   factory Depense.fromJson(Map<String, dynamic> json) =>
       _$DepenseFromJson(json);
-  Map<String, dynamic> toJson() => _$DepenseToJson(this);
+  
+  Map<String, dynamic> toJson() {
+    final json = _$DepenseToJson(this);
+    // Logique conditionnelle: utiliser serverId si disponible, sinon id
+    if (serverId != null) {
+      json['id'] = serverId;
+    } else {
+      json['id'] = id;
+    }
+    return json;
+  }
 
   /// Convertir une liste de JSON en liste d'objets Depense
   static List<Depense> fromJsonList(List<dynamic> jsonList) {

@@ -202,7 +202,7 @@ class _SyncExampleScreenState extends ConsumerState<SyncExampleScreen> {
 
   Future<void> _checkIfSyncNeeded() async {
     final syncNotifier = ref.read(syncStateNotifierProvider.notifier);
-    final isNeeded = await syncNotifier.isSyncNeeded();
+/*     final isNeeded = await syncNotifier.isSyncNeeded();
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -215,7 +215,7 @@ class _SyncExampleScreenState extends ConsumerState<SyncExampleScreen> {
           backgroundColor: isNeeded ? Colors.orange : Colors.green,
         ),
       );
-    }
+    } */
   }
 
   Future<void> _clearSyncData() async {

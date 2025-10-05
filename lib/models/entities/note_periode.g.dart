@@ -19,7 +19,11 @@ NotePeriode _$NotePeriodeFromJson(Map<String, dynamic> json) => NotePeriode(
     );
 
 Map<String, dynamic> _$NotePeriodeToJson(NotePeriode instance) {
-  final val = <String, dynamic>{};
+  final val = <String, dynamic>{
+    'eleve_id': instance.eleveId,
+    'cours_id': instance.coursId,
+    'periode_id': instance.periodeId,
+  };
 
   void writeNotNull(String key, dynamic value) {
     if (value != null) {
@@ -27,10 +31,6 @@ Map<String, dynamic> _$NotePeriodeToJson(NotePeriode instance) {
     }
   }
 
-  writeNotNull('id', instance.serverId);
-  val['eleve_id'] = instance.eleveId;
-  val['cours_id'] = instance.coursId;
-  val['periode_id'] = instance.periodeId;
   writeNotNull('valeur', instance.valeur);
   val['date_creation'] = instance.dateCreation.toIso8601String();
   val['date_modification'] = instance.dateModification.toIso8601String();

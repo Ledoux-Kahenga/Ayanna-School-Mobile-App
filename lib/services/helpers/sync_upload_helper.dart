@@ -16,8 +16,7 @@ class SyncUploadHelper {
   void addEleve(Eleve eleve, {required SyncOperation operation}) {
     final data = eleve.toJson();
     // Retirer les champs locaux qui ne doivent pas être envoyés
-    data.remove('id'); // ID local
-    data.remove('is_sync'); // Statut de sync local
+    // Statut de sync local
 
     switch (operation) {
       case SyncOperation.insert:
@@ -38,8 +37,7 @@ class SyncUploadHelper {
     required SyncOperation operation,
   }) {
     final data = enseignant.toJson();
-    data.remove('id');
-    data.remove('is_sync');
+   
 
     switch (operation) {
       case SyncOperation.insert:
@@ -57,8 +55,7 @@ class SyncUploadHelper {
   /// Ajouter une classe modifiée/créée
   void addClasse(Classe classe, {required SyncOperation operation}) {
     final data = classe.toJson();
-    data.remove('id');
-    data.remove('is_sync');
+    
 
     switch (operation) {
       case SyncOperation.insert:
@@ -79,8 +76,8 @@ class SyncUploadHelper {
     required SyncOperation operation,
   }) {
     final data = anneeScolaire.toJson();
-    data.remove('id');
-    data.remove('is_sync');
+
+  
 
     switch (operation) {
       case SyncOperation.insert:
@@ -104,8 +101,7 @@ class SyncUploadHelper {
     required dynamic Function(T) getServerId,
   }) {
     final data = toJson(entity);
-    data.remove('id');
-    data.remove('is_sync');
+   
 
     switch (operation) {
       case SyncOperation.insert:

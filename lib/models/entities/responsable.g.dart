@@ -27,7 +27,6 @@ Map<String, dynamic> _$ResponsableToJson(Responsable instance) {
     }
   }
 
-  writeNotNull('id', instance.serverId);
   writeNotNull('nom', instance.nom);
   writeNotNull('code', instance.code);
   writeNotNull('telephone', instance.telephone);

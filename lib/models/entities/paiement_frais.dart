@@ -34,10 +34,10 @@ part 'paiement_frais.g.dart';
 @JsonSerializable()
 class PaiementFrais {
   @PrimaryKey(autoGenerate: false)
-  @JsonKey(includeToJson: false)
+  @JsonKey(name: 'id', includeToJson: false, includeFromJson: true)
   final int? id;
   @ColumnInfo(name: 'server_id')
-  @JsonKey(name: 'id')
+  @JsonKey(name: 'id', includeToJson: false, includeFromJson: true)
   int? serverId;
 
   @ColumnInfo(name: 'is_sync')
@@ -100,7 +100,17 @@ class PaiementFrais {
 
   factory PaiementFrais.fromJson(Map<String, dynamic> json) =>
       _$PaiementFraisFromJson(json);
-  Map<String, dynamic> toJson() => _$PaiementFraisToJson(this);
+
+  Map<String, dynamic> toJson() {
+    final json = _$PaiementFraisToJson(this);
+    // Logique conditionnelle: utiliser serverId si disponible, sinon id
+    if (serverId != null) {
+      json['id'] = serverId;
+    } else {
+      json['id'] = id;
+    }
+    return json;
+  }
 
   /// Convertir une liste de JSON en liste d'objets PaiementFrais
   static List<PaiementFrais> fromJsonList(List<dynamic> jsonList) {

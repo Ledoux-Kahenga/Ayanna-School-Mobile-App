@@ -32,7 +32,6 @@ Map<String, dynamic> _$EnseignantToJson(Enseignant instance) {
     }
   }
 
-  writeNotNull('id', instance.serverId);
   writeNotNull('matricule', instance.matricule);
   val['nom'] = instance.nom;
   val['prenom'] = instance.prenom;

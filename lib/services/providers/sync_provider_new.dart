@@ -127,10 +127,8 @@ class SyncManager {
       final response = await _syncService.uploadChanges(uploadRequest);
 
       if (response.isSuccessful && response.body != null) {
-        // Convertir le Map en SyncUploadResponse
-        final uploadResponse = SyncUploadResponse.fromJson(
-          response.body as Map<String, dynamic>,
-        );
+        // response.body est déjà de type SyncUploadResponse
+        final uploadResponse = response.body!;
         print('✅ [SYNC-MANAGER] Upload réussi: ${uploadResponse.message}');
         if (uploadResponse.idMapping != null &&
             uploadResponse.idMapping!.isNotEmpty) {
@@ -143,7 +141,7 @@ class SyncManager {
       print('❌ [SYNC-MANAGER] Upload échoué: ${response.statusCode}');
       return null;
     } catch (e) {
-      print('❌ [SYNC-MANAGER] Erreur upload: $e');
+      print('❌ [SYNC-MANAGER] Erreur upload: $e ${StackTrace.current}');
       rethrow;
     }
   }
@@ -782,18 +780,18 @@ class SyncStateNotifier extends _$SyncStateNotifier {
     }
   }
 
-  /// Vérifie si une synchronisation est nécessaire
-  Future<bool> isSyncNeeded({int hoursThreshold = 1}) async {
+/*   /// Vérifie si une synchronisation est nécessaire
+  Future<bool> isSyncNeeded({int muniteThreshold = 1}) async {
     print(
-      '⏰ [SYNC] Vérification si synchronisation nécessaire (seuil: ${hoursThreshold}h)',
+      '⏰ [SYNC] Vérification si synchronisation nécessaire (seuil: ${muniteThreshold}h)',
     );
     final syncPrefs = ref.read(syncPreferencesNotifierProvider.notifier);
-    final needed = await syncPrefs.isSyncNeeded(hoursThreshold: hoursThreshold);
+    final needed = await syncPrefs.isSyncNeeded(muniteThreshold: muniteThreshold);
     print(
       '⏰ [SYNC] Synchronisation ${needed ? 'nécessaire' : 'non nécessaire'}',
     );
     return needed;
-  }
+  } */
 
   /// Obtient la dernière date de synchronisation
   Future<DateTime?> getLastSyncDate() async {
@@ -1074,7 +1072,7 @@ class SyncStateNotifier extends _$SyncStateNotifier {
       for (final paiement in unsyncedPaiements) {
         helper.addEntity(
           paiement,
-          'paiements_frais',
+          'paiement_frais',
           paiement.serverId != null
               ? SyncOperation.update
               : SyncOperation.insert,

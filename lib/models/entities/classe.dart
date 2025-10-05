@@ -28,12 +28,11 @@ part 'classe.g.dart';
 @JsonSerializable()
 class Classe {
   @PrimaryKey(autoGenerate: false)
-  @JsonKey(includeToJson: false)
+  @JsonKey(name: 'id', includeToJson: false, includeFromJson: true)
   final int? id;
-  
 
   @ColumnInfo(name: 'server_id')
-  @JsonKey(name: 'id')
+  @JsonKey(name: 'id', includeToJson: false, includeFromJson: true)
   int? serverId;
 
   @ColumnInfo(name: 'is_sync')
@@ -81,7 +80,17 @@ class Classe {
   });
 
   factory Classe.fromJson(Map<String, dynamic> json) => _$ClasseFromJson(json);
-  Map<String, dynamic> toJson() => _$ClasseToJson(this);
+
+  Map<String, dynamic> toJson() {
+    final json = _$ClasseToJson(this);
+    // Logique conditionnelle: utiliser serverId si disponible, sinon id
+    if (serverId != null) {
+      json['id'] = serverId;
+    } else {
+      json['id'] = id;
+    }
+    return json;
+  }
 
   /// Convertir une liste de JSON en liste d'objets Classe
   static List<Classe> fromJsonList(List<dynamic> jsonList) {

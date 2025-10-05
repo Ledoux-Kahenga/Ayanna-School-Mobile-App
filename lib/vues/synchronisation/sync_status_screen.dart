@@ -5,6 +5,7 @@ import '../../theme/ayanna_theme.dart';
 import '../../services/providers/sync_provider_new.dart';
 import '../../services/providers/shared_preferences_provider.dart';
 import '../../services/providers/auth_provider.dart';
+import '../../services/providers/database_provider.dart';
 import '../widgets/ayanna_drawer.dart';
 
 class SyncStatusScreen extends ConsumerStatefulWidget {
@@ -220,11 +221,13 @@ class _SyncStatusScreenState extends ConsumerState<SyncStatusScreen> {
           'État de synchronisation',
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.menu, color: Colors.white),
-          onPressed: () {
-            Scaffold.of(context).openDrawer();
-          },
+        leading: Builder(
+          builder: (context) => IconButton(
+            icon: const Icon(Icons.menu, color: Colors.white),
+            onPressed: () {
+              Scaffold.of(context).openDrawer();
+            },
+          ),
         ),
         actions: [
           IconButton(
@@ -251,6 +254,10 @@ class _SyncStatusScreenState extends ConsumerState<SyncStatusScreen> {
 
               // Carte de dernière synchronisation
               _buildLastSyncCard(syncPrefs['lastSyncDate'] as DateTime?),
+              const SizedBox(height: 16),
+
+              // Carte des statistiques de synchronisation
+              _buildSyncStatsCard(),
               const SizedBox(height: 16),
 
               // Boutons d'action
@@ -413,6 +420,205 @@ class _SyncStatusScreenState extends ConsumerState<SyncStatusScreen> {
         ),
       ),
     );
+  }
+
+  Widget _buildSyncStatsCard() {
+    final database = ref.watch(databaseProvider);
+
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.analytics_outlined,
+                  size: 24,
+                  color: Colors.grey.shade700,
+                ),
+                const SizedBox(width: 12),
+                const Text(
+                  'Éléments en attente de synchronisation',
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            FutureBuilder<Map<String, int>>(
+              future: _getUnsyncedCounts(database),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (snapshot.hasError) {
+                  return Text('Erreur: ${snapshot.error}');
+                }
+
+                final counts = snapshot.data ?? {};
+                final total = counts.values.fold<int>(
+                  0,
+                  (sum, count) => sum + count,
+                );
+
+                if (total == 0) {
+                  return Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: Colors.green.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      children: [
+                        Icon(Icons.check_circle, color: Colors.green.shade700),
+                        const SizedBox(width: 12),
+                        const Expanded(
+                          child: Text(
+                            'Toutes les données sont synchronisées',
+                            style: TextStyle(color: Colors.green),
+                          ),
+                        ),
+                      ],
+                    ),
+                  );
+                }
+
+                return Column(
+                  children: [
+                    _buildStatRow(
+                      'Élèves',
+                      counts['eleves'] ?? 0,
+                      Icons.school,
+                    ),
+                    _buildStatRow(
+                      'Classes',
+                      counts['classes'] ?? 0,
+                      Icons.class_,
+                    ),
+                    _buildStatRow(
+                      'Enseignants',
+                      counts['enseignants'] ?? 0,
+                      Icons.person,
+                    ),
+                    _buildStatRow(
+                      'Responsables',
+                      counts['responsables'] ?? 0,
+                      Icons.people,
+                    ),
+                    _buildStatRow(
+                      'Paiements',
+                      counts['paiements'] ?? 0,
+                      Icons.payment,
+                    ),
+                    _buildStatRow(
+                      'Écritures comptables',
+                      counts['ecritures'] ?? 0,
+                      Icons.receipt,
+                    ),
+                    const Divider(height: 24),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Total',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 12,
+                            vertical: 6,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.shade100,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            '$total',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.orange.shade900,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatRow(String label, int count, IconData icon) {
+    if (count == 0) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Row(
+        children: [
+          Icon(icon, size: 20, color: Colors.grey.shade600),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(fontSize: 14, color: Colors.grey.shade800),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.blue.shade100,
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: Text(
+              '$count',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue.shade900,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<Map<String, int>> _getUnsyncedCounts(database) async {
+    try {
+      final eleves = await database.eleveDao.getUnsyncedEleves();
+      final classes = await database.classeDao.getUnsyncedClasses();
+      final enseignants = await database.enseignantDao.getUnsyncedEnseignants();
+      final responsables = await database.responsableDao
+          .getUnsyncedResponsables();
+      final paiements = await database.paiementFraisDao
+          .getUnsyncedPaiementFrais();
+      final ecritures = await database.ecritureComptableDao
+          .getUnsyncedEcrituresComptables();
+
+      return {
+        'eleves': eleves.length,
+        'classes': classes.length,
+        'enseignants': enseignants.length,
+        'responsables': responsables.length,
+        'paiements': paiements.length,
+        'ecritures': ecritures.length,
+      };
+    } catch (e) {
+      print('Erreur lors du comptage des éléments non synchronisés: $e');
+      return {};
+    }
   }
 
   Widget _buildActionButtons(bool isSyncing) {

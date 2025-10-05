@@ -22,7 +22,13 @@ Licence _$LicenceFromJson(Map<String, dynamic> json) => Licence(
     );
 
 Map<String, dynamic> _$LicenceToJson(Licence instance) {
-  final val = <String, dynamic>{};
+  final val = <String, dynamic>{
+    'cle': instance.cle,
+    'type': instance.type,
+    'date_activation': instance.dateActivation.toIso8601String(),
+    'date_expiration': instance.dateExpiration.toIso8601String(),
+    'signature': instance.signature,
+  };
 
   void writeNotNull(String key, dynamic value) {
     if (value != null) {
@@ -30,12 +36,6 @@ Map<String, dynamic> _$LicenceToJson(Licence instance) {
     }
   }
 
-  writeNotNull('id', instance.serverId);
-  val['cle'] = instance.cle;
-  val['type'] = instance.type;
-  val['date_activation'] = instance.dateActivation.toIso8601String();
-  val['date_expiration'] = instance.dateExpiration.toIso8601String();
-  val['signature'] = instance.signature;
   writeNotNull('actif', instance.active);
   writeNotNull('entreprise_id', instance.entrepriseId);
   val['date_creation'] = instance.dateCreation.toIso8601String();

@@ -31,7 +31,6 @@ Map<String, dynamic> _$ClasseComptableToJson(ClasseComptable instance) {
     }
   }
 
-  writeNotNull('id', instance.serverId);
   writeNotNull('code', instance.code);
   val['nom'] = instance.nom;
   val['libelle'] = instance.libelle;

@@ -29,7 +29,6 @@ Map<String, dynamic> _$ClasseToJson(Classe instance) {
     }
   }
 
-  writeNotNull('id', instance.serverId);
   writeNotNull('code', instance.code);
   val['nom'] = instance.nom;
   writeNotNull('niveau', instance.niveau);

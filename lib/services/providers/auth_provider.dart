@@ -310,11 +310,11 @@ class AuthNotifier extends _$AuthNotifier {
         }
         print('✅ [SYNC] Connectivité réseau confirmée');
 
-        // Vérifier si une synchronisation est nécessaire
+        /* // Vérifier si une synchronisation est nécessaire
         print(
           '⏰ [SYNC] Vérification de la nécessité de synchronisation (seuil: 1 heure)...',
         );
-        final needsSync = await syncNotifier.isSyncNeeded(hoursThreshold: 1);
+        final needsSync = await syncNotifier.isSyncNeeded(muniteThreshold: 1);
         if (!needsSync) {
           print(
             '✅ [SYNC] Synchronisation récente trouvée - pas besoin de synchroniser',
@@ -322,7 +322,7 @@ class AuthNotifier extends _$AuthNotifier {
           return;
         }
         print('🔄 [SYNC] Synchronisation nécessaire - démarrage en cours');
-
+ */
         // Effectuer une synchronisation bidirectionnelle
         // (upload des changements locaux + download des changements serveur)
         print('📤 [SYNC] Démarrage de la synchronisation bidirectionnelle...');
@@ -347,6 +347,8 @@ class AuthNotifier extends _$AuthNotifier {
       if (authState == null ||
           !authState.isAuthenticated ||
           authState.userEmail == null) {
+        final prefs = await SharedPreferences.getInstance();
+        final token = prefs.getString(_tokenKey);
         print(
           '❌ [SYNC_MANUAL] Utilisateur non connecté - synchronisation impossible',
         );

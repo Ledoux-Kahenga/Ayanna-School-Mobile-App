@@ -717,7 +717,7 @@ class PaiementsFraisNotifier extends _$PaiementsFraisNotifier {
       try {
         await syncNotifier.uploadSingleEntity(
           paiement,
-          'paiements_frais',
+          'paiement_frais',
           'create',
           userEmail: 'admin@testschool.com',
         );
@@ -740,7 +740,7 @@ class PaiementsFraisNotifier extends _$PaiementsFraisNotifier {
       try {
         await syncNotifier.uploadSingleEntity(
           paiement,
-          'paiements_frais',
+          'paiement_frais',
           'update',
           userEmail: 'admin@testschool.com',
         );
@@ -759,7 +759,7 @@ class PaiementsFraisNotifier extends _$PaiementsFraisNotifier {
       try {
         await syncNotifier.uploadSingleEntity(
           paiement,
-          'paiements_frais',
+          'paiement_frais',
           'delete',
           userEmail: 'admin@testschool.com',
         );
@@ -881,7 +881,7 @@ class PaiementsFraisNotifier extends _$PaiementsFraisNotifier {
         try {
           await syncNotifier.uploadSingleEntity(
             nouveauPaiement,
-            'paiements_frais',
+            'paiement_frais',
             'create',
             userEmail: 'admin@testschool.com',
           );

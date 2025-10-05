@@ -25,7 +25,7 @@ final sharedPreferencesProvider =
 
 typedef SharedPreferencesRef = AutoDisposeFutureProviderRef<SharedPreferences>;
 String _$syncPreferencesNotifierHash() =>
-    r'444b20dcf8bbd10c3dee287c6010225596261154';
+    r'fd60a9034ec621ffb7f0d92c566d557f05024d1a';
 
 /// Provider pour gérer les données de synchronisation dans SharedPreferences
 ///

@@ -23,7 +23,9 @@ Entreprise _$EntrepriseFromJson(Map<String, dynamic> json) => Entreprise(
     );
 
 Map<String, dynamic> _$EntrepriseToJson(Entreprise instance) {
-  final val = <String, dynamic>{};
+  final val = <String, dynamic>{
+    'nom': instance.nom,
+  };
 
   void writeNotNull(String key, dynamic value) {
     if (value != null) {
@@ -31,8 +33,6 @@ Map<String, dynamic> _$EntrepriseToJson(Entreprise instance) {
     }
   }
 
-  writeNotNull('id', instance.serverId);
-  val['nom'] = instance.nom;
   writeNotNull('adresse', instance.adresse);
   writeNotNull('numero_id', instance.numeroId);
   writeNotNull('devise', instance.devise);

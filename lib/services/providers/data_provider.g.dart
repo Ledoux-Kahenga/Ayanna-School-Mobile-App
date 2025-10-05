@@ -160,7 +160,7 @@ final fraisScolairesNotifierProvider = AutoDisposeAsyncNotifierProvider<
 typedef _$FraisScolairesNotifier
     = AutoDisposeAsyncNotifier<List<FraisScolaire>>;
 String _$paiementsFraisNotifierHash() =>
-    r'c27c74ce9b4079d49232aebda7664512e9e792af';
+    r'4412cdfdbb9c9a8047896b6e9053e9e96b380f32';
 
 /// Provider pour la liste des paiements de frais
 ///

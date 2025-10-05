@@ -137,21 +137,23 @@ class _ConfigurationScreenState extends ConsumerState<ConfigurationScreen> {
                           ),
                           const Divider(height: 24),
                           const SizedBox(height: 12),
-                          DropdownButtonFormField<AnneeScolaire>(
-                            value: _selectedYear,
+                          DropdownButtonFormField<int>(
+                            initialValue: _selectedYear?.id,
                             decoration: const InputDecoration(
                               labelText: 'Année scolaire en cours',
                               border: OutlineInputBorder(),
                             ),
                             items: _annees.map((year) {
-                              return DropdownMenuItem(
-                                value: year,
+                              return DropdownMenuItem<int>(
+                                value: year.id,
                                 child: Text(year.nom),
                               );
                             }).toList(),
                             onChanged: (value) {
                               setState(() {
-                                _selectedYear = value;
+                                _selectedYear = _annees.firstWhere(
+                                  (year) => year.id == value,
+                                );
                               });
                             },
                             validator: (value) {

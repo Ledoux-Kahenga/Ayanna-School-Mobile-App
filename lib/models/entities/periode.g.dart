@@ -34,7 +34,6 @@ Map<String, dynamic> _$PeriodeToJson(Periode instance) {
     }
   }
 
-  writeNotNull('id', instance.serverId);
   writeNotNull('code', instance.code);
   val['nom'] = instance.nom;
   val['semestre'] = instance.semestre;

@@ -32,12 +32,11 @@ part 'comptes_config.g.dart';
 @JsonSerializable()
 class ComptesConfig {
   @PrimaryKey(autoGenerate: false)
-  @JsonKey(includeToJson: false)
+  @JsonKey(name: 'id', includeToJson: false, includeFromJson: true)
   final int? id;
 
-
   @ColumnInfo(name: 'server_id')
-  @JsonKey(name: 'id')
+  @JsonKey(name: 'id', includeToJson: false, includeFromJson: true)
   int? serverId;
 
   @ColumnInfo(name: 'is_sync')
@@ -87,8 +86,17 @@ class ComptesConfig {
 
   factory ComptesConfig.fromJson(Map<String, dynamic> json) =>
       _$ComptesConfigFromJson(json);
-  Map<String, dynamic> toJson() => _$ComptesConfigToJson(this);
 
+  Map<String, dynamic> toJson() {
+    final json = _$ComptesConfigToJson(this);
+    // Logique conditionnelle: utiliser serverId si disponible, sinon id
+    if (serverId != null) {
+      json['id'] = serverId;
+    } else {
+      json['id'] = id;
+    }
+    return json;
+  }
   /// Convertir une liste de JSON en liste d'objets ComptesConfig
   static List<ComptesConfig> fromJsonList(List<dynamic> jsonList) {
     return jsonList

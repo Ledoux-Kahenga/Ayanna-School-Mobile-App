@@ -22,7 +22,13 @@ Utilisateur _$UtilisateurFromJson(Map<String, dynamic> json) => Utilisateur(
     );
 
 Map<String, dynamic> _$UtilisateurToJson(Utilisateur instance) {
-  final val = <String, dynamic>{};
+  final val = <String, dynamic>{
+    'nom': instance.nom,
+    'prenom': instance.prenom,
+    'email': instance.email,
+    'mot_de_passe_hash': instance.motDePasseHash,
+    'role': instance.role,
+  };
 
   void writeNotNull(String key, dynamic value) {
     if (value != null) {
@@ -30,12 +36,6 @@ Map<String, dynamic> _$UtilisateurToJson(Utilisateur instance) {
     }
   }
 
-  writeNotNull('id', instance.serverId);
-  val['nom'] = instance.nom;
-  val['prenom'] = instance.prenom;
-  val['email'] = instance.email;
-  val['mot_de_passe_hash'] = instance.motDePasseHash;
-  val['role'] = instance.role;
   writeNotNull('actif', instance.actif);
   val['entreprise_id'] = instance.entrepriseId;
   val['date_creation'] = instance.dateCreation.toIso8601String();

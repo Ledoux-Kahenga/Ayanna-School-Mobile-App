@@ -28,7 +28,6 @@ Map<String, dynamic> _$CoursToJson(Cours instance) {
     }
   }
 
-  writeNotNull('id', instance.serverId);
   writeNotNull('code', instance.code);
   val['nom'] = instance.nom;
   writeNotNull('coefficient', instance.coefficient);

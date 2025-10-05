@@ -23,7 +23,12 @@ PaiementFrais _$PaiementFraisFromJson(Map<String, dynamic> json) =>
     );
 
 Map<String, dynamic> _$PaiementFraisToJson(PaiementFrais instance) {
-  final val = <String, dynamic>{};
+  final val = <String, dynamic>{
+    'eleve_id': instance.eleveId,
+    'frais_scolaire_id': instance.fraisScolaireId,
+    'montant_paye': instance.montantPaye,
+    'date_paiement': instance.datePaiement.toIso8601String(),
+  };
 
   void writeNotNull(String key, dynamic value) {
     if (value != null) {
@@ -31,11 +36,6 @@ Map<String, dynamic> _$PaiementFraisToJson(PaiementFrais instance) {
     }
   }
 
-  writeNotNull('id', instance.serverId);
-  val['eleve_id'] = instance.eleveId;
-  val['frais_scolaire_id'] = instance.fraisScolaireId;
-  val['montant_paye'] = instance.montantPaye;
-  val['date_paiement'] = instance.datePaiement.toIso8601String();
   writeNotNull('user_id', instance.userId);
   writeNotNull('reste_a_payer', instance.resteAPayer);
   writeNotNull('statut', instance.statut);

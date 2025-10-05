@@ -18,7 +18,9 @@ ConfigEcole _$ConfigEcoleFromJson(Map<String, dynamic> json) => ConfigEcole(
     );
 
 Map<String, dynamic> _$ConfigEcoleToJson(ConfigEcole instance) {
-  final val = <String, dynamic>{};
+  final val = <String, dynamic>{
+    'entreprise_id': instance.entrepriseId,
+  };
 
   void writeNotNull(String key, dynamic value) {
     if (value != null) {
@@ -26,8 +28,6 @@ Map<String, dynamic> _$ConfigEcoleToJson(ConfigEcole instance) {
     }
   }
 
-  writeNotNull('id', instance.serverId);
-  val['entreprise_id'] = instance.entrepriseId;
   writeNotNull('annee_scolaire_en_cours_id', instance.anneeScolaireEnCoursId);
   val['date_creation'] = instance.dateCreation.toIso8601String();
   val['date_modification'] = instance.dateModification.toIso8601String();

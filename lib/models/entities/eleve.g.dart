@@ -28,7 +28,9 @@ Eleve _$EleveFromJson(Map<String, dynamic> json) => Eleve(
     );
 
 Map<String, dynamic> _$EleveToJson(Eleve instance) {
-  final val = <String, dynamic>{};
+  final val = <String, dynamic>{
+    'nom': instance.nom,
+  };
 
   void writeNotNull(String key, dynamic value) {
     if (value != null) {
@@ -36,8 +38,6 @@ Map<String, dynamic> _$EleveToJson(Eleve instance) {
     }
   }
 
-  writeNotNull('id', instance.serverId);
-  val['nom'] = instance.nom;
   writeNotNull('postnom', instance.postnom);
   val['prenom'] = instance.prenom;
   writeNotNull('sexe', instance.sexe);

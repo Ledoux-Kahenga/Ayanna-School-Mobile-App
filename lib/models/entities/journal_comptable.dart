@@ -28,10 +28,10 @@ part 'journal_comptable.g.dart';
 @JsonSerializable()
 class JournalComptable {
   @PrimaryKey(autoGenerate: false)
-  @JsonKey(includeToJson: false)
+  @JsonKey(name: 'id', includeToJson: false, includeFromJson: true)
   final int? id;
   @ColumnInfo(name: 'server_id')
-  @JsonKey(name: 'id')
+  @JsonKey(name: 'id', includeToJson: false, includeFromJson: true)
   int? serverId;
 
   @ColumnInfo(name: 'is_sync')
@@ -86,7 +86,17 @@ class JournalComptable {
 
   factory JournalComptable.fromJson(Map<String, dynamic> json) =>
       _$JournalComptableFromJson(json);
-  Map<String, dynamic> toJson() => _$JournalComptableToJson(this);
+
+  Map<String, dynamic> toJson() {
+    final json = _$JournalComptableToJson(this);
+    // Logique conditionnelle: utiliser serverId si disponible, sinon id
+    if (serverId != null) {
+      json['id'] = serverId;
+    } else {
+      json['id'] = id;
+    }
+    return json;
+  }
 
   /// Convertir une liste de JSON en liste d'objets JournalComptable
   static List<JournalComptable> fromJsonList(List<dynamic> jsonList) {

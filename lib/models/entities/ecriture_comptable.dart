@@ -28,10 +28,10 @@ part 'ecriture_comptable.g.dart';
 @JsonSerializable()
 class EcritureComptable {
   @PrimaryKey(autoGenerate: false)
-  @JsonKey(includeToJson: false)
+  @JsonKey(name: 'id', includeToJson: false, includeFromJson: true)
   final int? id;
   @ColumnInfo(name: 'server_id')
-  @JsonKey(name: 'id')
+  @JsonKey(name: 'id', includeToJson: false, includeFromJson: true)
   int? serverId;
 
   @ColumnInfo(name: 'is_sync')
@@ -88,7 +88,17 @@ class EcritureComptable {
 
   factory EcritureComptable.fromJson(Map<String, dynamic> json) =>
       _$EcritureComptableFromJson(json);
-  Map<String, dynamic> toJson() => _$EcritureComptableToJson(this);
+  
+  Map<String, dynamic> toJson() {
+    final json = _$EcritureComptableToJson(this);
+    // Logique conditionnelle: utiliser serverId si disponible, sinon id
+    if (serverId != null) {
+      json['id'] = serverId;
+    } else {
+      json['id'] = id;
+    }
+    return json;
+  }
 
   /// Convertir une liste de JSON en liste d'objets EcritureComptable
   static List<EcritureComptable> fromJsonList(List<dynamic> jsonList) {

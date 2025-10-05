@@ -28,12 +28,11 @@ part 'config_ecole.g.dart';
 @JsonSerializable()
 class ConfigEcole {
   @PrimaryKey(autoGenerate: false)
-  @JsonKey(includeToJson: false)
+  @JsonKey(name: 'id', includeToJson: false, includeFromJson: true)
   final int? id;
 
-
   @ColumnInfo(name: 'server_id')
-  @JsonKey(name: 'id')
+  @JsonKey(name: 'id', includeToJson: false, includeFromJson: true)
   int? serverId;
 
   @ColumnInfo(name: 'is_sync')
@@ -73,8 +72,17 @@ class ConfigEcole {
 
   factory ConfigEcole.fromJson(Map<String, dynamic> json) =>
       _$ConfigEcoleFromJson(json);
-  Map<String, dynamic> toJson() => _$ConfigEcoleToJson(this);
 
+  Map<String, dynamic> toJson() {
+    final json = _$ConfigEcoleToJson(this);
+    // Logique conditionnelle: utiliser serverId si disponible, sinon id
+    if (serverId != null) {
+      json['id'] = serverId;
+    } else {
+      json['id'] = id;
+    }
+    return json;
+  }
   /// Convertir une liste de JSON en liste d'objets ConfigEcole
   static List<ConfigEcole> fromJsonList(List<dynamic> jsonList) {
     return jsonList

@@ -16,20 +16,11 @@ FraisClasses _$FraisClassesFromJson(Map<String, dynamic> json) => FraisClasses(
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
 
-Map<String, dynamic> _$FraisClassesToJson(FraisClasses instance) {
-  final val = <String, dynamic>{};
-
-  void writeNotNull(String key, dynamic value) {
-    if (value != null) {
-      val[key] = value;
-    }
-  }
-
-  writeNotNull('id', instance.serverId);
-  val['frais_id'] = instance.fraisId;
-  val['classe_id'] = instance.classeId;
-  val['date_creation'] = instance.dateCreation.toIso8601String();
-  val['date_modification'] = instance.dateModification.toIso8601String();
-  val['updated_at'] = instance.updatedAt.toIso8601String();
-  return val;
-}
+Map<String, dynamic> _$FraisClassesToJson(FraisClasses instance) =>
+    <String, dynamic>{
+      'frais_id': instance.fraisId,
+      'classe_id': instance.classeId,
+      'date_creation': instance.dateCreation.toIso8601String(),
+      'date_modification': instance.dateModification.toIso8601String(),
+      'updated_at': instance.updatedAt.toIso8601String(),
+    };

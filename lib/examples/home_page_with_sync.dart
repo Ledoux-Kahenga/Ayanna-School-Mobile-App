@@ -25,12 +25,12 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   Future<void> _checkInitialSync() async {
     final syncNotifier = ref.read(syncStateNotifierProvider.notifier);
-    final isNeeded = await syncNotifier.isSyncNeeded();
+    /* final isNeeded = await syncNotifier.isSyncNeeded();
 
     if (isNeeded && mounted) {
       // Proposer une synchronisation automatique
       _showSyncDialog();
-    }
+    } */
   }
 
   void _showSyncDialog() {

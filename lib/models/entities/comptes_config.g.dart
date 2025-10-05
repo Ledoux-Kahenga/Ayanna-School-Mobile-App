@@ -19,22 +19,13 @@ ComptesConfig _$ComptesConfigFromJson(Map<String, dynamic> json) =>
       updatedAt: DateTime.parse(json['updated_at'] as String),
     );
 
-Map<String, dynamic> _$ComptesConfigToJson(ComptesConfig instance) {
-  final val = <String, dynamic>{};
-
-  void writeNotNull(String key, dynamic value) {
-    if (value != null) {
-      val[key] = value;
-    }
-  }
-
-  writeNotNull('id', instance.serverId);
-  val['entreprise_id'] = instance.entrepriseId;
-  val['compte_caisse_id'] = instance.compteCaisseId;
-  val['compte_frais_id'] = instance.compteFraisId;
-  val['compte_client_id'] = instance.compteClientId;
-  val['date_creation'] = instance.dateCreation.toIso8601String();
-  val['date_modification'] = instance.dateModification.toIso8601String();
-  val['updated_at'] = instance.updatedAt.toIso8601String();
-  return val;
-}
+Map<String, dynamic> _$ComptesConfigToJson(ComptesConfig instance) =>
+    <String, dynamic>{
+      'entreprise_id': instance.entrepriseId,
+      'compte_caisse_id': instance.compteCaisseId,
+      'compte_frais_id': instance.compteFraisId,
+      'compte_client_id': instance.compteClientId,
+      'date_creation': instance.dateCreation.toIso8601String(),
+      'date_modification': instance.dateModification.toIso8601String(),
+      'updated_at': instance.updatedAt.toIso8601String(),
+    };

@@ -21,7 +21,11 @@ CompteComptable _$CompteComptableFromJson(Map<String, dynamic> json) =>
     );
 
 Map<String, dynamic> _$CompteComptableToJson(CompteComptable instance) {
-  final val = <String, dynamic>{};
+  final val = <String, dynamic>{
+    'numero': instance.numero,
+    'nom': instance.nom,
+    'libelle': instance.libelle,
+  };
 
   void writeNotNull(String key, dynamic value) {
     if (value != null) {
@@ -29,10 +33,6 @@ Map<String, dynamic> _$CompteComptableToJson(CompteComptable instance) {
     }
   }
 
-  writeNotNull('id', instance.serverId);
-  val['numero'] = instance.numero;
-  val['nom'] = instance.nom;
-  val['libelle'] = instance.libelle;
   writeNotNull('actif', instance.actif);
   val['classe_comptable_id'] = instance.classeComptableId;
   val['date_creation'] = instance.dateCreation.toIso8601String();

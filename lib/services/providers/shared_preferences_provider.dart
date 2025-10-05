@@ -84,13 +84,13 @@ class SyncPreferencesNotifier extends _$SyncPreferencesNotifier {
   }
 
   /// Vérifie si une synchronisation est nécessaire (plus de X heures)
-  Future<bool> isSyncNeeded({int hoursThreshold = 1}) async {
+  Future<bool> isSyncNeeded({int muniteThreshold = 1}) async {
     final lastSync = await getLastSyncDate();
     if (lastSync == null) return true;
 
     final now = DateTime.now();
     final difference = now.difference(lastSync);
 
-    return difference.inHours >= hoursThreshold;
+    return difference.inMinutes >= muniteThreshold;
   }
 }

@@ -112,14 +112,14 @@ class SyncUploadResponse {
 class IdMapping {
   final String table;
   @JsonKey(name: 'id_local')
-  final int idLocal;
+  final int? idLocal;
   @JsonKey(name: 'id_serveur')
-  final int idServeur;
+  final int? idServeur;
 
   const IdMapping({
     required this.table,
-    required this.idLocal,
-    required this.idServeur,
+     this.idLocal,
+     this.idServeur,
   });
 
   factory IdMapping.fromJson(Map<String, dynamic> json) =>

@@ -29,12 +29,11 @@ part 'creance.g.dart';
 @JsonSerializable()
 class Creance {
   @PrimaryKey(autoGenerate: false)
-  @JsonKey(includeToJson: false)
+  @JsonKey(name: 'id', includeToJson: false, includeFromJson: true)
   final int? id;
 
-
   @ColumnInfo(name: 'server_id')
-  @JsonKey(name: 'id')
+  @JsonKey(name: 'id', includeToJson: false, includeFromJson: true)
   int? serverId;
 
   @ColumnInfo(name: 'is_sync')
@@ -86,7 +85,17 @@ class Creance {
 
   factory Creance.fromJson(Map<String, dynamic> json) =>
       _$CreanceFromJson(json);
-  Map<String, dynamic> toJson() => _$CreanceToJson(this);
+
+  Map<String, dynamic> toJson() {
+    final json = _$CreanceToJson(this);
+    // Logique conditionnelle: utiliser serverId si disponible, sinon id
+    if (serverId != null) {
+      json['id'] = serverId;
+    } else {
+      json['id'] = id;
+    }
+    return json;
+  }
 
   /// Convertir une liste de JSON en liste d'objets Creance
   static List<Creance> fromJsonList(List<dynamic> jsonList) {

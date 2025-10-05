@@ -22,7 +22,12 @@ Depense _$DepenseFromJson(Map<String, dynamic> json) => Depense(
     );
 
 Map<String, dynamic> _$DepenseToJson(Depense instance) {
-  final val = <String, dynamic>{};
+  final val = <String, dynamic>{
+    'libelle': instance.libelle,
+    'montant': instance.montant,
+    'date_depense': instance.dateDepense.toIso8601String(),
+    'entreprise_id': instance.entrepriseId,
+  };
 
   void writeNotNull(String key, dynamic value) {
     if (value != null) {
@@ -30,11 +35,6 @@ Map<String, dynamic> _$DepenseToJson(Depense instance) {
     }
   }
 
-  writeNotNull('id', instance.serverId);
-  val['libelle'] = instance.libelle;
-  val['montant'] = instance.montant;
-  val['date_depense'] = instance.dateDepense.toIso8601String();
-  val['entreprise_id'] = instance.entrepriseId;
   writeNotNull('observation', instance.observation);
   writeNotNull('journal_id', instance.journalId);
   writeNotNull('user_id', instance.userId);
