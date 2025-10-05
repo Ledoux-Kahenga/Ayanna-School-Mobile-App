@@ -32,76 +32,203 @@ class _PaiementDesFraisState extends ConsumerState<PaiementDesFrais> {
   final _flutterThermalPrinterPlugin = FlutterThermalPrinter.instance;
   List<thermal.Printer> printers = [];
   StreamSubscription<List<thermal.Printer>>? _devicesStreamSubscription;
+  bool _isScanning = false;
 
   @override
   void initState() {
     super.initState();
+    print('📍 [PaiementFrais] initState appelé');
     _initData();
+    print('📍 [PaiementFrais] Appel de _requestBluetoothPermissions()');
     _requestBluetoothPermissions();
   }
 
   @override
   void dispose() {
+    print('📍 [PaiementFrais] dispose appelé, annulation du stream');
     _devicesStreamSubscription?.cancel();
     _searchController.dispose();
     super.dispose();
   }
 
   Future<void> _requestBluetoothPermissions() async {
-    // Demander les permissions Bluetooth nécessaires
+    print('📍 [PaiementFrais] Début de la demande de permissions Bluetooth...');
+
+    // Sur Android 12+ (API 31+), on utilise bluetoothConnect et bluetoothScan
+    // Sur Android < 12, on utilise bluetooth et location
     Map<Permission, PermissionStatus> statuses = await [
-      Permission.bluetooth,
       Permission.bluetoothConnect,
       Permission.bluetoothScan,
       Permission.location,
     ].request();
 
-    // Vérifier si toutes les permissions sont accordées
-    bool allGranted = statuses.values.every((status) => status.isGranted);
+    print('📍 [PaiementFrais] Statuts des permissions:');
+    statuses.forEach((permission, status) {
+      print('   - ${permission.toString()}: ${status.toString()}');
+    });
 
-    if (allGranted) {
+    // Vérifier les permissions essentielles selon la version Android
+    bool bluetoothConnectGranted =
+        statuses[Permission.bluetoothConnect]?.isGranted ?? false;
+    bool bluetoothScanGranted =
+        statuses[Permission.bluetoothScan]?.isGranted ?? false;
+    bool locationGranted = statuses[Permission.location]?.isGranted ?? false;
+
+    // Sur Android 12+, on a besoin de bluetoothConnect et bluetoothScan
+    // La location est optionnelle si on utilise neverForLocation
+    bool permissionsOk = bluetoothConnectGranted && bluetoothScanGranted;
+
+    print('📍 [PaiementFrais] Analyse des permissions:');
+    print('   - bluetoothConnect: $bluetoothConnectGranted');
+    print('   - bluetoothScan: $bluetoothScanGranted');
+    print('   - location: $locationGranted');
+    print('   - Permissions OK: $permissionsOk');
+
+    if (permissionsOk) {
+      print(
+        '✅ [PaiementFrais] Permissions essentielles accordées, lancement du scan...',
+      );
       _startScan();
     } else {
+      print('❌ [PaiementFrais] Permissions essentielles refusées');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Permissions Bluetooth requises pour l\'impression'),
-            duration: Duration(seconds: 3),
+            content: Text(
+              'Permissions Bluetooth requises pour l\'impression thermique',
+            ),
+            duration: Duration(seconds: 4),
           ),
         );
       }
     }
   }
 
-  void _startScan() {
-    _devicesStreamSubscription = _flutterThermalPrinterPlugin.devicesStream
-        .listen((devices) {
+  void _startScan() async {
+    print('📍 [PaiementFrais] Début du scan des imprimantes...');
+
+    setState(() {
+      _isScanning = true;
+    });
+
+    try {
+      // D'abord écouter le stream
+      print('📍 [PaiementFrais] Configuration du listener devicesStream...');
+      _devicesStreamSubscription = _flutterThermalPrinterPlugin.devicesStream.listen(
+        (devices) {
+          print(
+            '📡 [PaiementFrais] Stream déclenché avec ${devices.length} imprimante(s)',
+          );
           if (mounted) {
             setState(() {
               printers = devices;
+              print(
+                '✅ [PaiementFrais] Liste mise à jour: ${devices.length} imprimante(s)',
+              );
+              for (var printer in devices) {
+                print(
+                  '   🖨️  ${printer.name} (${printer.address}) - Type: ${printer.connectionType}',
+                );
+              }
             });
+          } else {
+            print('⚠️ [PaiementFrais] Widget non monté, mise à jour ignorée');
           }
+        },
+        onError: (error) {
+          print('❌ [PaiementFrais] Erreur dans le stream: $error');
+        },
+        cancelOnError: false,
+      );
+
+      print(
+        '📍 [PaiementFrais] Listener configuré, lancement de getPrinters()...',
+      );
+
+      // Puis lancer la découverte des imprimantes Bluetooth
+      await _flutterThermalPrinterPlugin.getPrinters(
+        refreshDuration: const Duration(seconds: 2),
+        connectionTypes: [thermal.ConnectionType.BLE],
+      );
+
+      print(
+        '✅ [PaiementFrais] getPrinters() terminé, attente des résultats dans le stream...',
+      );
+
+      // Attendre 8 secondes pour laisser le temps au scan de trouver les imprimantes
+      await Future.delayed(const Duration(seconds: 8));
+
+      print(
+        '⏹️ [PaiementFrais] Fin de l\'attente du scan, ${printers.length} imprimante(s) trouvée(s)',
+      );
+
+      _flutterThermalPrinterPlugin.stopScan();
+
+      if (mounted) {
+        setState(() {
+          _isScanning = false;
         });
+      }
+    } catch (e) {
+      print('❌ [PaiementFrais] Erreur lors du scan: $e');
+      if (mounted) {
+        setState(() {
+          _isScanning = false;
+        });
+      }
+    }
   }
 
   Future<void> _showReceiptWidget(
     entities.Eleve eleve,
     FraisDetails fraisDetails,
   ) async {
-    if (printers.isEmpty) {
+    print('📍 [PaiementFrais] _showReceiptWidget appelé');
+    print(
+      '📍 [PaiementFrais] Nombre d\'imprimantes disponibles: ${printers.length}',
+    );
+    print('📍 [PaiementFrais] Scan en cours: $_isScanning');
+
+    // Si le scan est en cours, afficher un message et attendre
+    if (_isScanning) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text(
-            'Aucune imprimante trouvée. Assurez-vous que l\'imprimante est connectée.',
+            '⏳ Recherche d\'imprimantes en cours, veuillez patienter...',
           ),
+          duration: Duration(seconds: 2),
+        ),
+      );
+      print(
+        '⚠️ [PaiementFrais] Scan en cours, impression refusée temporairement',
+      );
+      return;
+    }
+
+    if (printers.isEmpty) {
+      print('❌ [PaiementFrais] Aucune imprimante dans la liste');
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Aucune imprimante trouvée. Assurez-vous que l\'imprimante est allumée et à portée.',
+          ),
+          duration: Duration(seconds: 3),
         ),
       );
       return;
     }
 
+    print('✅ [PaiementFrais] Imprimantes disponibles:');
+    for (var p in printers) {
+      print('   🖨️  ${p.name} (${p.address})');
+    }
+
     // Si plusieurs imprimantes, afficher un dialogue de sélection
     thermal.Printer? selectedPrinter;
     if (printers.length > 1) {
+      print(
+        '📍 [PaiementFrais] Plusieurs imprimantes, affichage du dialogue de sélection...',
+      );
       selectedPrinter = await showDialog<thermal.Printer>(
         context: context,
         builder: (BuildContext context) {
@@ -136,20 +263,87 @@ class _PaiementDesFraisState extends ConsumerState<PaiementDesFrais> {
       );
 
       if (selectedPrinter == null) {
+        print('⚠️ [PaiementFrais] Sélection annulée par l\'utilisateur');
         return; // L'utilisateur a annulé
       }
+      print(
+        '✅ [PaiementFrais] Imprimante sélectionnée: ${selectedPrinter.name}',
+      );
     } else {
       selectedPrinter = printers[0];
+      print(
+        '✅ [PaiementFrais] Une seule imprimante, sélection automatique: ${selectedPrinter.name}',
+      );
     }
 
-    await _flutterThermalPrinterPlugin.printWidget(
-      context,
-      printer: selectedPrinter,
-      widget: FactureReceiptWidgetPaiement(
+    print(
+      '📍 [PaiementFrais] Début de l\'impression sur ${selectedPrinter.name}...',
+    );
+    print('📍 [PaiementFrais] Adresse: ${selectedPrinter.address}');
+    print('📍 [PaiementFrais] Type: ${selectedPrinter.connectionType}');
+    print('📍 [PaiementFrais] isConnected: ${selectedPrinter.isConnected}');
+
+    try {
+      // Vérifier si l'imprimante est déjà connectée
+      if (selectedPrinter.isConnected != true) {
+        print(
+          '📍 [PaiementFrais] Imprimante non connectée, connexion en cours...',
+        );
+
+        // Connecter à l'imprimante
+        final isConnected = await _flutterThermalPrinterPlugin.connect(
+          selectedPrinter,
+        );
+        print('📍 [PaiementFrais] Résultat de la connexion: $isConnected');
+
+        if (!isConnected) {
+          print('❌ [PaiementFrais] Échec de la connexion à l\'imprimante');
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text('Impossible de se connecter à l\'imprimante'),
+              ),
+            );
+          }
+          return;
+        }
+        print('✅ [PaiementFrais] Connexion réussie à l\'imprimante');
+      } else {
+        print('✅ [PaiementFrais] Imprimante déjà connectée');
+      }
+
+      print('📍 [PaiementFrais] Génération du widget de reçu...');
+      final receiptWidget = FactureReceiptWidgetPaiement(
         eleve: eleve,
         fraisDetails: fraisDetails,
-      ),
-    );
+      );
+      print('✅ [PaiementFrais] Widget de reçu généré');
+
+      print('📍 [PaiementFrais] Envoi à l\'imprimante...');
+      await _flutterThermalPrinterPlugin.printWidget(
+        context,
+        printer: selectedPrinter,
+        widget: receiptWidget,
+      );
+      print('✅ [PaiementFrais] Impression terminée avec succès');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Impression en cours...'),
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e, stackTrace) {
+      print('❌ [PaiementFrais] Erreur lors de l\'impression: $e');
+      print('❌ [PaiementFrais] Stack trace: $stackTrace');
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Erreur d\'impression: $e')));
+      }
+    }
   }
 
   Future<void> _initData() async {
@@ -959,114 +1153,98 @@ class FactureReceiptWidgetPaiement extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dateFormat = DateFormat('dd/MM/yyyy');
-    final numberFormat = NumberFormat("#,##0", "fr_FR");
+    // Formatage simple sans locale lourde
+    final now = DateTime.now();
+    final dateStr =
+        '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
 
     return SizedBox(
-      width: 550,
+      width: 384,
       child: Material(
+        color: Colors.white,
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(8.0),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
+            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              // Logo simple
-              Center(
-                child: Container(
-                  width: 50,
-                  height: 50,
-                  decoration: const BoxDecoration(
-                    color: AyannaColors.orange,
-                    shape: BoxShape.circle,
-                  ),
-                  child: const Center(
-                    child: Text(
-                      'Logo',
-                      style: TextStyle(
-                        color: AyannaColors.white,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(height: 8),
-
-              // En-tête de l'école
+              // En-tête simple
               const Text(
                 'Ayanna School',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
               ),
-              const Divider(thickness: 2, height: 20),
-
-              // Titre
-              const Center(
-                child: Text(
-                  'RECU DE PAIEMENT',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: AyannaColors.orange,
-                  ),
-                ),
-              ),
-              const SizedBox(height: 20),
-
-              // Infos Eleve et Frais
-              Text(
-                'Eleve : ${eleve.nomPostnomMaj} ${eleve.prenomCapitalized}',
-                style: const TextStyle(fontSize: 12),
-              ),
-              Text(
-                'Classe : ${eleve.classeNom ?? "-"}',
-                style: const TextStyle(fontSize: 12),
-              ),
-              Text(
-                'Frais concerne : ${fraisDetails.frais.nom}',
-                style: const TextStyle(fontSize: 12),
-              ),
-              const SizedBox(height: 16),
-
-              // Historique des paiements
+              const SizedBox(height: 4),
               const Text(
-                'Details des paiements :',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
+                'RECU DE PAIEMENT',
+                style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
 
-              // Table header
-              Container(
-                padding: const EdgeInsets.all(8),
-                color: AyannaColors.orange,
-                child: const Row(
+              // Infos élève (alignées à gauche, simples)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(
-                      flex: 2,
+                    Text(
+                      'Eleve: ${eleve.nomPostnomMaj} ${eleve.prenomCapitalized}',
+                      style: const TextStyle(fontSize: 8),
+                    ),
+                    Text(
+                      'Classe: ${eleve.classeNom ?? "-"}',
+                      style: const TextStyle(fontSize: 8),
+                    ),
+                    Text(
+                      'Frais: ${fraisDetails.frais.nom}',
+                      style: const TextStyle(fontSize: 8),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 8),
+
+              // Titre paiements
+              const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Paiements:',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 9),
+                ),
+              ),
+              const SizedBox(height: 4),
+
+              // En-têtes de colonnes (SANS Container, SANS Colors.grey)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 2),
+                child: Row(
+                  children: [
+                    SizedBox(
+                      width: 100,
                       child: Text(
                         'Date',
                         style: TextStyle(
+                          fontSize: 7,
                           fontWeight: FontWeight.bold,
-                          color: AyannaColors.white,
                         ),
                       ),
                     ),
-                    Expanded(
-                      flex: 2,
+                    SizedBox(
+                      width: 150,
                       child: Text(
-                        'Montant Paye',
+                        'Montant',
                         style: TextStyle(
+                          fontSize: 7,
                           fontWeight: FontWeight.bold,
-                          color: AyannaColors.white,
                         ),
                       ),
                     ),
-                    Expanded(
+                    SizedBox(
+                      width: 80,
                       child: Text(
-                        'Caissier',
+                        'Agent',
                         style: TextStyle(
+                          fontSize: 7,
                           fontWeight: FontWeight.bold,
-                          color: AyannaColors.white,
                         ),
                       ),
                     ),
@@ -1074,96 +1252,83 @@ class FactureReceiptWidgetPaiement extends StatelessWidget {
                 ),
               ),
 
-              // Table rows
-              ...fraisDetails.historiquePaiements.map(
-                (p) => Container(
-                  padding: const EdgeInsets.all(8),
-                  decoration: const BoxDecoration(
-                    border: Border(
-                      bottom: BorderSide(color: AyannaColors.lightGrey),
-                    ),
-                  ),
+              // Lignes de paiements (SIMPLIFIÉES)
+              ...fraisDetails.historiquePaiements.map((p) {
+                final pDate = p.datePaiement;
+                final pDateStr =
+                    '${pDate.day.toString().padLeft(2, '0')}/${pDate.month.toString().padLeft(2, '0')}/${pDate.year}';
+                final montant = p.montantPaye.toStringAsFixed(0);
+
+                return Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 2),
                   child: Row(
                     children: [
-                      Expanded(
-                        flex: 2,
-                        child: Text(dateFormat.format(p.datePaiement)),
-                      ),
-                      Expanded(
-                        flex: 2,
+                      SizedBox(
+                        width: 100,
                         child: Text(
-                          '${numberFormat.format(p.montantPaye)} CDF',
+                          pDateStr,
+                          style: const TextStyle(fontSize: 7),
                         ),
                       ),
-                      const Expanded(child: Text('Admin')),
+                      SizedBox(
+                        width: 150,
+                        child: Text(
+                          '$montant CDF',
+                          style: const TextStyle(fontSize: 7),
+                        ),
+                      ),
+                      const SizedBox(
+                        width: 80,
+                        child: Text('Admin', style: TextStyle(fontSize: 7)),
+                      ),
                     ],
                   ),
-                ),
-              ),
+                );
+              }),
 
-              const Divider(height: 20),
+              const SizedBox(height: 8),
 
-              // Totaux et statut
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Text(
-                    'Statut : ${fraisDetails.statut.replaceAll('_', ' ').toUpperCase()}',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: fraisDetails.statut == 'en_ordre'
-                          ? AyannaColors.successGreen
-                          : fraisDetails.statut == 'partiellement_paye'
-                          ? AyannaColors.orange
-                          : Colors.red,
+              // Totaux (SIMPLIFIÉS, sans couleurs conditionnelles)
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Statut: ${fraisDetails.statut.replaceAll('_', ' ').toUpperCase()}',
+                      style: const TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
-                  ),
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
-                    children: [
-                      Text(
-                        'Total Paye : ${numberFormat.format(fraisDetails.montantPaye)} CDF',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
+                    Text(
+                      'Total Paye: ${fraisDetails.montantPaye.toStringAsFixed(0)} CDF',
+                      style: const TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
                       ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'Reste a Payer : ${numberFormat.format(fraisDetails.resteAPayer)} CDF',
-                        style: const TextStyle(
-                          fontSize: 12,
-                          fontWeight: FontWeight.bold,
-                        ),
+                    ),
+                    Text(
+                      'Reste a Payer: ${fraisDetails.resteAPayer.toStringAsFixed(0)} CDF',
+                      style: const TextStyle(
+                        fontSize: 9,
+                        fontWeight: FontWeight.bold,
                       ),
-                    ],
-                  ),
-                ],
-              ),
-              const SizedBox(height: 30),
-
-              // Message de remerciement
-              const Center(
-                child: Text(
-                  'Merci pour votre paiement.',
-                  style: TextStyle(
-                    fontStyle: FontStyle.italic,
-                    color: AyannaColors.darkGrey,
-                  ),
+                    ),
+                  ],
                 ),
               ),
+              const SizedBox(height: 8),
 
-              // Pied de page
-              const SizedBox(height: 20),
-              const Divider(),
-              Center(
-                child: Text(
-                  'Genere par Ayanna School - ${dateFormat.format(DateTime.now())}',
-                  style: const TextStyle(
-                    fontSize: 8,
-                    color: AyannaColors.darkGrey,
-                  ),
-                ),
+              // Footer
+              const Text(
+                'Merci pour votre paiement.',
+                style: TextStyle(fontSize: 7),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Genere par Ayanna School - $dateStr',
+                style: const TextStyle(fontSize: 6),
               ),
             ],
           ),

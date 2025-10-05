@@ -333,6 +333,23 @@ class _ElevesScreenState extends ConsumerState<ElevesScreen> {
                           ...filteredEleves.asMap().entries.map((entry) {
                             final index = entry.key;
                             final eleve = entry.value;
+                            // Trouver la classe correspondante
+                            final classe = eleve.classeId != null
+                                ? classes.firstWhere(
+                                    (c) => c.id == eleve.classeId,
+                                    orElse: () => Classe(
+                                      id: null,
+                                      serverId: null,
+                                      isSync: false,
+                                      nom: '-',
+                                      anneeScolaireId: 0,
+                                      effectif: 0,
+                                      dateCreation: DateTime.now(),
+                                      dateModification: DateTime.now(),
+                                      updatedAt: DateTime.now(),
+                                    ),
+                                  )
+                                : null;
                             return TableRow(
                               children: [
                                 _DataCell((index + 1).toString()),
@@ -353,7 +370,7 @@ class _ElevesScreenState extends ConsumerState<ElevesScreen> {
                                     '${eleve.nom.toUpperCase()}${eleve.postnom != null && eleve.postnom!.isNotEmpty ? ' ${eleve.postnom!.toUpperCase()}' : ''} ${eleve.prenomCapitalized}',
                                   ),
                                 ),
-                                _DataCell(eleve.classeNom ?? '-'),
+                                _DataCell(classe?.nom ?? '-'),
                               ],
                             );
                           }),
