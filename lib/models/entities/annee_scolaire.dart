@@ -32,7 +32,7 @@ class AnneeScolaire {
   @ColumnInfo(name: 'is_sync')
   @JsonKey(name: 'is_sync', includeFromJson: false, includeToJson: false)
   bool isSync;
-
+ 
   String nom;
 
   @ColumnInfo(name: 'date_debut')

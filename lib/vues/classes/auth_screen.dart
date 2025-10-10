@@ -9,7 +9,6 @@ import '../../services/providers/providers.dart';
 import '../../theme/ayanna_theme.dart';
 import '../widgets/ayanna_widgets.dart';
 
-
 class AuthScreen extends ConsumerStatefulWidget {
   final bool navigateToClasses;
   final AnneeScolaire? anneeScolaire;
@@ -31,6 +30,43 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   bool _isLoading = false;
   bool _isPasswordVisible = false;
   String? _errorMessage;
+  bool _showLogoutMessage = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _checkAuthenticationStatus();
+  }
+
+  /// Vérifie l'état d'authentification pour afficher un message approprié
+  Future<void> _checkAuthenticationStatus() async {
+    print('🔍 [AUTH_SCREEN] Vérification de l\'état d\'authentification...');
+
+    try {
+      final authStateAsync = ref.read(authNotifierProvider);
+      print('🔍 [AUTH_SCREEN] État AsyncValue: $authStateAsync');
+
+      // Vérifier si on a une valeur et si l'utilisateur n'est pas connecté
+      authStateAsync.whenData((authState) {
+        print(
+          '🔍 [AUTH_SCREEN] État actuel d\'authentification: isAuthenticated=${authState.isAuthenticated}',
+        );
+
+        // Si l'utilisateur n'est pas connecté, afficher le message de déconnexion
+        if (!authState.isAuthenticated && authState.token == null) {
+          setState(() {
+            _showLogoutMessage = true;
+            _errorMessage = 'Déconnexion réussie. Veuillez vous reconnecter.';
+          });
+          print('✅ [AUTH_SCREEN] Message de déconnexion affiché');
+        }
+      });
+    } catch (e) {
+      print(
+        '❌ [AUTH_SCREEN] Erreur lors de la vérification d\'authentification: $e',
+      );
+    }
+  }
 
   /// Vérifie si la base de données locale est vide
   Future<bool> _isDatabaseEmpty() async {
@@ -59,7 +95,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
   }
 
   /// Vérifie l'authentification dans la base locale
-  
+
   Future<void> _login() async {
     if (_emailController.text.trim().isEmpty) {
       setState(() {
@@ -86,10 +122,12 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
 
       print('=== DÉBUT PROCESSUS DE CONNEXION ===');
       print('Email: $email');
-      final shpref=await ref.read(syncPreferencesNotifierProvider.notifier);
-     // shpref.clearSyncData();
-      final loginSuccess = await ref.watch(authNotifierProvider.notifier).login(email, password);
-      
+      final shpref = await ref.read(syncPreferencesNotifierProvider.notifier);
+      // shpref.clearSyncData();
+      final loginSuccess = await ref
+          .watch(authNotifierProvider.notifier)
+          .login(email, password);
+
       if (loginSuccess) {
         print('✅ Connexion réussie');
 
@@ -98,9 +136,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
-              builder: (context) => PaiementDesFrais(
-                anneeScolaire: widget.anneeScolaire,
-              ),
+              builder: (context) =>
+                  PaiementDesFrais(anneeScolaire: widget.anneeScolaire),
             ),
           );
         } else {
@@ -112,7 +149,6 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
           _errorMessage = 'Échec de la connexion. Veuillez réessayer.';
         });
       }
-
     } catch (e, stackTrace) {
       print('❌ ERREUR GÉNÉRALE LOGIN: $e');
       print('Stack trace: $stackTrace');
@@ -357,30 +393,63 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               ),
               const SizedBox(height: 24),
 
-              // Message d'erreur
+              // Message d'erreur ou de déconnexion
               if (_errorMessage != null)
                 Container(
                   padding: const EdgeInsets.all(12),
                   margin: const EdgeInsets.only(bottom: 16),
                   decoration: BoxDecoration(
-                    color: _errorMessage!.contains('succès')
-                        ? Colors.green.shade100
+                    color:
+                        _showLogoutMessage ||
+                            _errorMessage!.contains('succès') ||
+                            _errorMessage!.contains('Déconnexion réussie')
+                        ? Colors.blue.shade100
                         : Colors.red.shade100,
                     borderRadius: BorderRadius.circular(8),
                     border: Border.all(
-                      color: _errorMessage!.contains('succès')
-                          ? Colors.green.shade300
+                      color:
+                          _showLogoutMessage ||
+                              _errorMessage!.contains('succès') ||
+                              _errorMessage!.contains('Déconnexion réussie')
+                          ? Colors.blue.shade300
                           : Colors.red.shade300,
                     ),
                   ),
-                  child: Text(
-                    _errorMessage!,
-                    style: TextStyle(
-                      color: _errorMessage!.contains('succès')
-                          ? Colors.green.shade700
-                          : Colors.red.shade700,
-                    ),
-                    textAlign: TextAlign.center,
+                  child: Row(
+                    children: [
+                      Icon(
+                        _showLogoutMessage ||
+                                _errorMessage!.contains('Déconnexion réussie')
+                            ? Icons.logout
+                            : _errorMessage!.contains('succès')
+                            ? Icons.check_circle
+                            : Icons.error,
+                        color:
+                            _showLogoutMessage ||
+                                _errorMessage!.contains('succès') ||
+                                _errorMessage!.contains('Déconnexion réussie')
+                            ? Colors.blue.shade700
+                            : Colors.red.shade700,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          _errorMessage!,
+                          style: TextStyle(
+                            color:
+                                _showLogoutMessage ||
+                                    _errorMessage!.contains('succès') ||
+                                    _errorMessage!.contains(
+                                      'Déconnexion réussie',
+                                    )
+                                ? Colors.blue.shade700
+                                : Colors.red.shade700,
+                          ),
+                          textAlign: TextAlign.center,
+                        ),
+                      ),
+                    ],
                   ),
                 ),
 

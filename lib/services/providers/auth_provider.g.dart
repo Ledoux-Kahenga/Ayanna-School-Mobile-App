@@ -124,7 +124,42 @@ final isAuthLoadingProvider = AutoDisposeProvider<bool>.internal(
 );
 
 typedef IsAuthLoadingRef = AutoDisposeProviderRef<bool>;
-String _$authNotifierHash() => r'ebbf2adc02d7af6413f72b74bb41da6d39f490b4';
+String _$userFriendlyAuthStatusHash() =>
+    r'1eb43e47e808d576357aa6f85f15801a9f47cb7e';
+
+/// Provider pour obtenir un message d'état utilisateur convivial
+///
+/// Copied from [userFriendlyAuthStatus].
+@ProviderFor(userFriendlyAuthStatus)
+final userFriendlyAuthStatusProvider = AutoDisposeProvider<String?>.internal(
+  userFriendlyAuthStatus,
+  name: r'userFriendlyAuthStatusProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$userFriendlyAuthStatusHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef UserFriendlyAuthStatusRef = AutoDisposeProviderRef<String?>;
+String _$canWorkOfflineHash() => r'590561547680f132485587a53a8a7f8ec046c678';
+
+/// Provider pour vérifier si l'utilisateur peut travailler hors ligne
+///
+/// Copied from [canWorkOffline].
+@ProviderFor(canWorkOffline)
+final canWorkOfflineProvider = AutoDisposeFutureProvider<bool>.internal(
+  canWorkOffline,
+  name: r'canWorkOfflineProvider',
+  debugGetCreateSourceHash: const bool.fromEnvironment('dart.vm.product')
+      ? null
+      : _$canWorkOfflineHash,
+  dependencies: null,
+  allTransitiveDependencies: null,
+);
+
+typedef CanWorkOfflineRef = AutoDisposeFutureProviderRef<bool>;
+String _$authNotifierHash() => r'65e320a0a4f6dfb11c4eb7c0df2cf57ad67e0b40';
 
 /// Provider pour l'état d'authentification
 ///

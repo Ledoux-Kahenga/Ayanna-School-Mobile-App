@@ -160,7 +160,7 @@ final fraisScolairesNotifierProvider = AutoDisposeAsyncNotifierProvider<
 typedef _$FraisScolairesNotifier
     = AutoDisposeAsyncNotifier<List<FraisScolaire>>;
 String _$paiementsFraisNotifierHash() =>
-    r'4412cdfdbb9c9a8047896b6e9053e9e96b380f32';
+    r'e965bc691e94fd0f90369b096b887e9124bb433a';
 
 /// Provider pour la liste des paiements de frais
 ///
@@ -409,7 +409,7 @@ final ecrituresComptablesNotifierProvider = AutoDisposeAsyncNotifierProvider<
 typedef _$EcrituresComptablesNotifier
     = AutoDisposeAsyncNotifier<List<EcritureComptable>>;
 String _$journauxComptablesNotifierHash() =>
-    r'3dd22722362003a654ef8dd3e83955113c99c05d';
+    r'4fa2b5136f157173572c7558db86e5c95a5d4ad8';
 
 /// Provider pour la liste des journaux comptables
 ///

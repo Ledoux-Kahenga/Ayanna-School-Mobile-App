@@ -138,7 +138,7 @@ class _ConfigurationScreenState extends ConsumerState<ConfigurationScreen> {
                           const Divider(height: 24),
                           const SizedBox(height: 12),
                           DropdownButtonFormField<int>(
-                            initialValue: _selectedYear?.id,
+                            value: _selectedYear?.id,
                             decoration: const InputDecoration(
                               labelText: 'Année scolaire en cours',
                               border: OutlineInputBorder(),

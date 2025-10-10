@@ -6,6 +6,9 @@ abstract class EleveDao {
   @Query('SELECT * FROM eleves')
   Future<List<Eleve>> getAllEleves();
 
+  @Query('SELECT * FROM eleves ORDER BY nom, prenom')
+  Future<List<Eleve>> getAllElevesOrdered();
+
   @Query('SELECT * FROM eleves WHERE id = :id')
   Future<Eleve?> getEleveById(int id);
 
@@ -63,7 +66,7 @@ abstract class EleveDao {
 
   @Query('DELETE FROM eleves')
   Future<void> deleteAllEleves();
-  
+
   @Query('DELETE FROM eleves WHERE classe_id = :classeId')
   Future<void> deleteElevesByClasse(int classeId);
 

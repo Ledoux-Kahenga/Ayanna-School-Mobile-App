@@ -17,23 +17,116 @@ class SyncStatusScreen extends ConsumerStatefulWidget {
 
 class _SyncStatusScreenState extends ConsumerState<SyncStatusScreen> {
   int _drawerIndex = 5; // Index pour la synchronisation
+  String _refreshKey = DateTime.now().millisecondsSinceEpoch
+      .toString(); // Clé pour forcer le rafraîchissement
 
-  Future<void> _performDownloadSync() async {
+  /// Force le rafraîchissement de l'affichage des actions locales
+  void _refreshActionsLocales() {
+    if (mounted) {
+      setState(() {
+        _refreshKey = DateTime.now().millisecondsSinceEpoch.toString();
+      });
+    }
+  }
+
+  /// Vérifier si l'utilisateur est authentifié et récupérer son email
+  /// Retourne: email si authentifié, 'LOADING' si en cours, null si non connecté
+  String? _getAuthenticatedUserEmail() {
+    print('🔍 [SYNC_SCREEN] Vérification de l\'état d\'authentification...');
     final authStateAsync = ref.read(authNotifierProvider);
-    final userEmail = authStateAsync.maybeWhen(
-      data: (authState) => authState.userEmail ?? '',
-      orElse: () => '',
+    print(
+      '📊 [SYNC_SCREEN] AuthStateAsync - isLoading: ${authStateAsync.isLoading}, hasError: ${authStateAsync.hasError}',
     );
 
-    if (userEmail.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Utilisateur non connecté'),
-            backgroundColor: Colors.red,
+    // Si l'état est en cours de chargement, retourner un indicateur spécial
+    if (authStateAsync.isLoading) {
+      print('⏳ [SYNC_SCREEN] État d\'authentification en cours de chargement');
+      return 'LOADING';
+    }
+
+    // Si il y a une erreur, on ne peut pas continuer
+    if (authStateAsync.hasError) {
+      print(
+        '❌ [SYNC_SCREEN] Erreur dans l\'état d\'authentification: ${authStateAsync.error}',
+      );
+      return null;
+    }
+
+    final authState = authStateAsync.value;
+    if (authState == null) {
+      print('❌ [SYNC_SCREEN] AuthState est null');
+      return null;
+    }
+
+    print(
+      '📋 [SYNC_SCREEN] AuthState - isAuthenticated: ${authState.isAuthenticated}, userEmail: ${authState.userEmail}',
+    );
+
+    if (!authState.isAuthenticated ||
+        authState.userEmail == null ||
+        authState.userEmail!.isEmpty) {
+      print('❌ [SYNC_SCREEN] Utilisateur non authentifié ou email vide');
+      return null;
+    }
+
+    print('✅ [SYNC_SCREEN] Utilisateur authentifié: ${authState.userEmail}');
+    return authState.userEmail;
+  }
+
+  /// Afficher un message d'erreur si l'utilisateur n'est pas connecté
+  void _showNotConnectedError() {
+    print(
+      '⚠️ [SYNC_SCREEN] Affichage du message d\'erreur utilisateur non connecté',
+    );
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Utilisateur non connecté. Veuillez vous connecter pour synchroniser.',
           ),
-        );
+          backgroundColor: Colors.red,
+          duration: Duration(seconds: 4),
+        ),
+      );
+    }
+  }
+
+  /// Attendre que l'état d'authentification soit chargé et récupérer l'email
+  Future<String?> _waitForAuthAndGetEmail() async {
+    print(
+      '⏳ [SYNC_SCREEN] Attente du chargement de l\'état d\'authentification...',
+    );
+
+    // Attendre avec un timeout pour éviter d'attendre indéfiniment
+    try {
+      final authStateAsync = await ref
+          .read(authNotifierProvider.future)
+          .timeout(const Duration(seconds: 10));
+
+      if (!authStateAsync.isAuthenticated ||
+          authStateAsync.userEmail == null ||
+          authStateAsync.userEmail!.isEmpty) {
+        print('❌ [SYNC_SCREEN] Utilisateur non authentifié après chargement');
+        return null;
       }
+
+      print(
+        '✅ [SYNC_SCREEN] Utilisateur authentifié après attente: ${authStateAsync.userEmail}',
+      );
+      return authStateAsync.userEmail;
+    } catch (e) {
+      print(
+        '❌ [SYNC_SCREEN] Timeout ou erreur lors de l\'attente de l\'auth: $e',
+      );
+      return null;
+    }
+  }
+
+  Future<void> _performDownloadSync() async {
+    // Attendre que l'état d'authentification soit chargé
+    final userEmail = await _waitForAuthAndGetEmail();
+    if (userEmail == null) {
+      _showNotConnectedError();
       return;
     }
 
@@ -60,6 +153,9 @@ class _SyncStatusScreenState extends ConsumerState<SyncStatusScreen> {
       if (mounted) Navigator.of(context).pop();
 
       if (mounted) {
+        // Rafraîchir l'affichage après synchronisation descendante aussi
+        _refreshActionsLocales();
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Synchronisation descendante terminée'),
@@ -84,21 +180,10 @@ class _SyncStatusScreenState extends ConsumerState<SyncStatusScreen> {
   }
 
   Future<void> _performUploadSync() async {
-    final authStateAsync = ref.read(authNotifierProvider);
-    final userEmail = authStateAsync.maybeWhen(
-      data: (authState) => authState.userEmail ?? '',
-      orElse: () => '',
-    );
-
-    if (userEmail.isEmpty) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Utilisateur non connecté'),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+    // Attendre que l'état d'authentification soit chargé
+    final userEmail = await _waitForAuthAndGetEmail();
+    if (userEmail == null) {
+      _showNotConnectedError();
       return;
     }
 
@@ -125,6 +210,9 @@ class _SyncStatusScreenState extends ConsumerState<SyncStatusScreen> {
       if (mounted) Navigator.of(context).pop();
 
       if (mounted) {
+        // Rafraîchir l'affichage après synchronisation ascendante
+        _refreshActionsLocales();
+
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Synchronisation ascendante terminée'),
@@ -258,6 +346,10 @@ class _SyncStatusScreenState extends ConsumerState<SyncStatusScreen> {
 
               // Carte des statistiques de synchronisation
               _buildSyncStatsCard(),
+              const SizedBox(height: 16),
+
+              // Actions locales non synchronisées
+              _buildLocalActionsCard(),
               const SizedBox(height: 16),
 
               // Boutons d'action
@@ -441,9 +533,11 @@ class _SyncStatusScreenState extends ConsumerState<SyncStatusScreen> {
                   color: Colors.grey.shade700,
                 ),
                 const SizedBox(width: 12),
-                const Text(
-                  'Éléments en attente de synchronisation',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                const Expanded(
+                  child: Text(
+                    'Éléments en attente de synchronisation',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                  ),
                 ),
               ],
             ),
@@ -603,7 +697,7 @@ class _SyncStatusScreenState extends ConsumerState<SyncStatusScreen> {
       final responsables = await database.responsableDao
           .getUnsyncedResponsables();
       final paiements = await database.paiementFraisDao
-          .getUnsyncedPaiementFrais();
+          .getUnsyncedPaiementsFrais();
       final ecritures = await database.ecritureComptableDao
           .getUnsyncedEcrituresComptables();
 
@@ -659,5 +753,294 @@ class _SyncStatusScreenState extends ConsumerState<SyncStatusScreen> {
         ),
       ],
     );
+  }
+
+  Widget _buildLocalActionsCard() {
+    return Card(
+      elevation: 4,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.pending_actions,
+                    size: 24,
+                    color: Colors.orange,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Actions locales',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        'Non synchronisées',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.orange,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            const Divider(),
+            const SizedBox(height: 8),
+
+            // Actions locales non synchronisées
+            _buildActionsLocalesSection(),
+
+            if (_hasUnsyncedActions()) ...[
+              const SizedBox(height: 16),
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.orange.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                ),
+                child: const Row(
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.orange, size: 20),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Ces données seront envoyées lors de la prochaine synchronisation.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.orange,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionsLocalesSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.list_alt, color: Colors.orange, size: 20),
+            const SizedBox(width: 8),
+            const Expanded(
+              child: Text(
+                'Actions en attente de synchronisation',
+                style: TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+
+        // Élèves non synchronisés
+        FutureBuilder(
+          key: ValueKey('eleves_$_refreshKey'),
+          future: ref.read(eleveDaoProvider).getUnsyncedEleves(),
+          builder: (context, elevesSnapshot) {
+            if (elevesSnapshot.connectionState == ConnectionState.waiting) {
+              return const SizedBox(
+                height: 20,
+                child: Center(
+                  child: SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              );
+            }
+
+            final elevesNonSync = elevesSnapshot.data ?? [];
+
+            return Column(
+              children: elevesNonSync.take(3).map((eleve) {
+                final action = eleve.serverId == null ? 'Ajouter' : 'Modifier';
+                return _buildActionItemFormatted(
+                  'Elèves',
+                  eleve.id.toString(),
+                  action,
+                  '${eleve.nom} ${eleve.prenom}',
+                  Icons.school,
+                  Colors.blue,
+                );
+              }).toList(),
+            );
+          },
+        ),
+
+        const SizedBox(height: 8),
+
+        // Paiements non synchronisés
+        FutureBuilder(
+          key: ValueKey('paiements_$_refreshKey'),
+          future: ref
+              .read(paiementFraisDaoProvider)
+              .getUnsyncedPaiementsFrais(),
+          builder: (context, paiementsSnapshot) {
+            if (paiementsSnapshot.connectionState == ConnectionState.waiting) {
+              return const SizedBox(
+                height: 20,
+                child: Center(
+                  child: SizedBox(
+                    width: 16,
+                    height: 16,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              );
+            }
+
+            final paiementsNonSync = paiementsSnapshot.data ?? [];
+
+            return Column(
+              children: paiementsNonSync.take(3).map((paiement) {
+                final action = paiement.serverId == null
+                    ? 'Ajouter'
+                    : 'Modifier';
+                return _buildActionItemFormatted(
+                  'Paiement_frais',
+                  paiement.id.toString(),
+                  action,
+                  '${paiement.montantPaye} FC',
+                  Icons.payment,
+                  Colors.green,
+                );
+              }).toList(),
+            );
+          },
+        ),
+
+        const SizedBox(height: 16),
+
+        // Message global si pas d'actions (utiliser un autre FutureBuilder pour compter)
+        FutureBuilder(
+          key: ValueKey('count_$_refreshKey'),
+          future: Future.wait([
+            ref.read(eleveDaoProvider).getUnsyncedEleves(),
+            ref.read(paiementFraisDaoProvider).getUnsyncedPaiementsFrais(),
+          ]),
+          builder: (context, snapshot) {
+            if (snapshot.hasData) {
+              final elevesCount = (snapshot.data![0] as List).length;
+              final paiementsCount = (snapshot.data![1] as List).length;
+
+              if (elevesCount == 0 && paiementsCount == 0) {
+                return Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.green.withOpacity(0.3)),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.green, size: 20),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          'Aucune action locale en attente',
+                          style: TextStyle(
+                            fontSize: 14,
+                            color: Colors.green,
+                            fontWeight: FontWeight.w500,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }
+            }
+            return const SizedBox.shrink();
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionItemFormatted(
+    String table,
+    String id,
+    String action,
+    String description,
+    IconData icon,
+    Color color,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: color.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: color.withOpacity(0.2)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: color, size: 18),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Format : Table - ID - Action
+                Text(
+                  '$table - ID: $id - $action',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    fontSize: 13,
+                    color: color,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                // Description
+                Text(
+                  description,
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  bool _hasUnsyncedActions() {
+    // Cette méthode sera utilisée pour vérifier s'il y a des actions non synchronisées
+    // Pour l'instant, on retourne true, mais cela pourrait être optimisé
+    return true;
   }
 }

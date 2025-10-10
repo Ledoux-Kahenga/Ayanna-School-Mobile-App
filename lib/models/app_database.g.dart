@@ -1942,6 +1942,32 @@ class _$EleveDao extends EleveDao {
   }
 
   @override
+  Future<List<Eleve>> getAllElevesOrdered() async {
+    return _queryAdapter.queryList('SELECT * FROM eleves ORDER BY nom, prenom',
+        mapper: (Map<String, Object?> row) => Eleve(
+            id: row['id'] as int?,
+            serverId: row['server_id'] as int?,
+            isSync: (row['is_sync'] as int) != 0,
+            nom: row['nom'] as String,
+            postnom: row['postnom'] as String?,
+            prenom: row['prenom'] as String,
+            sexe: row['sexe'] as String?,
+            statut: row['statut'] as String?,
+            dateNaissance: _dateTimeNullableConverter
+                .decode(row['date_naissance'] as int?),
+            lieuNaissance: row['lieu_naissance'] as String?,
+            matricule: row['matricule'] as String?,
+            numeroPermanent: row['numero_permanent'] as String?,
+            classeId: row['classe_id'] as int?,
+            responsableId: row['responsable_id'] as int?,
+            dateCreation:
+                _dateTimeConverter.decode(row['date_creation'] as int),
+            dateModification:
+                _dateTimeConverter.decode(row['date_modification'] as int),
+            updatedAt: _dateTimeConverter.decode(row['updated_at'] as int)));
+  }
+
+  @override
   Future<Eleve?> getEleveById(int id) async {
     return _queryAdapter.query('SELECT * FROM eleves WHERE id = ?1',
         mapper: (Map<String, Object?> row) => Eleve(
@@ -5735,6 +5761,28 @@ class _$PaiementFraisDao extends PaiementFraisDao {
     await _queryAdapter.queryNoReturn(
         'UPDATE paiement_frais SET statut = ?2 WHERE id = ?1',
         arguments: [id, statut]);
+  }
+
+  @override
+  Future<double?> getTotalPaiementsByEleveAndFrais(
+    int eleveId,
+    int fraisId,
+  ) async {
+    return _queryAdapter.query(
+        'SELECT COALESCE(SUM(montant_paye), 0.0) FROM paiement_frais WHERE eleve_id = ?1 AND frais_scolaire_id = ?2',
+        mapper: (Map<String, Object?> row) => row.values.first as double,
+        arguments: [eleveId, fraisId]);
+  }
+
+  @override
+  Future<List<PaiementFrais>> getPaiementsByEleveAndFrais(
+    int eleveId,
+    int fraisId,
+  ) async {
+    return _queryAdapter.queryList(
+        'SELECT * FROM paiement_frais WHERE eleve_id = ?1 AND frais_scolaire_id = ?2 ORDER BY date_paiement DESC',
+        mapper: (Map<String, Object?> row) => PaiementFrais(id: row['id'] as int?, serverId: row['server_id'] as int?, isSync: (row['is_sync'] as int) != 0, eleveId: row['eleve_id'] as int, fraisScolaireId: row['frais_scolaire_id'] as int, montantPaye: row['montant_paye'] as double, datePaiement: _dateTimeConverter.decode(row['date_paiement'] as int), userId: row['user_id'] as int?, resteAPayer: row['reste_a_payer'] as double?, statut: row['statut'] as String?, dateCreation: _dateTimeConverter.decode(row['date_creation'] as int), dateModification: _dateTimeConverter.decode(row['date_modification'] as int), updatedAt: _dateTimeConverter.decode(row['updated_at'] as int)),
+        arguments: [eleveId, fraisId]);
   }
 
   @override

@@ -780,7 +780,7 @@ class SyncStateNotifier extends _$SyncStateNotifier {
     }
   }
 
-/*   /// Vérifie si une synchronisation est nécessaire
+  /*   /// Vérifie si une synchronisation est nécessaire
   Future<bool> isSyncNeeded({int muniteThreshold = 1}) async {
     print(
       '⏰ [SYNC] Vérification si synchronisation nécessaire (seuil: ${muniteThreshold}h)',
@@ -1402,7 +1402,78 @@ class SyncStateNotifier extends _$SyncStateNotifier {
       }
     }
 
-    // Ajouter le marquage pour les autres entités...
+    // Marquer les paiements de frais comme synchronisés
+    if (changesByTable.containsKey('paiement_frais')) {
+      try {
+        final paiementChanges = changesByTable['paiement_frais']!;
+        print(
+          '💳 [SYNC] Marquage ${paiementChanges.length} paiements comme synchronisés',
+        );
+        for (final change in paiementChanges) {
+          final paiementId = change.data['id'] as int?;
+          if (paiementId != null) {
+            await database.paiementFraisDao.markAsSynced(paiementId);
+          }
+        }
+      } catch (e) {
+        print('❌ [SYNC] Erreur marquage paiements: $e');
+      }
+    }
+
+    // Marquer les responsables comme synchronisés
+    if (changesByTable.containsKey('responsables')) {
+      try {
+        final responsableChanges = changesByTable['responsables']!;
+        print(
+          '👨‍👩‍👧‍👦 [SYNC] Marquage ${responsableChanges.length} responsables comme synchronisés',
+        );
+        for (final change in responsableChanges) {
+          final responsableId = change.data['id'] as int?;
+          if (responsableId != null) {
+            await database.responsableDao.markAsSynced(responsableId);
+          }
+        }
+      } catch (e) {
+        print('❌ [SYNC] Erreur marquage responsables: $e');
+      }
+    }
+
+    // Marquer les dépenses comme synchronisées
+    if (changesByTable.containsKey('depenses')) {
+      try {
+        final depenseChanges = changesByTable['depenses']!;
+        print(
+          '💰 [SYNC] Marquage ${depenseChanges.length} dépenses comme synchronisées',
+        );
+        for (final change in depenseChanges) {
+          final depenseId = change.data['id'] as int?;
+          if (depenseId != null) {
+            await database.depenseDao.markAsSynced(depenseId);
+          }
+        }
+      } catch (e) {
+        print('❌ [SYNC] Erreur marquage dépenses: $e');
+      }
+    }
+
+    // Marquer les créances comme synchronisées
+    if (changesByTable.containsKey('creances')) {
+      try {
+        final creanceChanges = changesByTable['creances']!;
+        print(
+          '📋 [SYNC] Marquage ${creanceChanges.length} créances comme synchronisées',
+        );
+        for (final change in creanceChanges) {
+          final creanceId = change.data['id'] as int?;
+          if (creanceId != null) {
+            await database.creanceDao.markAsSynced(creanceId);
+          }
+        }
+      } catch (e) {
+        print('❌ [SYNC] Erreur marquage créances: $e');
+      }
+    }
+
     print('✅ [SYNC] Marquage synchronisation terminé');
   }
 

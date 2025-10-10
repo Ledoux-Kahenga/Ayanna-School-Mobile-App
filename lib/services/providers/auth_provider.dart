@@ -5,7 +5,6 @@ import '../api/api_client.dart';
 import '../api/utilisateur_service.dart';
 import 'api_client_provider.dart';
 import 'sync_provider_new.dart';
-import 'database_provider.dart';
 
 part 'auth_provider.g.dart';
 
@@ -63,6 +62,8 @@ class AuthNotifier extends _$AuthNotifier {
   static const String _entrepriseIdKey = 'entreprise_id';
   static const String _userEmailKey = 'user_email';
   static const String _userNameKey = 'user_name';
+  static const String _passwordKey = 'user_password';
+  static const String _isFirstLaunchKey = 'is_first_launch';
 
   late UtilisateurService _utilisateurService;
 
@@ -92,65 +93,44 @@ class AuthNotifier extends _$AuthNotifier {
   }
 
   /// Connexion avec email et mot de passe
-  /// Essaie d'abord l'authentification locale, puis en ligne si elle échoue
+  /// Au premier lancement : connexion obligatoire au serveur pour l'initialisation
+  /// Aux lancements suivants : vérification locale en premier avec SharedPreferences
   Future<bool> login(String email, String password) async {
     print('🔐 [AUTH] Début de la tentative de connexion pour: $email');
 
     state = const AsyncValue.loading();
 
     try {
-      // 1. Essayer l'authentification locale d'abord
-      print('🏠 [AUTH] Tentative d\'authentification locale...');
-      final utilisateurDao = ref.read(utilisateurDaoProvider);
-      final utilisateurLocal = await utilisateurDao.loginLocalement(
-        email,
-        password,
-      );
+      final prefs = await SharedPreferences.getInstance();
+      final isFirstLaunch = prefs.getBool(_isFirstLaunchKey) ?? true;
 
-      if (utilisateurLocal != null) {
-        print(
-          '✅ [AUTH] Authentification locale réussie pour: ${utilisateurLocal.nom}',
-        );
+      print('� [AUTH] Premier lancement: $isFirstLaunch');
 
-        // Générer un token temporaire pour la session locale
-        final token =
-            'local_${DateTime.now().millisecondsSinceEpoch}_${utilisateurLocal.id}';
-
-        // Sauvegarder dans SharedPreferences
-        print('💾 [AUTH] Sauvegarde des données d\'authentification locale...');
-        await _saveAuthData(
-          token: token,
-          userId: utilisateurLocal.id,
-          entrepriseId: utilisateurLocal.entrepriseId,
-          email: email,
-          userName: utilisateurLocal.nom,
-        );
-        print('💾 [AUTH] Données locales sauvegardées avec succès');
-
-        // Sauvegarder le token dans l'intercepteur
-        print('🔧 [AUTH] Configuration du token local dans l\'intercepteur...');
-        await AuthInterceptor.saveToken(token);
-        print('🔧 [AUTH] Token local configuré avec succès');
-
-        state = AsyncValue.data(
-          AuthState(
-            isAuthenticated: true,
-            token: token,
-            userId: utilisateurLocal.id,
-            entrepriseId: utilisateurLocal.entrepriseId,
-            userEmail: email,
-          ),
-        );
-
-        print(
-          '🎉 [AUTH] Connexion locale réussie - Utilisateur: ${utilisateurLocal.nom}',
-        );
-        return true;
+      if (isFirstLaunch) {
+        // Premier lancement : connexion serveur obligatoire
+        return await _firstTimeLogin(email, password);
+      } else {
+        // Lancements suivants : vérification locale en premier
+        return await _subsequentLogin(email, password);
       }
+    } catch (e) {
+      print('💥 [AUTH] Exception lors de la connexion: $e');
+      print('📊 [AUTH] Stack trace: ${StackTrace.current}');
 
-      // 2. Si l'authentification locale échoue, essayer l'authentification en ligne
-      print('🌐 [AUTH] Authentification locale échouée, tentative en ligne...');
+      final userMessage = _getNetworkErrorMessage(e);
 
+      state = AsyncValue.data(
+        AuthState(isAuthenticated: false, errorMessage: userMessage),
+      );
+      return false;
+    }
+  }
+
+  /// Premier lancement - Connexion serveur obligatoire pour l'initialisation
+  Future<bool> _firstTimeLogin(String email, String password) async {
+    print('🏁 [AUTH] Premier lancement - Connexion serveur obligatoire');
+
+    try {
       final response = await _utilisateurService.login({
         'email': email,
         'password': password,
@@ -171,11 +151,11 @@ class AuthNotifier extends _$AuthNotifier {
           final userName = data['user_name'] as String?;
 
           print(
-            '✅ [AUTH] Connexion en ligne réussie - UserID: $userId, EntrepriseID: $entrepriseId, UserName: $userName',
+            '✅ [AUTH] Connexion serveur réussie - UserID: $userId, EntrepriseID: $entrepriseId, UserName: $userName',
           );
           print('🔑 [AUTH] Token reçu (longueur: ${token.length})');
 
-          // Sauvegarder dans SharedPreferences
+          // Sauvegarder dans SharedPreferences avec le mot de passe
           print('💾 [AUTH] Sauvegarde des données d\'authentification...');
           await _saveAuthData(
             token: token,
@@ -183,8 +163,13 @@ class AuthNotifier extends _$AuthNotifier {
             entrepriseId: entrepriseId,
             email: email,
             userName: userName,
+            password: password,
           );
-          print('💾 [AUTH] Données sauvegardées avec succès');
+
+          // Marquer que ce n'est plus le premier lancement
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool(_isFirstLaunchKey, false);
+          print('✅ [AUTH] Premier lancement marqué comme terminé');
 
           // Sauvegarder le token dans l'intercepteur
           print('🔧 [AUTH] Configuration du token dans l\'intercepteur...');
@@ -205,14 +190,199 @@ class AuthNotifier extends _$AuthNotifier {
           print('🔄 [AUTH] Déclenchement de la synchronisation automatique...');
           _triggerAutoSync(email);
 
-          print('🎉 [AUTH] Connexion en ligne réussie');
+          print('🎉 [AUTH] Premier lancement connexion réussie');
           return true;
         } else {
           final errorMessage =
-              data['message'] as String? ?? 'Erreur d\'authentification';
+              data['message'] as String? ??
+              'Identifiants incorrects. Vérifiez votre email et mot de passe.';
           print(
             '❌ [AUTH] Échec de l\'authentification - Message: $errorMessage',
           );
+
+          state = AsyncValue.data(
+            AuthState(
+              isAuthenticated: false,
+              errorMessage: 'Premier lancement - $errorMessage',
+            ),
+          );
+          return false;
+        }
+      } else {
+        final errorMessage = _getHttpErrorMessage(
+          response.statusCode,
+          response.error?.toString(),
+        );
+
+        print(
+          '❌ [AUTH] Erreur de réponse API - Status: ${response.statusCode}, Error: $errorMessage',
+        );
+
+        state = AsyncValue.data(
+          AuthState(
+            isAuthenticated: false,
+            errorMessage: 'Premier lancement - $errorMessage',
+          ),
+        );
+        return false;
+      }
+    } catch (e) {
+      print('💥 [AUTH] Erreur lors de la connexion serveur: $e');
+
+      final baseMessage = _getNetworkErrorMessage(e);
+      final userMessage =
+          'Premier lancement - $baseMessage Une connexion est requise pour initialiser l\'application.';
+
+      state = AsyncValue.data(
+        AuthState(isAuthenticated: false, errorMessage: userMessage),
+      );
+      return false;
+    }
+  }
+
+  /// Lancements suivants - Vérification locale en premier avec SharedPreferences
+  Future<bool> _subsequentLogin(String email, String password) async {
+    print('🔄 [AUTH] Lancement ultérieur - Vérification locale en premier');
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final savedEmail = prefs.getString(_userEmailKey);
+      final savedPassword = prefs.getString(_passwordKey);
+
+      print('📱 [AUTH] Email sauvegardé: $savedEmail');
+      print(
+        '🔐 [AUTH] Mot de passe sauvegardé: ${savedPassword != null ? 'Oui' : 'Non'}',
+      );
+
+      // Vérifier les identifiants avec les données sauvegardées
+      if (savedEmail == email && savedPassword == password) {
+        print(
+          '✅ [AUTH] Authentification locale réussie avec SharedPreferences',
+        );
+        print('📡 [AUTH] Mode hors ligne - Pas de synchronisation automatique');
+
+        // Récupérer les autres données sauvegardées
+        final token = prefs.getString(_tokenKey);
+        final userId = prefs.getInt(_userIdKey);
+        final entrepriseId = prefs.getInt(_entrepriseIdKey);
+
+        // Sauvegarder le token dans l'intercepteur
+        if (token != null) {
+          await AuthInterceptor.saveToken(token);
+        }
+
+        state = AsyncValue.data(
+          AuthState(
+            isAuthenticated: true,
+            token: token,
+            userId: userId,
+            entrepriseId: entrepriseId,
+            userEmail: email,
+          ),
+        );
+
+        print(
+          '🎉 [AUTH] Connexion locale réussie - Pas de synchronisation automatique',
+        );
+        return true;
+      } else {
+        print(
+          '❌ [AUTH] Identifiants locaux incorrects - Tentative connexion serveur...',
+        );
+
+        // Si l'authentification locale échoue, essayer le serveur avec un message approprié
+        final result = await _fallbackServerLogin(email, password);
+        if (!result) {
+          // Si la connexion serveur échoue aussi, on met un message spécifique
+          state.whenData((currentState) {
+            if (currentState.errorMessage?.contains(
+                  'Identifiants incorrects',
+                ) ==
+                true) {
+              state = AsyncValue.data(
+                currentState.copyWith(
+                  errorMessage:
+                      'Identifiants incorrects. Vérifiez votre email et mot de passe.',
+                ),
+              );
+            }
+          });
+        }
+        return result;
+      }
+    } catch (e) {
+      print('💥 [AUTH] Erreur lors de l\'authentification locale: $e');
+
+      // En cas d'erreur de lecture locale, essayer le serveur
+      final result = await _fallbackServerLogin(email, password);
+      if (!result) {
+        // Si échec total, message d'erreur approprié
+        state = AsyncValue.data(
+          AuthState(
+            isAuthenticated: false,
+            errorMessage:
+                'Erreur d\'authentification. Vérifiez vos identifiants et votre connexion internet.',
+          ),
+        );
+      }
+      return result;
+    }
+  }
+
+  /// Connexion serveur de secours lorsque l'authentification locale échoue
+  Future<bool> _fallbackServerLogin(String email, String password) async {
+    print('🌐 [AUTH] Connexion serveur de secours...');
+
+    try {
+      final response = await _utilisateurService.login({
+        'email': email,
+        'password': password,
+      });
+
+      if (response.isSuccessful && response.body != null) {
+        final data = response.body!;
+
+        if (data['success'] == true) {
+          final token = data['token'] as String;
+          final userId = data['user_id'] as int?;
+          final entrepriseId = data['entreprise_id'] as int?;
+          final userName = data['user_name'] as String?;
+
+          print('✅ [AUTH] Connexion serveur de secours réussie');
+
+          // Mettre à jour les données sauvegardées
+          await _saveAuthData(
+            token: token,
+            userId: userId,
+            entrepriseId: entrepriseId,
+            email: email,
+            userName: userName,
+            password: password,
+          );
+
+          await AuthInterceptor.saveToken(token);
+
+          state = AsyncValue.data(
+            AuthState(
+              isAuthenticated: true,
+              token: token,
+              userId: userId,
+              entrepriseId: entrepriseId,
+              userEmail: email,
+            ),
+          );
+
+          // 🔄 Déclencher la synchronisation automatique après une connexion serveur
+          print(
+            '🔄 [AUTH] Déclenchement de la synchronisation automatique (connexion serveur)...',
+          );
+          _triggerAutoSync(email);
+
+          return true;
+        } else {
+          final errorMessage =
+              data['message'] as String? ??
+              'Identifiants incorrects. Vérifiez votre email et mot de passe.';
 
           state = AsyncValue.data(
             AuthState(isAuthenticated: false, errorMessage: errorMessage),
@@ -220,11 +390,19 @@ class AuthNotifier extends _$AuthNotifier {
           return false;
         }
       } else {
-        final errorMessage =
-            response.error?.toString() ?? 'Erreur de connexion';
-        print(
-          '❌ [AUTH] Erreur de réponse API - Status: ${response.statusCode}, Error: $errorMessage',
+        final baseErrorMessage = _getHttpErrorMessage(
+          response.statusCode,
+          response.error?.toString(),
         );
+
+        // Message spécifique pour le mode fallback
+        String errorMessage;
+        if (response.statusCode == 0 || response.statusCode == -1) {
+          errorMessage =
+              'Pas de connexion internet. Vous pouvez utiliser l\'application hors ligne avec vos anciens identifiants.';
+        } else {
+          errorMessage = baseErrorMessage;
+        }
 
         state = AsyncValue.data(
           AuthState(isAuthenticated: false, errorMessage: errorMessage),
@@ -232,14 +410,14 @@ class AuthNotifier extends _$AuthNotifier {
         return false;
       }
     } catch (e) {
-      print('💥 [AUTH] Exception lors de la connexion: $e');
-      print('📊 [AUTH] Stack trace: ${StackTrace.current}');
+      print('💥 [AUTH] Erreur connexion serveur de secours: $e');
+
+      final baseMessage = _getNetworkErrorMessage(e);
+      final userMessage =
+          '$baseMessage Vous pouvez utiliser l\'application hors ligne avec vos anciens identifiants.';
 
       state = AsyncValue.data(
-        AuthState(
-          isAuthenticated: false,
-          errorMessage: 'Erreur de connexion: $e',
-        ),
+        AuthState(isAuthenticated: false, errorMessage: userMessage),
       );
       return false;
     }
@@ -255,18 +433,30 @@ class AuthNotifier extends _$AuthNotifier {
       await _utilisateurService.logout();
       print('✅ [LOGOUT] Déconnexion API réussie');
     } catch (e) {
-      // Ignorer les erreurs de déconnexion API
+      // Ignorer les erreurs de déconnexion API car la déconnexion locale suffit
       print('⚠️ [LOGOUT] Erreur lors de la déconnexion API (ignorée): $e');
     }
 
-    // Nettoyer le stockage local
-    print('🧹 [LOGOUT] Nettoyage du stockage local...');
-    await _clearAuthData();
-    await AuthInterceptor.clearToken();
-    print('🧹 [LOGOUT] Stockage local nettoyé');
+    try {
+      // Nettoyer le stockage local
+      print('🧹 [LOGOUT] Nettoyage du stockage local...');
+      await _clearAuthData();
+      await AuthInterceptor.clearToken();
+      print('🧹 [LOGOUT] Stockage local nettoyé');
 
-    state = const AsyncValue.data(AuthState());
-    print('✅ [LOGOUT] Déconnexion terminée avec succès');
+      state = const AsyncValue.data(AuthState());
+      print('✅ [LOGOUT] Déconnexion terminée avec succès');
+    } catch (e) {
+      print('💥 [LOGOUT] Erreur lors du nettoyage local: $e');
+      // Même en cas d'erreur de nettoyage, on considère la déconnexion réussie
+      state = AsyncValue.data(
+        AuthState(
+          isAuthenticated: false,
+          errorMessage:
+              'Déconnexion effectuée mais erreur de nettoyage. Redémarrez l\'application si nécessaire.',
+        ),
+      );
+    }
   }
 
   /// Rafraîchir le token (non implémenté pour Chopper)
@@ -347,8 +537,6 @@ class AuthNotifier extends _$AuthNotifier {
       if (authState == null ||
           !authState.isAuthenticated ||
           authState.userEmail == null) {
-        final prefs = await SharedPreferences.getInstance();
-        final token = prefs.getString(_tokenKey);
         print(
           '❌ [SYNC_MANUAL] Utilisateur non connecté - synchronisation impossible',
         );
@@ -382,6 +570,23 @@ class AuthNotifier extends _$AuthNotifier {
     } catch (e) {
       print('❌ [SYNC_MANUAL] Erreur lors de la synchronisation manuelle: $e');
       print('📊 [SYNC_MANUAL] Stack trace: ${StackTrace.current}');
+
+      // Mettre à jour l'état avec un message d'erreur approprié
+      state.whenData((currentState) {
+        String errorMessage;
+        if (e.toString().contains('401')) {
+          errorMessage =
+              'Synchronisation échouée : Session expirée. Reconnectez-vous.';
+        } else {
+          final baseMessage = _getNetworkErrorMessage(e);
+          errorMessage = 'Synchronisation échouée : $baseMessage';
+        }
+
+        state = AsyncValue.data(
+          currentState.copyWith(errorMessage: errorMessage),
+        );
+      });
+
       return false;
     }
   }
@@ -442,6 +647,7 @@ class AuthNotifier extends _$AuthNotifier {
     int? entrepriseId,
     String? email,
     String? userName,
+    String? password,
   }) async {
     final prefs = await SharedPreferences.getInstance();
 
@@ -451,6 +657,7 @@ class AuthNotifier extends _$AuthNotifier {
       if (entrepriseId != null) prefs.setInt(_entrepriseIdKey, entrepriseId),
       if (email != null) prefs.setString(_userEmailKey, email),
       if (userName != null) prefs.setString(_userNameKey, userName),
+      if (password != null) prefs.setString(_passwordKey, password),
     ]);
   }
 
@@ -464,7 +671,95 @@ class AuthNotifier extends _$AuthNotifier {
       prefs.remove(_entrepriseIdKey),
       prefs.remove(_userEmailKey),
       prefs.remove(_userNameKey),
+      prefs.remove(_passwordKey),
+      prefs.remove(_isFirstLaunchKey),
     ]);
+  }
+
+  /// Vérifier si c'est le premier lancement
+  Future<bool> isFirstLaunch() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_isFirstLaunchKey) ?? true;
+  }
+
+  /// Réinitialiser le flag de premier lancement (utile pour les tests)
+  Future<void> resetFirstLaunch() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_isFirstLaunchKey, true);
+  }
+
+  /// Méthode utilitaire pour gérer les erreurs réseau de façon centralisée
+  String _getNetworkErrorMessage(dynamic error) {
+    final errorString = error.toString().toLowerCase();
+
+    if (errorString.contains('socketexception')) {
+      return 'Pas de connexion internet. Vérifiez votre connexion réseau.';
+    } else if (errorString.contains('timeoutexception')) {
+      return 'Délai d\'attente dépassé. Vérifiez votre connexion internet.';
+    } else if (errorString.contains('handshakeexception')) {
+      return 'Erreur de sécurité SSL. Vérifiez la date et l\'heure de votre appareil.';
+    } else if (errorString.contains('formatexception')) {
+      return 'Erreur de format des données reçues. Contactez le support technique.';
+    } else {
+      return 'Erreur de connexion inattendue. Réessayez plus tard.';
+    }
+  }
+
+  /// Méthode utilitaire pour gérer les erreurs HTTP
+  String _getHttpErrorMessage(int? statusCode, String? responseMessage) {
+    switch (statusCode) {
+      case 400:
+        return responseMessage ??
+            'Requête invalide. Vérifiez les données saisies.';
+      case 401:
+        return 'Identifiants incorrects. Vérifiez votre email et mot de passe.';
+      case 403:
+        return 'Accès refusé. Contactez l\'administrateur.';
+      case 404:
+        return 'Service non trouvé. Contactez le support technique.';
+      case 429:
+        return 'Trop de tentatives. Attendez quelques minutes avant de réessayer.';
+      case 500:
+        return 'Erreur du serveur. Réessayez plus tard.';
+      case 502:
+      case 503:
+      case 504:
+        return 'Service temporairement indisponible. Réessayez plus tard.';
+      default:
+        if (statusCode == 0 || statusCode == -1) {
+          return 'Pas de connexion internet. Vérifiez votre connexion réseau.';
+        }
+        return 'Erreur de connexion au serveur${statusCode != null ? ' ($statusCode)' : ''}.';
+    }
+  }
+
+  /// Effacer le message d'erreur avec succès
+  void clearErrorWithSuccess(String? successMessage) {
+    state.whenData((authState) {
+      if (authState.errorMessage != null) {
+        state = AsyncValue.data(authState.copyWith(errorMessage: null));
+        // Optionnel: afficher un message de succès temporaire
+        if (successMessage != null) {
+          Future.delayed(const Duration(milliseconds: 100), () {
+            state.whenData((currentState) {
+              state = AsyncValue.data(
+                currentState.copyWith(errorMessage: successMessage),
+              );
+              // Effacer le message de succès après 3 secondes
+              Future.delayed(const Duration(seconds: 3), () {
+                state.whenData((finalState) {
+                  if (finalState.errorMessage == successMessage) {
+                    state = AsyncValue.data(
+                      finalState.copyWith(errorMessage: null),
+                    );
+                  }
+                });
+              });
+            });
+          });
+        }
+      }
+    });
   }
 }
 
@@ -515,4 +810,30 @@ String? authError(AuthErrorRef ref) {
 bool isAuthLoading(IsAuthLoadingRef ref) {
   final authState = ref.watch(authNotifierProvider);
   return authState.isLoading;
+}
+
+/// Provider pour obtenir un message d'état utilisateur convivial
+@riverpod
+String? userFriendlyAuthStatus(UserFriendlyAuthStatusRef ref) {
+  final authState = ref.watch(authNotifierProvider);
+  return authState.whenOrNull(
+    loading: () => 'Connexion en cours...',
+    error: (error, stack) => 'Erreur de connexion',
+    data: (state) {
+      if (state.isAuthenticated) {
+        return 'Connecté${state.userEmail != null ? ' en tant que ${state.userEmail}' : ''}';
+      } else if (state.errorMessage != null) {
+        return state.errorMessage;
+      }
+      return 'Non connecté';
+    },
+  );
+}
+
+/// Provider pour vérifier si l'utilisateur peut travailler hors ligne
+@riverpod
+Future<bool> canWorkOffline(CanWorkOfflineRef ref) async {
+  final authNotifier = ref.read(authNotifierProvider.notifier);
+  final isFirstLaunch = await authNotifier.isFirstLaunch();
+  return !isFirstLaunch; // Peut travailler hors ligne seulement si ce n'est pas le premier lancement
 }

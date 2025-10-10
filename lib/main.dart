@@ -51,6 +51,7 @@ class MainApp extends ConsumerWidget {
       routes: {
         '/paiement-frais': (context) => PaiementDesFrais(),
         '/add-eleve': (context) => AddEleveScreen(),
+        '/login': (context) => const AuthScreen(),
         '/home': (context) =>
             PaiementDesFrais(), // Route par défaut pour l'accueil
       },

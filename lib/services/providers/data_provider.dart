@@ -894,6 +894,214 @@ class PaiementsFraisNotifier extends _$PaiementsFraisNotifier {
       rethrow;
     }
   }
+
+  /// Enregistre un nouveau paiement avec écritures comptables automatiques
+  Future<void> enregistrerPaiementAvecEcritures({
+    required int eleveId,
+    required int fraisId,
+    required double montant,
+    required int entrepriseId,
+    int? userId,
+  }) async {
+    final paiementDao = ref.watch(paiementFraisDaoProvider);
+    final journalDao = ref.watch(journalComptableDaoProvider);
+    final ecritureDao = ref.watch(ecritureComptableDaoProvider);
+    final comptesConfigDao = ref.watch(comptesConfigDaoProvider);
+    final eleveDao = ref.watch(eleveDaoProvider);
+    final fraisDao = ref.watch(fraisScolaireDaoProvider);
+    final isConnected = ref.read(isConnectedProvider);
+    final syncNotifier = ref.read(syncStateNotifierProvider.notifier);
+
+    try {
+      final now = DateTime.now();
+
+      // 1. Récupérer les informations de l'élève et du frais
+      final eleve = await eleveDao.getEleveById(eleveId);
+      final frais = await fraisDao.getFraisScolaireById(fraisId);
+
+      if (eleve == null) throw Exception("Élève introuvable.");
+      if (frais == null) throw Exception("Frais scolaire introuvable.");
+
+      // 2. Calculer le reste à payer
+      print('💰 Calcul du reste à payer:');
+      print('  - Montant du frais: ${frais.montant}');
+
+      double montantDejaPaye = 0.0;
+      try {
+        final result = await paiementDao.getTotalPaiementsByEleveAndFrais(
+          eleveId,
+          fraisId,
+        );
+        // Avec COALESCE, result ne devrait jamais être null, mais on garde la sécurité
+        montantDejaPaye = result ?? 0.0;
+        print('  - Montant déjà payé (succès): $montantDejaPaye');
+      } catch (e) {
+        print('  - Erreur lors du calcul du montant déjà payé: $e');
+        print('  - Utilisation de la valeur par défaut: 0.0');
+        montantDejaPaye = 0.0;
+      }
+
+      print('  - Montant déjà payé final: $montantDejaPaye');
+      print('  - Nouveau paiement: $montant');
+
+      final resteAPayer = frais.montant - montantDejaPaye - montant;
+      print('  - Reste à payer calculé: $resteAPayer');
+
+      // 3. Créer le paiement
+      print('📝 Création du paiement:');
+      final resteAPayerFinal = resteAPayer > 0 ? resteAPayer : 0.0;
+      final statutFinal = resteAPayer <= 0 ? 'complet' : 'partiel';
+
+      print('  - Reste à payer final: $resteAPayerFinal');
+      print('  - Statut: $statutFinal');
+
+      final nouveauPaiement = PaiementFrais(
+        eleveId: eleveId,
+        fraisScolaireId: fraisId,
+        montantPaye: montant,
+        datePaiement: now,
+        userId: userId,
+        resteAPayer: resteAPayerFinal,
+        statut: statutFinal,
+        isSync: false,
+        dateCreation: now,
+        dateModification: now,
+        updatedAt: now,
+      );
+
+      print('🗃️ Insertion du paiement en base...');
+      final paiementId = await paiementDao.insertPaiementFrais(nouveauPaiement);
+      print('✅ Paiement inséré avec ID: $paiementId');
+
+      // 4. Créer le libellé pour le journal
+      final nomEleve = '${eleve.nom} ${eleve.postnom ?? ''} ${eleve.prenom}';
+      final libelle = 'Paiement : ${frais.nom} ${nomEleve.trim()}';
+
+      print('📓 Création du journal comptable...');
+      print('  - Libellé: $libelle');
+
+      // 5. Créer l'entrée dans le journal comptable
+      final journalEntry = JournalComptable(
+        dateOperation: now,
+        libelle: libelle,
+        montant: montant,
+        typeOperation: 'Entrée',
+        paiementFraisId: paiementId,
+        entrepriseId: entrepriseId,
+        isSync: false,
+        dateCreation: now,
+        dateModification: now,
+        updatedAt: now,
+      );
+
+      final journalId = await journalDao.insertJournalComptable(journalEntry);
+      print('✅ Journal créé avec ID: $journalId');
+
+      // 6. Récupérer la configuration comptable
+      final config = await comptesConfigDao.getComptesConfigByEntreprise(
+        entrepriseId,
+      );
+      if (config == null) {
+        throw Exception(
+          "Configuration comptable introuvable pour entreprise_id $entrepriseId",
+        );
+      }
+
+      // 7. Créer les écritures comptables (Partie Double)
+      print('📊 Création des écritures comptables (débit/crédit):');
+      print('  - Compte Caisse ID: ${config.compteCaisseId}');
+      print('  - Compte Frais ID: ${config.compteFraisId}');
+
+      // Écriture DÉBIT : Compte Caisse (Actif augmente)
+      final ecritureDebit = EcritureComptable(
+        journalId: journalId,
+        compteComptableId: config.compteCaisseId,
+        debit: montant,
+        credit: 0,
+        ordre: 1,
+        dateEcriture: now,
+        isSync: false,
+        dateCreation: now,
+        dateModification: now,
+        updatedAt: now,
+      );
+
+      // Écriture CRÉDIT : Compte Frais (Produit augmente)
+      final ecritureCredit = EcritureComptable(
+        journalId: journalId,
+        compteComptableId: config.compteFraisId,
+        debit: 0,
+        credit: montant,
+        ordre: 2,
+        dateEcriture: now,
+        isSync: false,
+        dateCreation: now,
+        dateModification: now,
+        updatedAt: now,
+      );
+
+      print('  - Écriture DÉBIT : Caisse = ${montant} CDF');
+      print('  - Écriture CRÉDIT : Frais = ${montant} CDF');
+      print(
+        '  - Équilibre comptable : ${ecritureDebit.debit} = ${ecritureCredit.credit} ✓',
+      );
+
+      await ecritureDao.insertEcritureComptable(ecritureDebit);
+      print('✅ Écriture DÉBIT insérée');
+
+      await ecritureDao.insertEcritureComptable(ecritureCredit);
+      print('✅ Écriture CRÉDIT insérée');
+
+      print(
+        '💼 Écritures comptables créées avec succès (partie double respectée)',
+      );
+
+      // 8. Invalider le cache pour rafraîchir les données
+      ref.invalidateSelf();
+
+      // 9. Synchronisation si connecté
+      if (isConnected) {
+        try {
+          await syncNotifier.uploadSingleEntity(
+            nouveauPaiement,
+            'paiement_frais',
+            'create',
+            userEmail: 'admin@testschool.com',
+          );
+
+          await syncNotifier.uploadSingleEntity(
+            journalEntry,
+            'journaux_comptables',
+            'create',
+            userEmail: 'admin@testschool.com',
+          );
+
+          await syncNotifier.uploadSingleEntity(
+            ecritureDebit,
+            'ecritures_comptables',
+            'create',
+            userEmail: 'admin@testschool.com',
+          );
+
+          await syncNotifier.uploadSingleEntity(
+            ecritureCredit,
+            'ecritures_comptables',
+            'create',
+            userEmail: 'admin@testschool.com',
+          );
+        } catch (e) {
+          print('Erreur lors de la synchronisation: $e');
+        }
+      }
+
+      print(
+        '✅ Paiement enregistré avec écritures comptables - Montant: $montant',
+      );
+    } catch (e) {
+      print('❌ Erreur lors de l\'enregistrement du paiement complet: $e');
+      rethrow;
+    }
+  }
 }
 
 /// Provider pour la liste des notes par période
@@ -2112,7 +2320,13 @@ class JournauxComptablesNotifier extends _$JournauxComptablesNotifier {
     final dao = ref.watch(journalComptableDaoProvider);
     final authState = await ref.read(authNotifierProvider.future);
 
+    print('🔍 getJournalEntries - Debug:');
+    print('  - Date demandée: $date');
+    print('  - Filtre: $filter');
+    print('  - Entreprise ID: ${authState.entrepriseId}');
+
     if (authState.entrepriseId == null) {
+      print('❌ Aucune entreprise connectée - retour liste vide');
       return [];
     }
 
@@ -2127,6 +2341,9 @@ class JournauxComptablesNotifier extends _$JournauxComptablesNotifier {
         dateFin,
         authState.entrepriseId!,
       );
+
+      print('  - Période: $dateDebut à $dateFin');
+      print('  - Entrées trouvées: ${entries.length}');
 
       // Appliquer le filtre si nécessaire
       if (filter == 'Tous') {

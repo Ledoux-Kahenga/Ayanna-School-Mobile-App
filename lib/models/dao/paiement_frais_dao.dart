@@ -97,4 +97,19 @@ abstract class PaiementFraisDao {
 
   @Query('UPDATE paiement_frais SET statut = :statut WHERE id = :id')
   Future<void> updateStatutPaiement(int id, String statut);
+
+  /// Calcule le total des paiements pour un élève et un frais spécifique
+  @Query(
+    'SELECT COALESCE(SUM(montant_paye), 0.0) FROM paiement_frais WHERE eleve_id = :eleveId AND frais_scolaire_id = :fraisId',
+  )
+  Future<double?> getTotalPaiementsByEleveAndFrais(int eleveId, int fraisId);
+
+  /// Récupère les paiements pour un élève et un frais spécifique
+  @Query(
+    'SELECT * FROM paiement_frais WHERE eleve_id = :eleveId AND frais_scolaire_id = :fraisId ORDER BY date_paiement DESC',
+  )
+  Future<List<PaiementFrais>> getPaiementsByEleveAndFrais(
+    int eleveId,
+    int fraisId,
+  );
 }
