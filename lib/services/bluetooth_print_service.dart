@@ -8,6 +8,10 @@ class BluetoothPrintService {
   factory BluetoothPrintService() => _instance;
   BluetoothPrintService._internal();
 
+  // Cache des appareils découverts pour persister même après déconnexion
+  final List<BluetoothInfo> _cachedDevices = [];
+  final Set<String> _knownMacAddresses = {};
+
   /// Vérifie et demande les permissions Bluetooth (simplifié)
   Future<bool> checkPermissions() async {
     try {
@@ -30,7 +34,7 @@ class BluetoothPrintService {
     }
   }
 
-  /// Scanne les appareils Bluetooth disponibles
+  /// Scanne les appareils Bluetooth disponibles (appairés + cache)
   Future<List<BluetoothInfo>> scanDevices() async {
     try {
       final hasPermissions = await checkPermissions();
@@ -43,11 +47,100 @@ class BluetoothPrintService {
         throw Exception('Bluetooth non activé');
       }
 
-      return await PrintBluetoothThermal.pairedBluetooths;
+      // Récupérer les appareils actuellement appairés
+      final pairedDevices = await PrintBluetoothThermal.pairedBluetooths;
+
+      // Mettre à jour le cache avec les nouveaux appareils
+      for (final device in pairedDevices) {
+        if (!_knownMacAddresses.contains(device.macAdress)) {
+          _knownMacAddresses.add(device.macAdress);
+          _cachedDevices.add(device);
+          debugPrint(
+            'Nouvel appareil ajouté au cache: ${device.name} (${device.macAdress})',
+          );
+        }
+      }
+
+      // Retourner une liste combinée (cache + appareils actuels)
+      final Map<String, BluetoothInfo> allDevicesMap = {};
+
+      // D'abord ajouter les appareils du cache
+      for (final device in _cachedDevices) {
+        allDevicesMap[device.macAdress] = device;
+      }
+
+      // Puis mettre à jour avec les appareils actuellement appairés (priorité)
+      for (final device in pairedDevices) {
+        allDevicesMap[device.macAdress] = device;
+      }
+
+      final combinedDevices = allDevicesMap.values.toList();
+      debugPrint(
+        'Scan terminé: ${pairedDevices.length} appairés, ${combinedDevices.length} total (avec cache)',
+      );
+
+      return combinedDevices;
     } catch (e) {
       debugPrint('Erreur lors du scan des appareils: $e');
       rethrow;
     }
+  }
+
+  /// Vide le cache des appareils
+  void clearDeviceCache() {
+    _cachedDevices.clear();
+    _knownMacAddresses.clear();
+    debugPrint('Cache des appareils vidé');
+  }
+
+  /// Ajoute manuellement un appareil au cache
+  void addDeviceToCache(BluetoothInfo device) {
+    if (!_knownMacAddresses.contains(device.macAdress)) {
+      _knownMacAddresses.add(device.macAdress);
+      _cachedDevices.add(device);
+      debugPrint('Appareil ajouté manuellement au cache: ${device.name}');
+    }
+  }
+
+  /// Scan périodique avec cache persistant
+  Future<List<BluetoothInfo>> scanDevicesWithCache({Duration? timeout}) async {
+    const maxAttempts = 3;
+    const delayBetweenAttempts = Duration(seconds: 2);
+
+    for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        debugPrint('Tentative de scan $attempt/$maxAttempts...');
+
+        final devices = await scanDevices();
+
+        if (devices.isNotEmpty) {
+          debugPrint('Scan réussi: ${devices.length} appareils trouvés');
+          return devices;
+        }
+
+        if (attempt < maxAttempts) {
+          debugPrint(
+            'Aucun appareil trouvé, nouvelle tentative dans ${delayBetweenAttempts.inSeconds}s...',
+          );
+          await Future.delayed(delayBetweenAttempts);
+        }
+      } catch (e) {
+        debugPrint('Erreur tentative $attempt: $e');
+        if (attempt == maxAttempts) rethrow;
+        await Future.delayed(delayBetweenAttempts);
+      }
+    }
+
+    // Si aucun appareil trouvé après toutes les tentatives, retourner le cache
+    debugPrint(
+      'Scan échoué, retour du cache: ${_cachedDevices.length} appareils',
+    );
+    return List.from(_cachedDevices);
+  }
+
+  /// Créer un appareil Bluetooth personnalisé (pour les appareils connus)
+  BluetoothInfo createCustomDevice(String name, String macAddress) {
+    return BluetoothInfo(name: name, macAdress: macAddress);
   }
 
   /// Se connecte à un appareil Bluetooth
