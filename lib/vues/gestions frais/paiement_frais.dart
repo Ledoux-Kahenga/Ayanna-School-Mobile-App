@@ -10,10 +10,8 @@ import '../../theme/ayanna_theme.dart';
 import '../widgets/ayanna_drawer.dart';
 import '../../models/entities/eleve.dart' as entities;
 import '../../services/providers/providers.dart';
-import 'package:flutter_thermal_printer/flutter_thermal_printer.dart';
-import 'package:flutter_thermal_printer/utils/printer.dart' as thermal;
-import 'dart:async';
-import 'package:permission_handler/permission_handler.dart';
+import '../../services/bluetooth_print_service.dart';
+import '../widgets/bluetooth_printer_selector.dart';
 
 class PaiementDesFrais extends ConsumerStatefulWidget {
   final AnneeScolaire? anneeScolaire;
@@ -29,321 +27,109 @@ class _PaiementDesFraisState extends ConsumerState<PaiementDesFrais> {
   final TextEditingController _searchController = TextEditingController();
   entities.Eleve? _selectedEleve;
   List<FraisDetails> _fraisDetails = [];
-  final _flutterThermalPrinterPlugin = FlutterThermalPrinter.instance;
-  List<thermal.Printer> printers = [];
-  StreamSubscription<List<thermal.Printer>>? _devicesStreamSubscription;
-  bool _isScanning = false;
+
+  // Map pour stocker les noms des classes (classeId -> nom de classe)
+  final Map<int, String> _classesNoms = {};
+
+  // Service d'impression Bluetooth
+  final BluetoothPrintService _bluetoothService = BluetoothPrintService();
 
   @override
   void initState() {
     super.initState();
     print('📍 [PaiementFrais] initState appelé');
     _initData();
-    print('📍 [PaiementFrais] Appel de _requestBluetoothPermissions()');
-    _requestBluetoothPermissions();
   }
 
   @override
   void dispose() {
-    print('📍 [PaiementFrais] dispose appelé, annulation du stream');
-    _devicesStreamSubscription?.cancel();
     _searchController.dispose();
     super.dispose();
   }
 
-  Future<void> _requestBluetoothPermissions() async {
-    print('📍 [PaiementFrais] Début de la demande de permissions Bluetooth...');
-
-    // Sur Android 12+ (API 31+), on utilise bluetoothConnect et bluetoothScan
-    // Sur Android < 12, on utilise bluetooth et location
-    Map<Permission, PermissionStatus> statuses = await [
-      Permission.bluetoothConnect,
-      Permission.bluetoothScan,
-      Permission.location,
-    ].request();
-
-    print('📍 [PaiementFrais] Statuts des permissions:');
-    statuses.forEach((permission, status) {
-      print('   - ${permission.toString()}: ${status.toString()}');
-    });
-
-    // Vérifier les permissions essentielles selon la version Android
-    bool bluetoothConnectGranted =
-        statuses[Permission.bluetoothConnect]?.isGranted ?? false;
-    bool bluetoothScanGranted =
-        statuses[Permission.bluetoothScan]?.isGranted ?? false;
-    bool locationGranted = statuses[Permission.location]?.isGranted ?? false;
-
-    // Sur Android 12+, on a besoin de bluetoothConnect et bluetoothScan
-    // La location est optionnelle si on utilise neverForLocation
-    bool permissionsOk = bluetoothConnectGranted && bluetoothScanGranted;
-
-    print('📍 [PaiementFrais] Analyse des permissions:');
-    print('   - bluetoothConnect: $bluetoothConnectGranted');
-    print('   - bluetoothScan: $bluetoothScanGranted');
-    print('   - location: $locationGranted');
-    print('   - Permissions OK: $permissionsOk');
-
-    if (permissionsOk) {
-      print(
-        '✅ [PaiementFrais] Permissions essentielles accordées, lancement du scan...',
-      );
-      _startScan();
-    } else {
-      print('❌ [PaiementFrais] Permissions essentielles refusées');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Permissions Bluetooth requises pour l\'impression thermique',
-            ),
-            duration: Duration(seconds: 4),
-          ),
-        );
-      }
-    }
-  }
-
-  void _startScan() async {
-    print('📍 [PaiementFrais] Début du scan des imprimantes...');
-
-    setState(() {
-      _isScanning = true;
-    });
-
-    try {
-      // D'abord écouter le stream
-      print('📍 [PaiementFrais] Configuration du listener devicesStream...');
-      _devicesStreamSubscription = _flutterThermalPrinterPlugin.devicesStream.listen(
-        (devices) {
-          print(
-            '📡 [PaiementFrais] Stream déclenché avec ${devices.length} imprimante(s)',
-          );
-          if (mounted) {
-            setState(() {
-              printers = devices;
-              print(
-                '✅ [PaiementFrais] Liste mise à jour: ${devices.length} imprimante(s)',
-              );
-              for (var printer in devices) {
-                print(
-                  '   🖨️  ${printer.name} (${printer.address}) - Type: ${printer.connectionType}',
-                );
-              }
-            });
-          } else {
-            print('⚠️ [PaiementFrais] Widget non monté, mise à jour ignorée');
-          }
-        },
-        onError: (error) {
-          print('❌ [PaiementFrais] Erreur dans le stream: $error');
-        },
-        cancelOnError: false,
-      );
-
-      print(
-        '📍 [PaiementFrais] Listener configuré, lancement de getPrinters()...',
-      );
-
-      // Puis lancer la découverte des imprimantes Bluetooth
-      await _flutterThermalPrinterPlugin.getPrinters(
-        refreshDuration: const Duration(seconds: 2),
-        connectionTypes: [thermal.ConnectionType.BLE],
-      );
-
-      print(
-        '✅ [PaiementFrais] getPrinters() terminé, attente des résultats dans le stream...',
-      );
-
-      // Attendre 8 secondes pour laisser le temps au scan de trouver les imprimantes
-      await Future.delayed(const Duration(seconds: 8));
-
-      print(
-        '⏹️ [PaiementFrais] Fin de l\'attente du scan, ${printers.length} imprimante(s) trouvée(s)',
-      );
-
-      _flutterThermalPrinterPlugin.stopScan();
-
-      if (mounted) {
-        setState(() {
-          _isScanning = false;
-        });
-      }
-    } catch (e) {
-      print('❌ [PaiementFrais] Erreur lors du scan: $e');
-      if (mounted) {
-        setState(() {
-          _isScanning = false;
-        });
-      }
-    }
-  }
-
-  Future<void> _showReceiptWidget(
+  Future<void> _printReceipt(
     entities.Eleve eleve,
     FraisDetails fraisDetails,
   ) async {
-    print('📍 [PaiementFrais] _showReceiptWidget appelé');
-    print(
-      '📍 [PaiementFrais] Nombre d\'imprimantes disponibles: ${printers.length}',
-    );
-    print('📍 [PaiementFrais] Scan en cours: $_isScanning');
-
-    // Si le scan est en cours, afficher un message et attendre
-    if (_isScanning) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            '⏳ Recherche d\'imprimantes en cours, veuillez patienter...',
-          ),
-          duration: Duration(seconds: 2),
-        ),
-      );
-      print(
-        '⚠️ [PaiementFrais] Scan en cours, impression refusée temporairement',
-      );
-      return;
-    }
-
-    if (printers.isEmpty) {
-      print('❌ [PaiementFrais] Aucune imprimante dans la liste');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Aucune imprimante trouvée. Assurez-vous que l\'imprimante est allumée et à portée.',
-          ),
-          duration: Duration(seconds: 3),
-        ),
-      );
-      return;
-    }
-
-    print('✅ [PaiementFrais] Imprimantes disponibles:');
-    for (var p in printers) {
-      print('   🖨️  ${p.name} (${p.address})');
-    }
-
-    // Si plusieurs imprimantes, afficher un dialogue de sélection
-    thermal.Printer? selectedPrinter;
-    if (printers.length > 1) {
-      print(
-        '📍 [PaiementFrais] Plusieurs imprimantes, affichage du dialogue de sélection...',
-      );
-      selectedPrinter = await showDialog<thermal.Printer>(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text('Sélectionner une imprimante'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: printers.map((printer) {
-                  return ListTile(
-                    leading: const Icon(
-                      Icons.print,
-                      color: AyannaColors.orange,
-                    ),
-                    title: Text(printer.name ?? 'Imprimante inconnue'),
-                    subtitle: Text(printer.address ?? ''),
-                    onTap: () {
-                      Navigator.of(context).pop(printer);
-                    },
-                  );
-                }).toList(),
-              ),
-            ),
-            actions: [
-              TextButton(
-                child: const Text('Annuler'),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ],
-          );
-        },
-      );
-
-      if (selectedPrinter == null) {
-        print('⚠️ [PaiementFrais] Sélection annulée par l\'utilisateur');
-        return; // L'utilisateur a annulé
-      }
-      print(
-        '✅ [PaiementFrais] Imprimante sélectionnée: ${selectedPrinter.name}',
-      );
-    } else {
-      selectedPrinter = printers[0];
-      print(
-        '✅ [PaiementFrais] Une seule imprimante, sélection automatique: ${selectedPrinter.name}',
-      );
-    }
-
-    print(
-      '📍 [PaiementFrais] Début de l\'impression sur ${selectedPrinter.name}...',
-    );
-    print('📍 [PaiementFrais] Adresse: ${selectedPrinter.address}');
-    print('📍 [PaiementFrais] Type: ${selectedPrinter.connectionType}');
-    print('📍 [PaiementFrais] isConnected: ${selectedPrinter.isConnected}');
-
     try {
-      // Vérifier si l'imprimante est déjà connectée
-      if (selectedPrinter.isConnected != true) {
-        print(
-          '📍 [PaiementFrais] Imprimante non connectée, connexion en cours...',
-        );
+      // Vérifier d'abord si une imprimante est connectée
+      final isConnected = await _bluetoothService.isConnected();
 
-        // Connecter à l'imprimante
-        final isConnected = await _flutterThermalPrinterPlugin.connect(
-          selectedPrinter,
-        );
-        print('📍 [PaiementFrais] Résultat de la connexion: $isConnected');
-
-        if (!isConnected) {
-          print('❌ [PaiementFrais] Échec de la connexion à l\'imprimante');
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Impossible de se connecter à l\'imprimante'),
-              ),
-            );
-          }
-          return;
-        }
-        print('✅ [PaiementFrais] Connexion réussie à l\'imprimante');
-      } else {
-        print('✅ [PaiementFrais] Imprimante déjà connectée');
+      if (!isConnected) {
+        // Afficher le sélecteur d'imprimante
+        await _showPrinterSelector();
+        return;
       }
 
-      print('📍 [PaiementFrais] Génération du widget de reçu...');
-      final receiptWidget = FactureReceiptWidgetPaiement(
-        eleve: eleve,
-        fraisDetails: fraisDetails,
-      );
-      print('✅ [PaiementFrais] Widget de reçu généré');
+      // Préparer les données des paiements
+      final paiements = fraisDetails.historiquePaiements
+          .map(
+            (p) => {
+              'date': DateFormat('dd/MM/yy').format(p.datePaiement),
+              'montant': p.montantPaye.toStringAsFixed(0),
+            },
+          )
+          .toList();
 
-      print('📍 [PaiementFrais] Envoi à l\'imprimante...');
-      await _flutterThermalPrinterPlugin.printWidget(
-        context,
-        printer: selectedPrinter,
-        widget: receiptWidget,
+      // Imprimer avec le service Bluetooth
+      final success = await _bluetoothService.printReceipt(
+        schoolName: 'AYANNA SCHOOL',
+        schoolAddress: '14 Av. Bunduki, Q. Plateau, C. Annexe',
+        schoolPhone: 'Tél : +243997554905',
+        eleveName: '${eleve.prenomCapitalized} ${eleve.nomPostnomMaj}',
+        classe: _classesNoms[eleve.classeId] ?? '-',
+        matricule: eleve.matricule ?? '',
+        fraisName: fraisDetails.frais.nom,
+        paiements: paiements,
+        montantTotal: fraisDetails.montant,
+        totalPaye: fraisDetails.montantPaye,
+        resteAPayer: fraisDetails.resteAPayer,
       );
-      print('✅ [PaiementFrais] Impression terminée avec succès');
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Impression en cours...'),
-            duration: Duration(seconds: 2),
+          SnackBar(
+            content: Text(
+              success
+                  ? 'Reçu envoyé à l\'imprimante'
+                  : 'Erreur lors de l\'impression',
+            ),
+            backgroundColor: success ? AyannaColors.successGreen : Colors.red,
           ),
         );
       }
-    } catch (e, stackTrace) {
-      print('❌ [PaiementFrais] Erreur lors de l\'impression: $e');
-      print('❌ [PaiementFrais] Stack trace: $stackTrace');
+    } catch (e) {
+      debugPrint('Erreur impression: $e');
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Erreur d\'impression: $e')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
+        );
       }
     }
+  }
+
+  Future<void> _showPrinterSelector() async {
+    await showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
+          child: BluetoothPrinterSelector(
+            onPrinterSelected: (macAddress) {
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Imprimante connectée! Vous pouvez maintenant imprimer.',
+                  ),
+                  backgroundColor: AyannaColors.successGreen,
+                ),
+              );
+            },
+          ),
+        ),
+      ),
+    );
   }
 
   Future<void> _initData() async {
@@ -354,6 +140,8 @@ class _PaiementDesFraisState extends ConsumerState<PaiementDesFrais> {
       _fraisDetails = [];
     });
     try {
+      // Charger les noms des classes
+      await _loadClassesNoms();
       // No need to load élèves here since we're using reactive data fetching
       // The reactive provider will handle loading élèves
     } catch (e) {
@@ -364,6 +152,23 @@ class _PaiementDesFraisState extends ConsumerState<PaiementDesFrais> {
       setState(() {
         _loading = false;
       });
+    }
+  }
+
+  // Méthode pour charger les noms des classes
+  Future<void> _loadClassesNoms() async {
+    try {
+      final classes = await ref.read(classesNotifierProvider.future);
+      setState(() {
+        _classesNoms.clear();
+        for (final classe in classes) {
+          if (classe.id != null) {
+            _classesNoms[classe.id!] = classe.nom;
+          }
+        }
+      });
+    } catch (e) {
+      debugPrint('Erreur lors du chargement des classes: $e');
     }
   }
 
@@ -444,6 +249,13 @@ class _PaiementDesFraisState extends ConsumerState<PaiementDesFrais> {
             style: TextStyle(color: AyannaColors.white),
           ),
           iconTheme: const IconThemeData(color: AyannaColors.white),
+          actions: [
+            IconButton(
+              onPressed: _showPrinterSelector,
+              icon: const Icon(Icons.print),
+              tooltip: 'Configurer imprimante',
+            ),
+          ],
         ),
         drawer: AyannaDrawer(
           selectedIndex: drawerIndex,
@@ -470,6 +282,11 @@ class _PaiementDesFraisState extends ConsumerState<PaiementDesFrais> {
                     ),
                     child: TextField(
                       controller: _searchController,
+                      onChanged: (value) {
+                        setState(() {
+                          // Déclenche la reconstruction pour filtrer la liste
+                        });
+                      },
                       style: const TextStyle(
                         color: AyannaColors.darkGrey,
                         fontSize: 16,
@@ -622,7 +439,7 @@ class _PaiementDesFraisState extends ConsumerState<PaiementDesFrais> {
                                           ),
                                         const SizedBox(height: 2),
                                         Text(
-                                          'Classe : ${e.classeNom ?? "-"}',
+                                          'Classe : ${_classesNoms[e.classeId] ?? "-"}',
                                           style: const TextStyle(
                                             fontSize: 13,
                                             color: AyannaColors.orange,
@@ -705,7 +522,7 @@ class _PaiementDesFraisState extends ConsumerState<PaiementDesFrais> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Classe : ${_selectedEleve!.classeNom ?? "-"}',
+                          'Classe : ${_classesNoms[_selectedEleve!.classeId] ?? "-"}',
                           style: const TextStyle(
                             fontSize: 13,
                             color: AyannaColors.orange,
@@ -900,114 +717,10 @@ class _PaiementDesFraisState extends ConsumerState<PaiementDesFrais> {
                                                     fd.showRecu = true;
                                                   });
                                                 } else {
-                                                  await _showReceiptWidget(
+                                                  await _printReceipt(
                                                     _selectedEleve!,
                                                     fd,
                                                   );
-
-                                                  // await Printing.layoutPdf(
-                                                  //   onLayout: (format) async {
-                                                  //     final doc = pw.Document();
-                                                  //     doc.addPage(
-                                                  //       pw.Page(
-                                                  //         build: (pw.Context context) {
-                                                  //           return pw.Column(
-                                                  //             crossAxisAlignment: pw
-                                                  //                 .CrossAxisAlignment
-                                                  //                 .start,
-                                                  //             children: [
-                                                  //               pw.Text(
-                                                  //                 'Généré par Ayanna School - ${DateTime.now()}',
-                                                  //               ),
-                                                  //               pw.Text(
-                                                  //                 'Default School',
-                                                  //               ),
-                                                  //               pw.Text(
-                                                  //                 '14 Av. Bunduki, Q. Plateau, C. Annexe',
-                                                  //               ),
-                                                  //               pw.Text(
-                                                  //                 'Tél : +243997554905',
-                                                  //               ),
-                                                  //               pw.Text(
-                                                  //                 'Email : comtact@school.com',
-                                                  //               ),
-                                                  //               pw.Divider(),
-                                                  //               pw.Text(
-                                                  //                 'REÇU FRAIS',
-                                                  //                 style: pw.TextStyle(
-                                                  //                   fontSize:
-                                                  //                       20,
-                                                  //                   fontWeight: pw
-                                                  //                       .FontWeight
-                                                  //                       .bold,
-                                                  //                 ),
-                                                  //               ),
-                                                  //               pw.Text(
-                                                  //                 'Élève : ${_selectedEleve!.prenomCapitalized} ${_selectedEleve!.nomPostnomMaj}',
-                                                  //               ),
-                                                  //               pw.Text(
-                                                  //                 'Classe : ${_selectedEleve!.classeNom ?? "-"}',
-                                                  //               ),
-                                                  //               pw.Text(
-                                                  //                 'Frais : ${fd.frais.nom}',
-                                                  //               ),
-                                                  //               pw.Text(
-                                                  //                 'Paiements :',
-                                                  //               ),
-                                                  //               pw.Table.fromTextArray(
-                                                  //                 headers: [
-                                                  //                   'Date',
-                                                  //                   'Montant',
-                                                  //                   'Caissier',
-                                                  //                 ],
-                                                  //                 data: fd
-                                                  //                     .historiquePaiements
-                                                  //                     .map(
-                                                  //                       (p) => [
-                                                  //                         p.datePaiement,
-                                                  //                         p.montantPaye,
-
-                                                  //                         'Admin',
-                                                  //                       ],
-                                                  //                     )
-                                                  //                     .toList(),
-                                                  //               ),
-                                                  //               pw.Text(
-                                                  //                 'Total payé : ${fd.montantPaye.toInt()} ${AppPreferences().devise}',
-                                                  //               ),
-                                                  //               pw.Text(
-                                                  //                 'Reste : ${fd.resteAPayer.toInt()} ${AppPreferences().devise}',
-                                                  //               ),
-                                                  //               pw.Text(
-                                                  //                 'Statut : ${fd.statut == 'en_ordre'
-                                                  //                     ? 'En ordre'
-                                                  //                     : fd.statut == 'partiellement_paye'
-                                                  //                     ? 'Partiel'
-                                                  //                     : 'Pas en ordre'}',
-                                                  //               ),
-                                                  //               pw.SizedBox(
-                                                  //                 height: 16,
-                                                  //               ),
-                                                  //               pw.Text(
-                                                  //                 'Merci pour votre paiement.',
-                                                  //                 style: pw.TextStyle(
-                                                  //                   fontStyle: pw
-                                                  //                       .FontStyle
-                                                  //                       .italic,
-                                                  //                 ),
-                                                  //               ),
-                                                  //             ],
-                                                  //           );
-                                                  //         },
-                                                  //       ),
-                                                  //     );
-                                                  //     return doc.save();
-                                                  //   },
-                                                  // );
-
-                                                  setState(() {
-                                                    fd.showRecu = false;
-                                                  });
                                                 }
                                               },
                                             ),
@@ -1022,7 +735,8 @@ class _PaiementDesFraisState extends ConsumerState<PaiementDesFrais> {
                                             eleve:
                                                 '${_selectedEleve!.prenomCapitalized} ${_selectedEleve!.nomPostnomMaj}',
                                             classe:
-                                                _selectedEleve!.classeNom ??
+                                                _classesNoms[_selectedEleve!
+                                                    .classeId] ??
                                                 '-',
                                             frais: fd.frais.nom,
                                             paiements: fd.historiquePaiements
@@ -1144,11 +858,13 @@ class _PaiementDesFraisState extends ConsumerState<PaiementDesFrais> {
 class FactureReceiptWidgetPaiement extends StatelessWidget {
   final entities.Eleve eleve;
   final FraisDetails fraisDetails;
+  final String? classeNom;
 
   const FactureReceiptWidgetPaiement({
     Key? key,
     required this.eleve,
     required this.fraisDetails,
+    this.classeNom,
   }) : super(key: key);
 
   @override
@@ -1191,7 +907,7 @@ class FactureReceiptWidgetPaiement extends StatelessWidget {
                       style: const TextStyle(fontSize: 8),
                     ),
                     Text(
-                      'Classe: ${eleve.classeNom ?? "-"}',
+                      'Classe: ${classeNom ?? "-"}',
                       style: const TextStyle(fontSize: 8),
                     ),
                     Text(

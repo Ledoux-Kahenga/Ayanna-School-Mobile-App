@@ -6,10 +6,9 @@ import '../../theme/ayanna_theme.dart';
 import '../widgets/facture_recu_widget.dart';
 import 'package:ayanna_school/models/entities/entities.dart';
 import 'package:ayanna_school/services/providers/providers.dart';
-import 'package:flutter_thermal_printer/flutter_thermal_printer.dart';
-import 'package:flutter_thermal_printer/utils/printer.dart' as thermal;
 import 'dart:async';
-import 'package:permission_handler/permission_handler.dart';
+import '../../services/bluetooth_print_service.dart';
+import '../widgets/bluetooth_printer_selector.dart';
 
 class ClasseEleveDetailsScreen extends ConsumerStatefulWidget {
   final Eleve eleve;
@@ -29,328 +28,91 @@ class _ClasseEleveDetailsScreenState
     extends ConsumerState<ClasseEleveDetailsScreen> {
   List<FraisDetails> _fraisDetails = [];
   bool _loading = true;
-  final _flutterThermalPrinterPlugin = FlutterThermalPrinter.instance;
-  List<thermal.Printer> printers = [];
-  StreamSubscription<List<thermal.Printer>>? _devicesStreamSubscription;
-  bool _isScanning = false;
+
+  // Service d'impression Bluetooth
+  final BluetoothPrintService _bluetoothService = BluetoothPrintService();
 
   @override
   void initState() {
     super.initState();
     print('📍 [ClasseEleveDetails] initState appelé');
     _fetchEleveDetails();
-    print('📍 [ClasseEleveDetails] Appel de _requestBluetoothPermissions()');
-    _requestBluetoothPermissions();
   }
 
   @override
   void dispose() {
-    print('📍 [ClasseEleveDetails] dispose appelé, annulation du stream');
-    _devicesStreamSubscription?.cancel();
     super.dispose();
   }
 
-  Future<void> _requestBluetoothPermissions() async {
-    print(
-      '📍 [ClasseEleveDetails] Début de la demande de permissions Bluetooth...',
-    );
-
-    // Sur Android 12+ (API 31+), on utilise bluetoothConnect et bluetoothScan
-    // Sur Android < 12, on utilise bluetooth et location
-    Map<Permission, PermissionStatus> statuses = await [
-      Permission.bluetoothConnect,
-      Permission.bluetoothScan,
-      Permission.location,
-    ].request();
-
-    print('📍 [ClasseEleveDetails] Statuts des permissions:');
-    statuses.forEach((permission, status) {
-      print('   - ${permission.toString()}: ${status.toString()}');
-    });
-
-    // Vérifier les permissions essentielles selon la version Android
-    bool bluetoothConnectGranted =
-        statuses[Permission.bluetoothConnect]?.isGranted ?? false;
-    bool bluetoothScanGranted =
-        statuses[Permission.bluetoothScan]?.isGranted ?? false;
-    bool locationGranted = statuses[Permission.location]?.isGranted ?? false;
-
-    // Sur Android 12+, on a besoin de bluetoothConnect et bluetoothScan
-    // La location est optionnelle si on utilise neverForLocation
-    bool permissionsOk = bluetoothConnectGranted && bluetoothScanGranted;
-
-    print('📍 [ClasseEleveDetails] Analyse des permissions:');
-    print('   - bluetoothConnect: $bluetoothConnectGranted');
-    print('   - bluetoothScan: $bluetoothScanGranted');
-    print('   - location: $locationGranted');
-    print('   - Permissions OK: $permissionsOk');
-
-    if (permissionsOk) {
-      print(
-        '✅ [ClasseEleveDetails] Permissions essentielles accordées, lancement du scan...',
-      );
-      _startScan();
-    } else {
-      print('❌ [ClasseEleveDetails] Permissions essentielles refusées');
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Permissions Bluetooth requises pour l\'impression thermique',
-            ),
-            duration: Duration(seconds: 4),
-          ),
-        );
-      }
-    }
-  }
-
-  void _startScan() async {
-    print('📍 [ClasseEleveDetails] Début du scan des imprimantes...');
-
-    setState(() {
-      _isScanning = true;
-    });
-
+  Future<void> _printReceipt(Eleve eleve, FraisDetails fraisDetails) async {
     try {
-      // D'abord écouter le stream
-      print(
-        '📍 [ClasseEleveDetails] Configuration du listener devicesStream...',
+      final service = _bluetoothService;
+
+      final success = await service.printReceipt(
+        schoolName: 'Ayanna School',
+        schoolAddress: '14 Av. Bunduki, Q. Plateau, C. Annexe',
+        schoolPhone: '+243997554905',
+        eleveName: '${eleve.nom} ${eleve.postnom} ${eleve.prenom}',
+        classe: 'Non spécifiée', // Ajustez selon votre modèle de données
+        matricule: eleve.matricule ?? '',
+        fraisName: fraisDetails.nomFrais,
+        paiements: fraisDetails.historiquePaiements
+            .map(
+              (p) => {
+                'montant': p.montantPaye,
+                'date': p.datePaiement.toIso8601String(),
+                'mode': 'Espèces',
+              },
+            )
+            .toList(),
+        montantTotal: fraisDetails.montant,
+        totalPaye: fraisDetails.totalPaye,
+        resteAPayer: fraisDetails.restePayer,
       );
-      _devicesStreamSubscription = _flutterThermalPrinterPlugin.devicesStream.listen(
-        (devices) {
-          print(
-            '📡 [ClasseEleveDetails] Stream déclenché avec ${devices.length} imprimante(s)',
+
+      if (success) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Reçu imprimé avec succès'),
+              backgroundColor: Colors.green,
+            ),
           );
-          if (mounted) {
-            setState(() {
-              printers = devices;
-              print(
-                '✅ [ClasseEleveDetails] Liste mise à jour: ${devices.length} imprimante(s)',
-              );
-              for (var printer in devices) {
-                print(
-                  '   🖨️  ${printer.name} (${printer.address}) - Type: ${printer.connectionType}',
-                );
-              }
-            });
-          } else {
-            print(
-              '⚠️ [ClasseEleveDetails] Widget non monté, mise à jour ignorée',
-            );
-          }
-        },
-        onError: (error) {
-          print('❌ [ClasseEleveDetails] Erreur dans le stream: $error');
-        },
-        cancelOnError: false,
-      );
-
-      print(
-        '📍 [ClasseEleveDetails] Listener configuré, lancement de getPrinters()...',
-      );
-
-      // Puis lancer la découverte des imprimantes Bluetooth
-      await _flutterThermalPrinterPlugin.getPrinters(
-        refreshDuration: const Duration(seconds: 2),
-        connectionTypes: [thermal.ConnectionType.BLE],
-      );
-
-      print(
-        '✅ [ClasseEleveDetails] getPrinters() terminé, attente des résultats dans le stream...',
-      );
-
-      // Attendre 8 secondes pour laisser le temps au scan de trouver les imprimantes
-      await Future.delayed(const Duration(seconds: 8));
-
-      print(
-        '⏹️ [ClasseEleveDetails] Fin de l\'attente du scan, ${printers.length} imprimante(s) trouvée(s)',
-      );
-
-      _flutterThermalPrinterPlugin.stopScan();
-
-      if (mounted) {
-        setState(() {
-          _isScanning = false;
-        });
+        }
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Échec de l\'impression'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
       }
     } catch (e) {
-      print('❌ [ClasseEleveDetails] Erreur lors du scan: $e');
       if (mounted) {
-        setState(() {
-          _isScanning = false;
-        });
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur d\'impression: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
       }
     }
   }
 
-  Future<void> _showReceiptWidget(
-    Eleve eleve,
-    FraisDetails fraisDetails,
-  ) async {
-    print('📍 [ClasseEleveDetails] _showReceiptWidget appelé');
-    print(
-      '📍 [ClasseEleveDetails] Nombre d\'imprimantes disponibles: ${printers.length}',
-    );
-    print('📍 [ClasseEleveDetails] Scan en cours: $_isScanning');
-
-    // Si le scan est en cours, afficher un message et attendre
-    if (_isScanning) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            '⏳ Recherche d\'imprimantes en cours, veuillez patienter...',
-          ),
-          duration: Duration(seconds: 2),
-        ),
-      );
-      print(
-        '⚠️ [ClasseEleveDetails] Scan en cours, impression refusée temporairement',
-      );
-      return;
-    }
-
-    if (printers.isEmpty) {
-      print('❌ [ClasseEleveDetails] Aucune imprimante dans la liste');
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Aucune imprimante trouvée. Assurez-vous que l\'imprimante est allumée et à portée.',
-          ),
-          duration: Duration(seconds: 3),
-        ),
-      );
-      return;
-    }
-
-    print('✅ [ClasseEleveDetails] Imprimantes disponibles:');
-    for (var p in printers) {
-      print('   🖨️  ${p.name} (${p.address})');
-    }
-
-    // Si plusieurs imprimantes, afficher un dialogue de sélection
-    thermal.Printer? selectedPrinter;
-    if (printers.length > 1) {
-      print(
-        '📍 [ClasseEleveDetails] Plusieurs imprimantes, affichage du dialogue de sélection...',
-      );
-      selectedPrinter = await showDialog<thermal.Printer>(
-        context: context,
-        builder: (BuildContext context) {
-          return AlertDialog(
-            title: const Text('Sélectionner une imprimante'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: printers.map((printer) {
-                  return ListTile(
-                    leading: const Icon(
-                      Icons.print,
-                      color: AyannaColors.orange,
-                    ),
-                    title: Text(printer.name ?? 'Imprimante inconnue'),
-                    subtitle: Text(printer.address ?? ''),
-                    onTap: () {
-                      Navigator.of(context).pop(printer);
-                    },
-                  );
-                }).toList(),
-              ),
-            ),
-            actions: [
-              TextButton(
-                child: const Text('Annuler'),
-                onPressed: () => Navigator.of(context).pop(),
-              ),
-            ],
-          );
-        },
-      );
-
-      if (selectedPrinter == null) {
-        print('⚠️ [ClasseEleveDetails] Sélection annulée par l\'utilisateur');
-        return; // L'utilisateur a annulé
-      }
-      print(
-        '✅ [ClasseEleveDetails] Imprimante sélectionnée: ${selectedPrinter.name}',
-      );
-    } else {
-      selectedPrinter = printers[0];
-      print(
-        '✅ [ClasseEleveDetails] Une seule imprimante, sélection automatique: ${selectedPrinter.name}',
-      );
-    }
-
-    print(
-      '📍 [ClasseEleveDetails] Début de l\'impression sur ${selectedPrinter.name}...',
-    );
-    print('📍 [ClasseEleveDetails] Adresse: ${selectedPrinter.address}');
-    print('📍 [ClasseEleveDetails] Type: ${selectedPrinter.connectionType}');
-    print(
-      '📍 [ClasseEleveDetails] isConnected: ${selectedPrinter.isConnected}',
-    );
-
-    try {
-      // Vérifier si l'imprimante est déjà connectée
-      if (selectedPrinter.isConnected != true) {
-        print(
-          '📍 [ClasseEleveDetails] Imprimante non connectée, connexion en cours...',
+  void _showPrinterSelector(Eleve eleve, FraisDetails fraisDetails) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return BluetoothPrinterSelector(
+          onPrinterSelected: (deviceId) {
+            Navigator.of(context).pop();
+            _printReceipt(eleve, fraisDetails);
+          },
         );
-
-        // Connecter à l'imprimante
-        final isConnected = await _flutterThermalPrinterPlugin.connect(
-          selectedPrinter,
-        );
-        print('📍 [ClasseEleveDetails] Résultat de la connexion: $isConnected');
-
-        if (!isConnected) {
-          print('❌ [ClasseEleveDetails] Échec de la connexion à l\'imprimante');
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('Impossible de se connecter à l\'imprimante'),
-              ),
-            );
-          }
-          return;
-        }
-        print('✅ [ClasseEleveDetails] Connexion réussie à l\'imprimante');
-      } else {
-        print('✅ [ClasseEleveDetails] Imprimante déjà connectée');
-      }
-
-      print('📍 [ClasseEleveDetails] Génération du widget de reçu...');
-      final receiptWidget = FactureReceiptWidget(
-        eleve: eleve,
-        fraisDetails: fraisDetails,
-      );
-      print('✅ [ClasseEleveDetails] Widget de reçu généré');
-
-      print('📍 [ClasseEleveDetails] Envoi à l\'imprimante...');
-      await _flutterThermalPrinterPlugin.printWidget(
-        context,
-        printer: selectedPrinter,
-        widget: receiptWidget,
-      );
-      print('✅ [ClasseEleveDetails] Impression terminée avec succès');
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Impression en cours...'),
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-    } catch (e, stackTrace) {
-      print('❌ [ClasseEleveDetails] Erreur lors de l\'impression: $e');
-      print('❌ [ClasseEleveDetails] Stack trace: $stackTrace');
-      if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Erreur d\'impression: $e')));
-      }
-    }
+      },
+    );
   }
 
   Future<void> _fetchEleveDetails() async {
@@ -632,11 +394,11 @@ class _ClasseEleveDetailsScreenState
                       ElevatedButton.icon(
                         icon: const Icon(Icons.print),
                         label: const Text('Imprimer'),
-                        onPressed: () async {
+                        onPressed: () {
                           print(
                             '🖨️ [ClasseEleveDetails] Bouton Imprimer cliqué',
                           );
-                          await _showReceiptWidget(widget.eleve, fraisDetail);
+                          _showPrinterSelector(widget.eleve, fraisDetail);
 
                           // await Printing.layoutPdf(
                           //   onLayout: (format) async {
