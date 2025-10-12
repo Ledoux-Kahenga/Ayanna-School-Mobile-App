@@ -296,9 +296,30 @@ class _BluetoothPrinterSelectorState extends State<BluetoothPrinterSelector> {
     return Card(
       margin: const EdgeInsets.only(bottom: 8),
       child: ListTile(
-        leading: Icon(
-          isConnected ? Icons.print : Icons.bluetooth,
-          color: isConnected ? AyannaColors.successGreen : null,
+        onTap: isConnected || _isConnecting
+            ? null
+            : () => _connectToDevice(device),
+        leading: Stack(
+          children: [
+            Icon(
+              isConnected ? Icons.print : Icons.bluetooth,
+              color: isConnected ? AyannaColors.successGreen : null,
+            ),
+            if (isConnected)
+              Positioned(
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  width: 16,
+                  height: 16,
+                  decoration: const BoxDecoration(
+                    color: AyannaColors.successGreen,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.check, color: Colors.white, size: 12),
+                ),
+              ),
+          ],
         ),
         title: Text(
           device.name.isNotEmpty ? device.name : 'Appareil sans nom',
@@ -462,7 +483,7 @@ class _BluetoothPrinterSelectorState extends State<BluetoothPrinterSelector> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.1),
+                  color: Colors.orange.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: Colors.orange),
                 ),
@@ -479,24 +500,26 @@ class _BluetoothPrinterSelectorState extends State<BluetoothPrinterSelector> {
                 ),
               )
             else
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 200),
-                child: ListView.builder(
-                  shrinkWrap: true,
-                  itemCount: _devices.length,
-                  itemBuilder: (context, index) {
-                    return _buildDeviceCard(_devices[index]);
-                  },
+              Expanded(
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxHeight: 400),
+                  child: ListView.builder(
+                    shrinkWrap: true,
+                    itemCount: _devices.length,
+                    itemBuilder: (context, index) {
+                      return _buildDeviceCard(_devices[index]);
+                    },
+                  ),
                 ),
               ),
 
-            // Message d'aide
+            // Message d'aide déplacé en bas
             if (_devices.isNotEmpty) ...[
               const SizedBox(height: 16),
               Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: AyannaColors.successGreen.withValues(alpha: 0.1),
+                  color: AyannaColors.successGreen.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(8),
                   border: Border.all(color: AyannaColors.successGreen),
                 ),
@@ -510,7 +533,7 @@ class _BluetoothPrinterSelectorState extends State<BluetoothPrinterSelector> {
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Appuyez sur une imprimante pour vous connecter. Utilisez le bouton test pour vérifier l\'impression.',
+                        'Connectez votre appareil à votre imprimante dans les paramètres Bluetooth du téléphone, puis votre périphérique devrait s\'afficher ici.',
                         style: TextStyle(fontSize: 12),
                       ),
                     ),

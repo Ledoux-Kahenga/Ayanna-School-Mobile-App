@@ -52,7 +52,27 @@ class _PaiementDesFraisState extends ConsumerState<PaiementDesFrais> {
     FraisDetails fraisDetails,
   ) async {
     try {
-      // Vérifier d'abord si une imprimante est connectée
+      // Vérifier d'abord les permissions Bluetooth
+      debugPrint('🔍 Vérification des permissions Bluetooth...');
+      final hasPermissions = await _bluetoothService.checkPermissions();
+
+      if (!hasPermissions) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Permissions Bluetooth requises pour l\'impression.\n'
+                'Veuillez accorder les permissions et réessayer.',
+              ),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+        return;
+      }
+
+      // Vérifier si une imprimante est connectée
       final isConnected = await _bluetoothService.isConnected();
 
       if (!isConnected) {
@@ -71,11 +91,18 @@ class _PaiementDesFraisState extends ConsumerState<PaiementDesFrais> {
           )
           .toList();
 
+      // Récupérer les informations de l'entreprise depuis la base
+      final entreprises = await ref.read(entreprisesNotifierProvider.future);
+      final entreprise = entreprises.isNotEmpty ? entreprises.first : null;
+
       // Imprimer avec le service Bluetooth
       final success = await _bluetoothService.printReceipt(
-        schoolName: 'AYANNA SCHOOL',
-        schoolAddress: '14 Av. Bunduki, Q. Plateau, C. Annexe',
-        schoolPhone: 'Tél : +243997554905',
+        schoolName: entreprise?.nom.toUpperCase() ?? 'AYANNA SCHOOL',
+        schoolAddress:
+            entreprise?.adresse ?? '14 Av. Bunduki, Q. Plateau, C. Annexe',
+        schoolPhone: entreprise?.telephone != null
+            ? 'Tél : ${entreprise!.telephone}'
+            : 'Tél : +243997554905',
         eleveName: '${eleve.prenomCapitalized} ${eleve.nomPostnomMaj}',
         classe: _classesNoms[eleve.classeId] ?? '-',
         matricule: eleve.matricule ?? '',
@@ -109,6 +136,25 @@ class _PaiementDesFraisState extends ConsumerState<PaiementDesFrais> {
   }
 
   Future<void> _showPrinterSelector() async {
+    // Vérifier les permissions avant d'ouvrir le sélecteur
+    final hasPermissions = await _bluetoothService.checkPermissions();
+
+    if (!hasPermissions) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Permissions Bluetooth requises.\n'
+              'Veuillez accorder les permissions dans les paramètres et réessayer.',
+            ),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 4),
+          ),
+        );
+      }
+      return;
+    }
+
     await showDialog(
       context: context,
       builder: (context) => Dialog(
@@ -140,11 +186,18 @@ class _PaiementDesFraisState extends ConsumerState<PaiementDesFrais> {
       _fraisDetails = [];
     });
     try {
+      // Forcer le chargement des providers
+      print('🚀 [PaiementFrais] Initialisation des données...');
+
       // Charger les noms des classes
       await _loadClassesNoms();
-      // No need to load élèves here since we're using reactive data fetching
-      // The reactive provider will handle loading élèves
+
+      // Forcer le chargement des élèves si nécessaire
+      ref.read(elevesNotifierProvider);
+
+      print('✅ [PaiementFrais] Données initialisées');
     } catch (e) {
+      print('❌ [PaiementFrais] Erreur lors de l\'initialisation: $e');
       setState(() {
         _errorMessage = 'Erreur lors du chargement: $e';
       });
@@ -158,16 +211,39 @@ class _PaiementDesFraisState extends ConsumerState<PaiementDesFrais> {
   // Méthode pour charger les noms des classes
   Future<void> _loadClassesNoms() async {
     try {
-      final classes = await ref.read(classesNotifierProvider.future);
-      setState(() {
-        _classesNoms.clear();
-        for (final classe in classes) {
-          if (classe.id != null) {
-            _classesNoms[classe.id!] = classe.nom;
+      // Utilisation de watch pour être réactif aux changements
+      final classesAsync = ref.read(classesNotifierProvider);
+
+      if (classesAsync.hasValue) {
+        final classes = classesAsync.value!;
+        setState(() {
+          _classesNoms.clear();
+          for (final classe in classes) {
+            if (classe.id != null) {
+              _classesNoms[classe.id!] = classe.nom;
+            }
           }
-        }
-      });
+        });
+        print(
+          '📚 [PaiementFrais] ${_classesNoms.length} classes chargées: $_classesNoms',
+        );
+      } else {
+        // Si les données ne sont pas encore disponibles, les charger
+        final classes = await ref.read(classesNotifierProvider.future);
+        setState(() {
+          _classesNoms.clear();
+          for (final classe in classes) {
+            if (classe.id != null) {
+              _classesNoms[classe.id!] = classe.nom;
+            }
+          }
+        });
+        print(
+          '📚 [PaiementFrais] ${_classesNoms.length} classes chargées (async): $_classesNoms',
+        );
+      }
     } catch (e) {
+      print('❌ [PaiementFrais] Erreur lors du chargement des classes: $e');
       debugPrint('Erreur lors du chargement des classes: $e');
     }
   }
@@ -340,6 +416,26 @@ class _PaiementDesFraisState extends ConsumerState<PaiementDesFrais> {
                     child: Consumer(
                       builder: (context, ref, child) {
                         final elevesAsync = ref.watch(elevesNotifierProvider);
+                        final classesAsync = ref.watch(classesNotifierProvider);
+
+                        // Mettre à jour les noms des classes de manière réactive
+                        classesAsync.whenData((classes) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            if (mounted) {
+                              setState(() {
+                                _classesNoms.clear();
+                                for (final classe in classes) {
+                                  if (classe.id != null) {
+                                    _classesNoms[classe.id!] = classe.nom;
+                                  }
+                                }
+                              });
+                              print(
+                                '🔄 [PaiementFrais] Classes mises à jour: ${_classesNoms.length} classes',
+                              );
+                            }
+                          });
+                        });
 
                         return elevesAsync.when(
                           data: (allEleves) {

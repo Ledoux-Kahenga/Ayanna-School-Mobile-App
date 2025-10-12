@@ -1429,6 +1429,10 @@ class EntreprisesNotifier extends _$EntreprisesNotifier {
   @override
   Future<List<Entreprise>> build() async {
     final dao = ref.watch(entrepriseDaoProvider);
+
+    // Initialiser l'entreprise par défaut si nécessaire
+    await initializeDefaultEntreprise();
+
     return await dao.getAllEntreprises();
   }
 
@@ -1508,6 +1512,40 @@ class EntreprisesNotifier extends _$EntreprisesNotifier {
 
     await dao.deleteEntreprise(entreprise);
     ref.invalidateSelf();
+  }
+
+  /// Initialise une entreprise par défaut si aucune n'existe
+  Future<void> initializeDefaultEntreprise() async {
+    final dao = ref.watch(entrepriseDaoProvider);
+    final existingEntreprises = await dao.getAllEntreprises();
+
+    if (existingEntreprises.isEmpty) {
+      print(
+        '🏫 [EntreprisesNotifier] Aucune entreprise trouvée, création de l\'entreprise par défaut...',
+      );
+
+      final now = DateTime.now();
+      final defaultEntreprise = Entreprise(
+        nom: 'AYANNA SCHOOL',
+        adresse: '14 Av. Bunduki, Q. Plateau, C. Annexe',
+        telephone: '+243997554905',
+        email: 'contact@ayannaschool.cd',
+        devise: 'USD',
+        timezone: 'Africa/Kinshasa',
+        dateCreation: now,
+        dateModification: now,
+        updatedAt: now,
+        isSync: true,
+      );
+
+      await dao.insertEntreprise(defaultEntreprise);
+      ref.invalidateSelf();
+      print('✅ [EntreprisesNotifier] Entreprise par défaut créée avec succès');
+    } else {
+      print(
+        '📊 [EntreprisesNotifier] ${existingEntreprises.length} entreprise(s) trouvée(s)',
+      );
+    }
   }
 }
 

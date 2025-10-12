@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../services/providers/data_provider.dart';
 
-class FactureRecuWidget extends StatelessWidget {
+class FactureRecuWidget extends ConsumerWidget {
   final String eleve;
   final String classe;
   final String frais;
@@ -22,8 +24,10 @@ class FactureRecuWidget extends StatelessWidget {
   });
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final dateGen = DateFormat('dd/MM/yyyy HH:mm').format(DateTime.now());
+    final entreprisesAsync = ref.watch(entreprisesNotifierProvider);
+
     return Card(
       margin: const EdgeInsets.all(16),
       elevation: 4,
@@ -41,31 +45,92 @@ class FactureRecuWidget extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 8),
-              Center(
-                child: Text(
-                  'Default School',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
+
+              // Informations de l'entreprise depuis la base de données
+              entreprisesAsync.when(
+                data: (entreprises) {
+                  final entreprise = entreprises.isNotEmpty
+                      ? entreprises.first
+                      : null;
+                  return Column(
+                    children: [
+                      Center(
+                        child: Text(
+                          entreprise?.nom.toUpperCase() ?? 'AYANNA SCHOOL',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                          ),
+                        ),
+                      ),
+                      Center(
+                        child: Text(
+                          entreprise?.adresse ??
+                              '14 Av. Bunduki, Q. Plateau, C. Annexe',
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      ),
+                      Center(
+                        child: Text(
+                          entreprise?.telephone != null
+                              ? 'Tél : ${entreprise!.telephone}'
+                              : 'Tél : +243997554905',
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      ),
+                      Center(
+                        child: Text(
+                          entreprise?.email != null
+                              ? 'Email : ${entreprise!.email}'
+                              : 'Email : contact@ayannaschool.cd',
+                          style: const TextStyle(fontSize: 14),
+                        ),
+                      ),
+                    ],
+                  );
+                },
+                loading: () => const Column(
+                  children: [
+                    Center(child: CircularProgressIndicator()),
+                    SizedBox(height: 8),
+                    Center(
+                      child: Text(
+                        'Chargement des informations...',
+                        style: TextStyle(fontSize: 14),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              Center(
-                child: Text(
-                  '14 Av. Bunduki, Q. Plateau, C. Annexe',
-                  style: const TextStyle(fontSize: 14),
-                ),
-              ),
-              Center(
-                child: Text(
-                  'Tél : +243997554905',
-                  style: const TextStyle(fontSize: 14),
-                ),
-              ),
-              Center(
-                child: Text(
-                  'Email : comtact@school.com',
-                  style: const TextStyle(fontSize: 14),
+                error: (error, stack) => Column(
+                  children: [
+                    Center(
+                      child: Text(
+                        'AYANNA SCHOOL',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 18,
+                        ),
+                      ),
+                    ),
+                    Center(
+                      child: Text(
+                        '14 Av. Bunduki, Q. Plateau, C. Annexe',
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                    ),
+                    Center(
+                      child: Text(
+                        'Tél : +243997554905',
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                    ),
+                    Center(
+                      child: Text(
+                        'Email : contact@ayannaschool.cd',
+                        style: const TextStyle(fontSize: 14),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const Divider(height: 24, thickness: 1.2),

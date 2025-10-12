@@ -1,6 +1,7 @@
 import 'package:esc_pos_utils_plus/esc_pos_utils_plus.dart';
 import 'package:flutter/material.dart';
 import 'package:print_bluetooth_thermal/print_bluetooth_thermal.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class BluetoothPrintService {
   static final BluetoothPrintService _instance =
@@ -12,14 +13,50 @@ class BluetoothPrintService {
   final List<BluetoothInfo> _cachedDevices = [];
   final Set<String> _knownMacAddresses = {};
 
-  /// Vérifie et demande les permissions Bluetooth (simplifié)
+  /// Vérifie et demande les permissions Bluetooth
   Future<bool> checkPermissions() async {
     try {
-      // Les permissions sont gérées automatiquement par print_bluetooth_thermal
+      // Demander les permissions nécessaires pour le Bluetooth
+      List<Permission> permissions = [];
+
+      // Sur Android 12+ (API 31+), utiliser les nouvelles permissions
+      permissions.add(Permission.bluetoothScan);
+      permissions.add(Permission.bluetoothConnect);
+
+      // Permission de localisation nécessaire pour le scan Bluetooth
+      permissions.add(Permission.locationWhenInUse);
+
+      debugPrint('🔵 Demande des permissions Bluetooth...');
+
+      // Demander toutes les permissions
+      Map<Permission, PermissionStatus> statuses = await permissions.request();
+
+      // Vérifier si les permissions essentielles sont accordées
+      bool bluetoothScanGranted =
+          statuses[Permission.bluetoothScan]?.isGranted ?? false;
+      bool bluetoothConnectGranted =
+          statuses[Permission.bluetoothConnect]?.isGranted ?? false;
+      bool locationGranted =
+          statuses[Permission.locationWhenInUse]?.isGranted ?? false;
+
+      debugPrint('📍 Permissions accordées:');
+      debugPrint('  - Bluetooth Scan: $bluetoothScanGranted');
+      debugPrint('  - Bluetooth Connect: $bluetoothConnectGranted');
+      debugPrint('  - Location: $locationGranted');
+
+      // Les permissions Bluetooth scan et connect sont essentielles
+      if (!bluetoothScanGranted || !bluetoothConnectGranted) {
+        debugPrint('❌ Permissions Bluetooth essentielles refusées');
+        return false;
+      }
+
+      // Vérifier que le Bluetooth est activé
       final isEnabled = await PrintBluetoothThermal.bluetoothEnabled;
+      debugPrint('📶 Bluetooth activé: $isEnabled');
+
       return isEnabled;
     } catch (e) {
-      debugPrint('Erreur lors de la vérification des permissions: $e');
+      debugPrint('❌ Erreur lors de la vérification des permissions: $e');
       return false;
     }
   }
