@@ -1844,14 +1844,20 @@ class ComptesConfigsNotifier extends _$ComptesConfigsNotifier {
 
   Future<void> refresh(List<ComptesConfig> configs) async {
     final dao = ref.watch(comptesConfigDaoProvider);
+    print("Refreshing comptes configs with ${configs.length} items");
+   for (var config in configs) {
     try {
-      await dao.insertComptesConfigs(configs);
-      ref.invalidateSelf();
+      
+        await dao.insertComptesConfig(config);
+        print("inserted config ${config.id}");
+    
+      //ref.invalidateSelf();
     } catch (e) {
       print(
         'Erreur lors du rafraîchissement des configurations de comptes: $e',
       );
     }
+      }
   }
 
   Future<void> addComptesConfig(ComptesConfig config) async {

@@ -706,6 +706,14 @@ class _$UtilisateurDao extends UtilisateurDao {
   }
 
   @override
+  Future<String?> getMotDePasseHashByEmail(String email) async {
+    return _queryAdapter.query(
+        'SELECT mot_de_passe_hash FROM utilisateurs WHERE email = ?1',
+        mapper: (Map<String, Object?> row) => row.values.first as String,
+        arguments: [email]);
+  }
+
+  @override
   Future<Utilisateur?> getUtilisateurById(int id) async {
     return _queryAdapter.query('SELECT * FROM utilisateurs WHERE id = ?1',
         mapper: (Map<String, Object?> row) => Utilisateur(

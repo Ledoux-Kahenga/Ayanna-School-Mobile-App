@@ -124,7 +124,7 @@ final isAuthLoadingProvider = AutoDisposeProvider<bool>.internal(
 );
 
 typedef IsAuthLoadingRef = AutoDisposeProviderRef<bool>;
-String _$authNotifierHash() => r'ebbf2adc02d7af6413f72b74bb41da6d39f490b4';
+String _$authNotifierHash() => r'5d1aa13eb1ae36629ddc5139c40a8039e738dfc8';
 
 /// Provider pour l'état d'authentification
 ///

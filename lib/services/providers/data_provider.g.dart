@@ -369,7 +369,7 @@ final comptesComptablesNotifierProvider = AutoDisposeAsyncNotifierProvider<
 typedef _$ComptesComptablesNotifier
     = AutoDisposeAsyncNotifier<List<CompteComptable>>;
 String _$comptesConfigsNotifierHash() =>
-    r'27ae068749f97888ef64f738bd715a5b81b76dbd';
+    r'06d5aa17970605fddf12ddc332d74e8a9c763e5b';
 
 /// Provider pour la liste des configurations de comptes
 ///

@@ -11,6 +11,9 @@ abstract class UtilisateurDao {
   )
   Future<Utilisateur?> loginLocalement(String email, String password);
 
+  @Query('SELECT mot_de_passe_hash FROM utilisateurs WHERE email = :email')
+  Future<String?> getMotDePasseHashByEmail(String email);
+
   @Query('SELECT * FROM utilisateurs WHERE id = :id')
   Future<Utilisateur?> getUtilisateurById(int id);
 

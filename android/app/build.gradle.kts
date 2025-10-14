@@ -30,9 +30,9 @@ android {
         versionName = flutter.versionName
         multiDexEnabled = true
         
-        ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
-        }
+      //  ndk {
+        //    abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+       // }
     }
 
     buildTypes {
@@ -51,6 +51,7 @@ dependencies {
     implementation("androidx.activity:activity:1.9.0")
     implementation("androidx.fragment:fragment:1.6.2")
     implementation("androidx.multidex:multidex:2.0.1")
+    implementation("com.google.android.play:core:1.10.3")
 }
 
 flutter {

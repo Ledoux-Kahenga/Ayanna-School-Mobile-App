@@ -1,8 +1,9 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:ayanna_school/services/providers/shared_preferences_provider.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../api/api_client.dart';
 import '../api/utilisateur_service.dart';
+import '../bcrypt_laravel.dart';
 import 'api_client_provider.dart';
 import 'sync_provider_new.dart';
 import 'database_provider.dart';
@@ -97,55 +98,65 @@ class AuthNotifier extends _$AuthNotifier {
     print('🔐 [AUTH] Début de la tentative de connexion pour: $email');
 
     state = const AsyncValue.loading();
-
+    //final syncPrefs = ref.read(syncPreferencesNotifierProvider.notifier).clearSyncData();
+      
     try {
       // 1. Essayer l'authentification locale d'abord
       print('🏠 [AUTH] Tentative d\'authentification locale...');
       final utilisateurDao = ref.read(utilisateurDaoProvider);
-      final utilisateurLocal = await utilisateurDao.loginLocalement(
+      final motDePasseHash = await utilisateurDao.getMotDePasseHashByEmail(
         email,
-        password,
       );
 
-      if (utilisateurLocal != null) {
-        print(
-          '✅ [AUTH] Authentification locale réussie pour: ${utilisateurLocal.nom}',
-        );
+      print(
+        '🔍 [AUTH] Hash récupéré de la DB: ${motDePasseHash != null ? "${motDePasseHash.substring(0, 20)}..." : "NULL"}',
+      );
 
-        // Générer un token temporaire pour la session locale
-        final token =
-            'local_${DateTime.now().millisecondsSinceEpoch}_${utilisateurLocal.id}';
+      if (motDePasseHash != null) {
+        print('🔐 [AUTH] Tentative de vérification du mot de passe...');
 
-        // Sauvegarder dans SharedPreferences
-        print('💾 [AUTH] Sauvegarde des données d\'authentification locale...');
-        await _saveAuthData(
-          token: token,
-          userId: utilisateurLocal.id,
-          entrepriseId: utilisateurLocal.entrepriseId,
-          email: email,
-          userName: utilisateurLocal.nom,
-        );
-        print('💾 [AUTH] Données locales sauvegardées avec succès');
+        try {
+          // ✅ CORRECTION: Utiliser LaravelBcrypt.checkPassword pour la compatibilité Laravel
+          final isPasswordMatches = LaravelBcrypt.checkPassword(
+            password,
+            motDePasseHash,
+          );
+          print(
+            '🔐 [AUTH] Résultat de LaravelBcrypt.checkPassword: $isPasswordMatches',
+          );
 
-        // Sauvegarder le token dans l'intercepteur
-        print('🔧 [AUTH] Configuration du token local dans l\'intercepteur...');
-        await AuthInterceptor.saveToken(token);
-        print('🔧 [AUTH] Token local configuré avec succès');
+          if (isPasswordMatches) {
+            print('✅ [AUTH] Authentification locale réussie pour: $email');
 
-        state = AsyncValue.data(
-          AuthState(
-            isAuthenticated: true,
-            token: token,
-            userId: utilisateurLocal.id,
-            entrepriseId: utilisateurLocal.entrepriseId,
-            userEmail: email,
-          ),
-        );
+            // Sauvegarder dans SharedPreferences
+            print(
+              '💾 [AUTH] Sauvegarde des données d\'authentification locale...',
+            );
 
-        print(
-          '🎉 [AUTH] Connexion locale réussie - Utilisateur: ${utilisateurLocal.nom}',
-        );
-        return true;
+            // Sauvegarder le token dans l'intercepteur
+            print(
+              '🔧 [AUTH] Configuration du token local dans l\'intercepteur...',
+            );
+
+            print('🔧 [AUTH] Token local configuré avec succès');
+
+            state = AsyncValue.data(
+              AuthState(isAuthenticated: true, userEmail: email),
+            );
+
+            print('🎉 [AUTH] Connexion locale réussie - Utilisateur: $email');
+            return true;
+          } else {
+            print(
+              '❌ [AUTH] Mot de passe incorrect pour l\'authentification locale',
+            );
+          }
+        } catch (e) {
+          print('💥 [AUTH] Erreur lors de la vérification bcrypt: $e');
+          print('📊 [AUTH] Hash problématique: $motDePasseHash');
+        }
+      } else {
+        print('⚠️ [AUTH] Aucun hash trouvé en base locale pour: $email');
       }
 
       // 2. Si l'authentification locale échoue, essayer l'authentification en ligne
@@ -353,6 +364,7 @@ class AuthNotifier extends _$AuthNotifier {
           '❌ [SYNC_MANUAL] Utilisateur non connecté - synchronisation impossible',
         );
         print('   AuthState: $authState');
+        print('   Token exists: ${token != null}');
         return false;
       }
 
