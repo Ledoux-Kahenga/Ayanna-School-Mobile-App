@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../theme/ayanna_theme.dart';
 import '../models/entities/licence.dart';
 import '../services/providers/providers.dart';
+import '../services/licence/licence_validator.dart';
 
 /// Écran de réactivation de licence avec polling automatique
 ///
@@ -342,11 +343,24 @@ class _LicenceReactivationScreenState
 
           _stopPolling();
 
-          // Wait a bit to show success message, then trigger callback
-          await Future.delayed(const Duration(seconds: 2));
+          // Invalider le provider IMMÉDIATEMENT pour que l'app se rebuilde
+          // Cela doit être fait AVANT toute navigation
+          try {
+            ref.invalidate(licenceValidationProvider);
+            print('✅ [LICENCE] Provider invalidé avec succès');
+          } catch (e) {
+            print('⚠️ [LICENCE] Erreur invalidation provider (ignorée): $e');
+          }
 
+          // Appeler le callback immédiatement pour permettre la navigation
+          // Le message de succès sera visible brièvement avant la navigation
           if (mounted && widget.onLicenceReactivated != null) {
-            widget.onLicenceReactivated!();
+            // Utiliser un microtask pour éviter les problèmes de frame
+            Future.microtask(() {
+              if (mounted) {
+                widget.onLicenceReactivated!();
+              }
+            });
           }
         } else {
           // Dates du serveur indiquent que la licence est toujours expirée

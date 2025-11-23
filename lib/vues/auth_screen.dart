@@ -6,10 +6,10 @@ import 'package:ayanna_school/services/licence/licence_validator.dart';
 import 'package:ayanna_school/vues/licence_reactivation_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import '../../services/providers/providers.dart';
+import '../services/providers/providers.dart';
 
-import '../../theme/ayanna_theme.dart';
-import '../widgets/ayanna_widgets.dart';
+import '../theme/ayanna_theme.dart';
+import 'widgets/ayanna_widgets.dart';
 
 /// Statuts possibles du bouton de connexion
 enum ButtonStatus {
@@ -68,9 +68,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         _isCheckingFirstLaunch = false;
 
         // Déterminer le statut du bouton
-        if (_isFirstLaunch && !hasDataLoaded) {
-          _buttonStatus = ButtonStatus.chargementDonnees;
-        } else if (_isFirstLaunch) {
+        if (_isFirstLaunch) {
+          // Premier démarrage : toujours commencer par l'enregistrement du mot de passe
           _buttonStatus = ButtonStatus.enregistrement;
         } else if (!hasDataLoaded) {
           _buttonStatus = ButtonStatus.chargementDonnees;
@@ -227,7 +226,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
               builder: (context) => LicenceReactivationScreen(
                 licence: licenceState.licence!,
                 onLicenceReactivated: () {
-                  ref.invalidate(licenceValidationProvider);
+                  // Navigation déjà gérée par l'invalidation du provider
                   Navigator.pushReplacementNamed(context, '/home');
                 },
               ),
@@ -270,7 +269,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                   builder: (context) => LicenceReactivationScreen(
                     licence: licence,
                     onLicenceReactivated: () {
-                      ref.invalidate(licenceValidationProvider);
+                      // Navigation déjà gérée par l'invalidation du provider
                       Navigator.pushReplacementNamed(context, '/home');
                     },
                   ),
@@ -455,8 +454,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                 builder: (context) => LicenceReactivationScreen(
                   licence: licenceState.licence!,
                   onLicenceReactivated: () {
-                    // Invalider et rediriger vers home après réactivation
-                    ref.invalidate(licenceValidationProvider);
+                    // Navigation déjà gérée par l'invalidation du provider
                     Navigator.pushReplacementNamed(context, '/home');
                   },
                 ),
@@ -517,7 +515,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
                     builder: (context) => LicenceReactivationScreen(
                       licence: licence,
                       onLicenceReactivated: () {
-                        ref.invalidate(licenceValidationProvider);
+                        // Navigation déjà gérée par l'invalidation du provider
                         Navigator.pushReplacementNamed(context, '/home');
                       },
                     ),
@@ -615,11 +613,11 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
         if (!hasDataLoaded) {
           _buttonStatus = ButtonStatus.chargementDonnees;
           _errorMessage =
-              '✅ Mot de passe enregistré ! Cliquez sur "Charger les données".';
+              'Mot de passe enregistré ! Cliquez sur "Charger les données".';
         } else {
           _buttonStatus = ButtonStatus.validationLicence;
           _errorMessage =
-              '✅ Mot de passe enregistré ! Cliquez sur "Valider la licence".';
+              'Mot de passe enregistré ! Cliquez sur "Valider la licence".';
         }
       });
 

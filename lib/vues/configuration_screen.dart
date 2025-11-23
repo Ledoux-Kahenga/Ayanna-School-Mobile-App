@@ -429,45 +429,32 @@ class _ConfigurationScreenState extends ConsumerState<ConfigurationScreen> {
 
   /// Affiche un modal pour changer le mot de passe
   Future<void> _showChangePasswordModal() async {
-    final currentPasswordController = TextEditingController();
-    final newPasswordController = TextEditingController();
-    final confirmPasswordController = TextEditingController();
-
-    try {
-      await showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (dialogContext) => _ChangePasswordDialog(
-          currentPasswordController: currentPasswordController,
-          newPasswordController: newPasswordController,
-          confirmPasswordController: confirmPasswordController,
-          onSuccess: () {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Row(
-                    children: [
-                      Icon(Icons.check_circle, color: Colors.white),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Text('Mot de passe modifié avec succès !'),
-                      ),
-                    ],
-                  ),
-                  backgroundColor: Colors.green,
-                  duration: const Duration(seconds: 3),
+    await showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (dialogContext) => _ChangePasswordDialog(
+        onSuccess: () {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Row(
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.white),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text('Mot de passe modifié avec succès !'),
+                    ),
+                  ],
                 ),
-              );
-            }
-          },
-          ref: ref,
-        ),
-      );
-    } finally {
-      currentPasswordController.dispose();
-      newPasswordController.dispose();
-      confirmPasswordController.dispose();
-    }
+                backgroundColor: Colors.green,
+                duration: const Duration(seconds: 3),
+              ),
+            );
+          }
+        },
+        ref: ref,
+      ),
+    );
   }
 
   @override
@@ -855,16 +842,10 @@ class _ConfigurationScreenState extends ConsumerState<ConfigurationScreen> {
 
 /// Widget séparé pour le dialog de changement de mot de passe
 class _ChangePasswordDialog extends ConsumerStatefulWidget {
-  final TextEditingController currentPasswordController;
-  final TextEditingController newPasswordController;
-  final TextEditingController confirmPasswordController;
   final VoidCallback onSuccess;
   final WidgetRef ref;
 
   const _ChangePasswordDialog({
-    required this.currentPasswordController,
-    required this.newPasswordController,
-    required this.confirmPasswordController,
     required this.onSuccess,
     required this.ref,
   });
@@ -875,17 +856,29 @@ class _ChangePasswordDialog extends ConsumerStatefulWidget {
 }
 
 class _ChangePasswordDialogState extends ConsumerState<_ChangePasswordDialog> {
+  final _currentPasswordController = TextEditingController();
+  final _newPasswordController = TextEditingController();
+  final _confirmPasswordController = TextEditingController();
+  
   bool _isCurrentPasswordVisible = false;
   bool _isNewPasswordVisible = false;
   bool _isConfirmPasswordVisible = false;
   String? _errorMessage;
   bool _isProcessing = false;
 
+  @override
+  void dispose() {
+    _currentPasswordController.dispose();
+    _newPasswordController.dispose();
+    _confirmPasswordController.dispose();
+    super.dispose();
+  }
+
   Future<void> _handleSubmit() async {
     // Validation
-    final currentPassword = widget.currentPasswordController.text.trim();
-    final newPassword = widget.newPasswordController.text.trim();
-    final confirmPassword = widget.confirmPasswordController.text.trim();
+    final currentPassword = _currentPasswordController.text.trim();
+    final newPassword = _newPasswordController.text.trim();
+    final confirmPassword = _confirmPasswordController.text.trim();
 
     if (currentPassword.isEmpty) {
       setState(() {
@@ -971,7 +964,7 @@ class _ChangePasswordDialogState extends ConsumerState<_ChangePasswordDialog> {
           children: [
             // Mot de passe actuel
             TextField(
-              controller: widget.currentPasswordController,
+              controller: _currentPasswordController,
               obscureText: !_isCurrentPasswordVisible,
               enabled: !_isProcessing,
               decoration: InputDecoration(
@@ -1006,7 +999,7 @@ class _ChangePasswordDialogState extends ConsumerState<_ChangePasswordDialog> {
 
             // Nouveau mot de passe
             TextField(
-              controller: widget.newPasswordController,
+              controller: _newPasswordController,
               obscureText: !_isNewPasswordVisible,
               enabled: !_isProcessing,
               decoration: InputDecoration(
@@ -1038,7 +1031,7 @@ class _ChangePasswordDialogState extends ConsumerState<_ChangePasswordDialog> {
 
             // Confirmer nouveau mot de passe
             TextField(
-              controller: widget.confirmPasswordController,
+              controller: _confirmPasswordController,
               obscureText: !_isConfirmPasswordVisible,
               enabled: !_isProcessing,
               decoration: InputDecoration(

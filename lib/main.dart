@@ -15,7 +15,7 @@ import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import 'theme/ayanna_theme.dart';
-import 'vues/classes/auth_screen.dart';
+import 'vues/auth_screen.dart';
 import 'widgets/licence_guard.dart';
 
 void main() async {
@@ -107,8 +107,8 @@ class _AppInitializerState extends ConsumerState<AppInitializer> {
               return LicenceReactivationScreen(
                 licence: state.licence!,
                 onLicenceReactivated: () {
-                  // Invalider le provider pour re-vérifier
-                  ref.invalidate(licenceValidationProvider);
+                  // L'invalidation du provider est déjà gérée dans LicenceReactivationScreen
+                  // Le rebuild se fera automatiquement via le FutureProvider
                 },
               );
             }
