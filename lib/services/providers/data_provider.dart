@@ -900,17 +900,32 @@ class PaiementsFraisNotifier extends _$PaiementsFraisNotifier {
     required int eleveId,
     required int fraisId,
     required double montant,
-    required int entrepriseId,
     int? userId,
   }) async {
+    print('🚀 DEBUT enregistrerPaiementAvecEcritures - montant: $montant');
+
     final paiementDao = ref.watch(paiementFraisDaoProvider);
     final journalDao = ref.watch(journalComptableDaoProvider);
     final ecritureDao = ref.watch(ecritureComptableDaoProvider);
     final comptesConfigDao = ref.watch(comptesConfigDaoProvider);
     final eleveDao = ref.watch(eleveDaoProvider);
     final fraisDao = ref.watch(fraisScolaireDaoProvider);
+    final entrepriseDao = ref.watch(entrepriseDaoProvider);
     final isConnected = ref.read(isConnectedProvider);
     final syncNotifier = ref.read(syncStateNotifierProvider.notifier);
+
+    // Récupérer l'ID de l'entreprise depuis la base de données
+    final entreprises = await entrepriseDao.getAllEntreprises();
+    int entrepriseId;
+
+    if (entreprises.isEmpty) {
+      print('⚠️ Aucune entreprise trouvée, initialisation...');
+      throw Exception("Aucune entreprise trouvée dans la base de données");
+    } else {
+      entrepriseId = entreprises.first.id!;
+    }
+
+    print('✅ Entreprise ID récupérée: $entrepriseId');
 
     try {
       final now = DateTime.now();
@@ -932,16 +947,13 @@ class PaiementsFraisNotifier extends _$PaiementsFraisNotifier {
           eleveId,
           fraisId,
         );
-        // Avec COALESCE, result ne devrait jamais être null, mais on garde la sécurité
         montantDejaPaye = result ?? 0.0;
-        print('  - Montant déjà payé (succès): $montantDejaPaye');
+        print('  - Montant déjà payé: $montantDejaPaye');
       } catch (e) {
-        print('  - Erreur lors du calcul du montant déjà payé: $e');
-        print('  - Utilisation de la valeur par défaut: 0.0');
+        print('  - Erreur calcul montant payé: $e');
         montantDejaPaye = 0.0;
       }
 
-      print('  - Montant déjà payé final: $montantDejaPaye');
       print('  - Nouveau paiement: $montant');
 
       final resteAPayer = frais.montant - montantDejaPaye - montant;
@@ -960,9 +972,8 @@ class PaiementsFraisNotifier extends _$PaiementsFraisNotifier {
         fraisScolaireId: fraisId,
         montantPaye: montant,
         datePaiement: now,
-        userId: userId,
-        resteAPayer: resteAPayerFinal,
         statut: statutFinal,
+        resteAPayer: resteAPayerFinal,
         isSync: false,
         dateCreation: now,
         dateModification: now,
@@ -985,7 +996,7 @@ class PaiementsFraisNotifier extends _$PaiementsFraisNotifier {
         dateOperation: now,
         libelle: libelle,
         montant: montant,
-        typeOperation: 'Entrée',
+        typeOperation: 'entrée',
         paiementFraisId: paiementId,
         entrepriseId: entrepriseId,
         isSync: false,
@@ -996,28 +1007,41 @@ class PaiementsFraisNotifier extends _$PaiementsFraisNotifier {
 
       final journalId = await journalDao.insertJournalComptable(journalEntry);
       print('✅ Journal créé avec ID: $journalId');
+      print('✅ Journal typeOperation: "${journalEntry.typeOperation}"');
+      print('✅ Journal montant: ${journalEntry.montant}');
+      print('✅ Journal entrepriseId: ${journalEntry.entrepriseId}');
 
       // 6. Récupérer la configuration comptable
+      print(
+        '🔍 Recherche configuration comptable pour entreprise_id: $entrepriseId',
+      );
+
       final config = await comptesConfigDao.getComptesConfigByEntreprise(
         entrepriseId,
       );
+
       if (config == null) {
+        print(
+          '❌ ERREUR: Configuration comptable introuvable pour entreprise_id $entrepriseId',
+        );
         throw Exception(
-          "Configuration comptable introuvable pour entreprise_id $entrepriseId",
+          "Configuration comptable introuvable pour entreprise_id $entrepriseId. Veuillez créer la configuration comptable dans les paramètres.",
         );
       }
 
-      // 7. Créer les écritures comptables (Partie Double)
-      print('📊 Création des écritures comptables (débit/crédit):');
+      print('✅ Configuration comptable trouvée');
       print('  - Compte Caisse ID: ${config.compteCaisseId}');
       print('  - Compte Frais ID: ${config.compteFraisId}');
 
-      // Écriture DÉBIT : Compte Caisse (Actif augmente)
-      final ecritureDebit = EcritureComptable(
+      // 7. Créer les écritures comptables (double partie)
+      print('📊 Création des écritures comptables (double partie):');
+
+      // Écriture 1: DÉBIT Compte Caisse (l'argent entre en caisse)
+      final ecritureCaisse = EcritureComptable(
         journalId: journalId,
         compteComptableId: config.compteCaisseId,
-        debit: montant,
-        credit: 0,
+        debit: montant.toDouble(),
+        credit: 0.0,
         ordre: 1,
         dateEcriture: now,
         isSync: false,
@@ -1026,12 +1050,17 @@ class PaiementsFraisNotifier extends _$PaiementsFraisNotifier {
         updatedAt: now,
       );
 
-      // Écriture CRÉDIT : Compte Frais (Produit augmente)
-      final ecritureCredit = EcritureComptable(
+      final ecritureCaisseId = await ecritureDao.insertEcritureComptable(
+        ecritureCaisse,
+      );
+      print('✅ Écriture DÉBIT Caisse insérée avec ID: $ecritureCaisseId');
+
+      // Écriture 2: CRÉDIT Compte Frais (le revenu est enregistré)
+      final ecritureFrais = EcritureComptable(
         journalId: journalId,
         compteComptableId: config.compteFraisId,
-        debit: 0,
-        credit: montant,
+        debit: 0.0,
+        credit: montant.toDouble(),
         ordre: 2,
         dateEcriture: now,
         isSync: false,
@@ -1040,24 +1069,17 @@ class PaiementsFraisNotifier extends _$PaiementsFraisNotifier {
         updatedAt: now,
       );
 
-      print('  - Écriture DÉBIT : Caisse = ${montant} CDF');
-      print('  - Écriture CRÉDIT : Frais = ${montant} CDF');
+      final ecritureFraisId = await ecritureDao.insertEcritureComptable(
+        ecritureFrais,
+      );
+      print('✅ Écriture CRÉDIT Frais insérée avec ID: $ecritureFraisId');
       print(
-        '  - Équilibre comptable : ${ecritureDebit.debit} = ${ecritureCredit.credit} ✓',
+        '✅ Double partie comptable respectée: Débit=$montant, Crédit=$montant',
       );
 
-      await ecritureDao.insertEcritureComptable(ecritureDebit);
-      print('✅ Écriture DÉBIT insérée');
-
-      await ecritureDao.insertEcritureComptable(ecritureCredit);
-      print('✅ Écriture CRÉDIT insérée');
-
-      print(
-        '💼 Écritures comptables créées avec succès (partie double respectée)',
-      );
-
-      // 8. Invalider le cache pour rafraîchir les données
+      // 8. Invalider les caches pour rafraîchir les données
       ref.invalidateSelf();
+      ref.invalidate(journauxComptablesNotifierProvider);
 
       // 9. Synchronisation si connecté
       if (isConnected) {
@@ -1068,35 +1090,30 @@ class PaiementsFraisNotifier extends _$PaiementsFraisNotifier {
             'create',
             userEmail: 'admin@testschool.com',
           );
-
           await syncNotifier.uploadSingleEntity(
             journalEntry,
             'journaux_comptables',
             'create',
             userEmail: 'admin@testschool.com',
           );
-
           await syncNotifier.uploadSingleEntity(
-            ecritureDebit,
+            ecritureCaisse,
             'ecritures_comptables',
             'create',
             userEmail: 'admin@testschool.com',
           );
-
           await syncNotifier.uploadSingleEntity(
-            ecritureCredit,
+            ecritureFrais,
             'ecritures_comptables',
             'create',
             userEmail: 'admin@testschool.com',
           );
         } catch (e) {
-          print('Erreur lors de la synchronisation: $e');
+          print('⚠️ Erreur synchronisation: $e');
         }
       }
 
-      print(
-        '✅ Paiement enregistré avec écritures comptables - Montant: $montant',
-      );
+      print('✅ Paiement avec écritures comptables enregistré avec succès');
     } catch (e) {
       print('❌ Erreur lors de l\'enregistrement du paiement complet: $e');
       rethrow;
@@ -1429,10 +1446,6 @@ class EntreprisesNotifier extends _$EntreprisesNotifier {
   @override
   Future<List<Entreprise>> build() async {
     final dao = ref.watch(entrepriseDaoProvider);
-
-    // Initialiser l'entreprise par défaut si nécessaire
-    await initializeDefaultEntreprise();
-
     return await dao.getAllEntreprises();
   }
 
@@ -1512,40 +1525,6 @@ class EntreprisesNotifier extends _$EntreprisesNotifier {
 
     await dao.deleteEntreprise(entreprise);
     ref.invalidateSelf();
-  }
-
-  /// Initialise une entreprise par défaut si aucune n'existe
-  Future<void> initializeDefaultEntreprise() async {
-    final dao = ref.watch(entrepriseDaoProvider);
-    final existingEntreprises = await dao.getAllEntreprises();
-
-    if (existingEntreprises.isEmpty) {
-      print(
-        '🏫 [EntreprisesNotifier] Aucune entreprise trouvée, création de l\'entreprise par défaut...',
-      );
-
-      final now = DateTime.now();
-      final defaultEntreprise = Entreprise(
-        nom: 'AYANNA SCHOOL',
-        adresse: '14 Av. Bunduki, Q. Plateau, C. Annexe',
-        telephone: '+243997554905',
-        email: 'contact@ayannaschool.cd',
-        devise: 'USD',
-        timezone: 'Africa/Kinshasa',
-        dateCreation: now,
-        dateModification: now,
-        updatedAt: now,
-        isSync: true,
-      );
-
-      await dao.insertEntreprise(defaultEntreprise);
-      ref.invalidateSelf();
-      print('✅ [EntreprisesNotifier] Entreprise par défaut créée avec succès');
-    } else {
-      print(
-        '📊 [EntreprisesNotifier] ${existingEntreprises.length} entreprise(s) trouvée(s)',
-      );
-    }
   }
 }
 
@@ -2090,13 +2069,18 @@ class ComptesConfigsNotifier extends _$ComptesConfigsNotifier {
 
   Future<void> refresh(List<ComptesConfig> configs) async {
     final dao = ref.watch(comptesConfigDaoProvider);
-    try {
-      await dao.insertComptesConfigs(configs);
-      ref.invalidateSelf();
-    } catch (e) {
-      print(
-        'Erreur lors du rafraîchissement des configurations de comptes: $e',
-      );
+    print("Refreshing comptes configs with ${configs.length} items");
+    for (var config in configs) {
+      try {
+        await dao.insertComptesConfig(config);
+        print("inserted config ${config.id}");
+
+        //ref.invalidateSelf();
+      } catch (e) {
+        print(
+          'Erreur lors du rafraîchissement des configurations de comptes: $e',
+        );
+      }
     }
   }
 
@@ -2184,11 +2168,13 @@ class EcrituresComptablesNotifier extends _$EcrituresComptablesNotifier {
 
   Future<void> refresh(List<EcritureComptable> ecritures) async {
     final dao = ref.watch(ecritureComptableDaoProvider);
-    try {
-      await dao.insertEcrituresComptables(ecritures);
-      ref.invalidateSelf();
-    } catch (e) {
-      print('Erreur lors du rafraîchissement des écritures comptables: $e');
+    for (var ecriture in ecritures) {
+      try {
+        await dao.insertEcrituresComptables([ecriture]);
+        ref.invalidateSelf();
+      } catch (e) {
+        print('Erreur lors du rafraîchissement des écritures comptables: $e');
+      }
     }
   }
 
@@ -2274,11 +2260,13 @@ class JournauxComptablesNotifier extends _$JournauxComptablesNotifier {
 
   Future<void> refresh(List<JournalComptable> journaux) async {
     final dao = ref.watch(journalComptableDaoProvider);
-    try {
-      await dao.insertJournauxComptables(journaux);
-      ref.invalidateSelf();
-    } catch (e) {
-      print('Erreur lors du rafraîchissement des journaux comptables: $e');
+    for (var journal in journaux) {
+      try {
+        await dao.insertJournalComptable(journal);
+        ref.invalidateSelf();
+      } catch (e) {
+        print('Erreur lors du rafraîchissement des journaux comptables: $e');
+      }
     }
   }
 
@@ -2358,13 +2346,7 @@ class JournauxComptablesNotifier extends _$JournauxComptablesNotifier {
     final dao = ref.watch(journalComptableDaoProvider);
     final authState = await ref.read(authNotifierProvider.future);
 
-    print('🔍 getJournalEntries - Debug:');
-    print('  - Date demandée: $date');
-    print('  - Filtre: $filter');
-    print('  - Entreprise ID: ${authState.entrepriseId}');
-
     if (authState.entrepriseId == null) {
-      print('❌ Aucune entreprise connectée - retour liste vide');
       return [];
     }
 
@@ -2379,9 +2361,6 @@ class JournauxComptablesNotifier extends _$JournauxComptablesNotifier {
         dateFin,
         authState.entrepriseId!,
       );
-
-      print('  - Période: $dateDebut à $dateFin');
-      print('  - Entrées trouvées: ${entries.length}');
 
       // Appliquer le filtre si nécessaire
       if (filter == 'Tous') {
@@ -2409,34 +2388,79 @@ class JournauxComptablesNotifier extends _$JournauxComptablesNotifier {
     final authState = await ref.read(authNotifierProvider.future);
 
     if (authState.entrepriseId == null) {
+      print('⚠️ getSoldeCaisse: entrepriseId null');
       return 0.0;
     }
 
     try {
-      // Récupérer toutes les entrées
-      final totalEntrees =
-          await dao.getTotalByTypeOperation(
-            'Entrée',
-            authState.entrepriseId!,
-          ) ??
-          0.0;
+      print(
+        '🔍 Calcul du solde caisse pour entreprise_id: ${authState.entrepriseId}',
+      );
 
-      // Récupérer toutes les sorties
-      final totalSorties =
-          await dao.getTotalByTypeOperation(
-            'Sortie',
-            authState.entrepriseId!,
-          ) ??
-          0.0;
+      // Récupérer TOUS les journaux comptables
+      final tousLesJournaux = await dao.getAllJournauxComptables();
 
-      return totalEntrees - totalSorties;
-    } catch (e) {
-      print('Erreur lors du calcul du solde de caisse: $e');
+      print('📊 Total journaux en base: ${tousLesJournaux.length}');
+
+      if (tousLesJournaux.isEmpty) {
+        print('⚠️ Aucun journal comptable trouvé');
+        return 0.0;
+      }
+
+      // Filtrer par entreprise
+      final journauxEntreprise = tousLesJournaux
+          .where((j) => j.entrepriseId == authState.entrepriseId)
+          .toList();
+
+      print(
+        '� Journaux pour entreprise ${authState.entrepriseId}: ${journauxEntreprise.length}',
+      );
+
+      // Calculer entrées et sorties
+      double totalEntrees = 0.0;
+      double totalSorties = 0.0;
+      int compteurEntrees = 0;
+      int compteurSorties = 0;
+
+      for (final journal in journauxEntreprise) {
+        print(
+          '  📝 Journal ID ${journal.id}: type="${journal.typeOperation}" montant=${journal.montant}',
+        );
+
+        final typeOp = journal.typeOperation.toLowerCase().trim();
+
+        if (typeOp == 'entrée' || typeOp == 'entree') {
+          totalEntrees += journal.montant;
+          compteurEntrees++;
+          if (compteurEntrees <= 3) {
+            print('    ✅ ENTRÉE: ${journal.montant} - ${journal.libelle}');
+          }
+        } else if (typeOp == 'sortie') {
+          totalSorties += journal.montant;
+          compteurSorties++;
+          if (compteurSorties <= 3) {
+            print('    ❌ SORTIE: ${journal.montant} - ${journal.libelle}');
+          }
+        } else {
+          print('    ⚠️ Type inconnu: "$typeOp"');
+        }
+      }
+
+      print('� Total ENTRÉES: $totalEntrees ($compteurEntrees opérations)');
+      print('💸 Total SORTIES: $totalSorties ($compteurSorties opérations)');
+
+      final solde = totalEntrees - totalSorties;
+      print('✅ SOLDE CAISSE = $solde');
+
+      return solde;
+    } catch (e, stackTrace) {
+      print('❌ Erreur lors du calcul du solde de caisse: $e');
+      print('Stack trace: $stackTrace');
       return 0.0;
     }
   }
 
-  /// Enregistre une sortie de caisse (dépense)
+  /// Enregistre une sortie de caisse (dépense) avec écritures comptables
   Future<void> insertSortieCaisse({
     required int entrepriseId,
     required double montant,
@@ -2446,14 +2470,38 @@ class JournauxComptablesNotifier extends _$JournauxComptablesNotifier {
     String? observation,
     required int userId,
   }) async {
-    final dao = ref.watch(journalComptableDaoProvider);
+    print('🚀 DEBUT insertSortieCaisse - montant: $montant');
+
+    final journalDao = ref.watch(journalComptableDaoProvider);
+    final ecritureDao = ref.watch(ecritureComptableDaoProvider);
+    final comptesConfigDao = ref.watch(comptesConfigDaoProvider);
+    final depenseDao = ref.watch(depenseDaoProvider);
     final isConnected = ref.read(isConnectedProvider);
     final syncNotifier = ref.read(syncStateNotifierProvider.notifier);
 
     try {
       final now = DateTime.now();
 
-      // Construire le libellé complet avec les informations additionnelles
+      // 1. Récupérer la configuration comptable pour obtenir le compte caisse
+      print(
+        '🔍 Recherche configuration comptable pour entreprise_id: $entrepriseId',
+      );
+      final config = await comptesConfigDao.getComptesConfigByEntreprise(
+        entrepriseId,
+      );
+
+      if (config == null) {
+        print('❌ ERREUR: Configuration comptable introuvable');
+        throw Exception(
+          "Configuration comptable introuvable pour entreprise_id $entrepriseId. Veuillez créer la configuration comptable dans les paramètres.",
+        );
+      }
+
+      print('✅ Configuration comptable trouvée');
+      print('  - Compte Caisse ID: ${config.compteCaisseId}');
+      print('  - Compte Charge ID: $compteDestinationId');
+
+      // 2. Construire le libellé complet avec les informations additionnelles
       String libelleComplet = libelle;
       if (pieceJustification != null && pieceJustification.isNotEmpty) {
         libelleComplet += ' (Ref: $pieceJustification)';
@@ -2462,9 +2510,13 @@ class JournauxComptablesNotifier extends _$JournauxComptablesNotifier {
         libelleComplet += ' - $observation';
       }
 
+      print('📓 Création du journal comptable...');
+      print('  - Libellé: $libelleComplet');
+
+      // 3. Créer l'entrée dans le journal comptable
       final nouveauJournal = JournalComptable(
         entrepriseId: entrepriseId,
-        typeOperation: 'Sortie',
+        typeOperation: 'sortie',
         montant: montant,
         libelle: libelleComplet,
         dateOperation: now,
@@ -2474,9 +2526,86 @@ class JournauxComptablesNotifier extends _$JournauxComptablesNotifier {
         updatedAt: now,
       );
 
-      await dao.insertJournalComptable(nouveauJournal);
-      ref.invalidateSelf();
+      final journalId = await journalDao.insertJournalComptable(nouveauJournal);
+      print('✅ Journal créé avec ID: $journalId');
 
+      // 4. Créer la dépense
+      print('💰 Création de la dépense...');
+
+      // Construire le libellé de la dépense avec les informations du compte
+      String libelleDepense = libelle;
+      if (observation != null && observation.isNotEmpty) {
+        libelleDepense = '$libelle - $observation';
+      }
+
+      final nouvelleDepense = Depense(
+        entrepriseId: entrepriseId,
+        montant: montant,
+        libelle: libelleDepense,
+        observation:
+            pieceJustification, // Utiliser le champ observation pour la pièce justificative
+        journalId: journalId,
+        userId: userId,
+        dateDepense: now,
+        isSync: false,
+        dateCreation: now,
+        dateModification: now,
+        updatedAt: now,
+      );
+
+      final depenseId = await depenseDao.insertDepense(nouvelleDepense);
+      print('✅ Dépense créée avec ID: $depenseId');
+
+      // 5. Créer les écritures comptables (double partie)
+      print('📊 Création des écritures comptables (double partie):');
+
+      // Écriture 1: DÉBIT Compte de Charge (la charge augmente)
+      final ecritureCharge = EcritureComptable(
+        journalId: journalId,
+        compteComptableId: compteDestinationId,
+        debit: montant.toDouble(),
+        credit: 0.0,
+        ordre: 1,
+        dateEcriture: now,
+        isSync: false,
+        dateCreation: now,
+        dateModification: now,
+        updatedAt: now,
+      );
+
+      final ecritureChargeId = await ecritureDao.insertEcritureComptable(
+        ecritureCharge,
+      );
+      print('✅ Écriture DÉBIT Charge insérée avec ID: $ecritureChargeId');
+
+      // Écriture 2: CRÉDIT Compte Caisse (l'argent sort de la caisse)
+      final ecritureCaisse = EcritureComptable(
+        journalId: journalId,
+        compteComptableId: config.compteCaisseId,
+        debit: 0.0,
+        credit: montant.toDouble(),
+        ordre: 2,
+        dateEcriture: now,
+        isSync: false,
+        dateCreation: now,
+        dateModification: now,
+        updatedAt: now,
+      );
+
+      final ecritureCaisseId = await ecritureDao.insertEcritureComptable(
+        ecritureCaisse,
+      );
+      print('✅ Écriture CRÉDIT Caisse insérée avec ID: $ecritureCaisseId');
+      print(
+        '✅ Double partie comptable respectée: Débit=$montant, Crédit=$montant',
+      );
+
+      // 6. Invalider les caches pour rafraîchir les données
+      ref.invalidateSelf();
+      ref.invalidate(depensesNotifierProvider);
+      ref.invalidate(ecrituresComptablesNotifierProvider);
+
+      // 7. Synchronisation si connecté
       if (isConnected) {
         try {
           await syncNotifier.uploadSingleEntity(
@@ -2485,12 +2614,32 @@ class JournauxComptablesNotifier extends _$JournauxComptablesNotifier {
             'create',
             userEmail: 'admin@testschool.com',
           );
+          await syncNotifier.uploadSingleEntity(
+            nouvelleDepense,
+            'depenses',
+            'create',
+            userEmail: 'admin@testschool.com',
+          );
+          await syncNotifier.uploadSingleEntity(
+            ecritureCharge,
+            'ecritures_comptables',
+            'create',
+            userEmail: 'admin@testschool.com',
+          );
+          await syncNotifier.uploadSingleEntity(
+            ecritureCaisse,
+            'ecritures_comptables',
+            'create',
+            userEmail: 'admin@testschool.com',
+          );
         } catch (e) {
-          print('Erreur lors de l\'upload de la sortie de caisse: $e');
+          print('⚠️ Erreur synchronisation: $e');
         }
       }
+
+      print('✅ Dépense avec écritures comptables enregistrée avec succès');
     } catch (e) {
-      print('Erreur lors de l\'enregistrement de la sortie de caisse: $e');
+      print('❌ Erreur lors de l\'enregistrement de la dépense: $e');
       rethrow;
     }
   }

@@ -2,6 +2,7 @@ import 'dart:typed_data';
 import 'package:ayanna_school/models/entities/eleve.dart';
 import 'package:ayanna_school/models/frais_details.dart';
 import 'package:intl/intl.dart';
+import 'package:ayanna_school/services/app_preferences.dart';
 import 'package:pdf/pdf.dart';
 import 'package:pdf/widgets.dart' as pw;
 
@@ -15,7 +16,8 @@ class PdfService {
     final doc = pw.Document();
     // Valeurs par défaut si non fournies
     final entrepriseNomFinal = entrepriseNom ?? 'Ayanna School';
-    final deviseFinal = devise ?? 'CDF';
+    // Si la devise n'est pas fournie, tenter de la lire depuis la table entreprise
+    final deviseFinal = devise ?? await AppPreferences().getDevise();
     final dateFormat = DateFormat('dd/MM/yyyy');
 
     // J'ai ajouté ces couleurs pour un style plus professionnel

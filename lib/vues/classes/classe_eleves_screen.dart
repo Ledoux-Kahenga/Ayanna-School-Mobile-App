@@ -5,6 +5,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../theme/ayanna_theme.dart';
 import 'package:ayanna_school/models/entities/entities.dart';
 import 'package:ayanna_school/services/providers/providers.dart';
+import 'package:ayanna_school/services/app_preferences.dart';
+import 'package:intl/intl.dart';
 import 'classe_eleve_details_screen.dart';
 
 class ClassElevesScreen extends ConsumerStatefulWidget {
@@ -170,6 +172,10 @@ class _ClassElevesScreenState extends ConsumerState<ClassElevesScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // format numbers and get default devise for display
+    final format = NumberFormat('#,##0.00', 'fr_FR');
+    final devise = AppPreferences().devise;
+
     // ... (pas de changement ici, tout le reste du widget est correct)
     return Scaffold(
       backgroundColor: AyannaColors.lightGrey,
@@ -249,8 +255,8 @@ class _ClassElevesScreenState extends ConsumerState<ClassElevesScreen> {
                         ),
                         _buildDashboardCard(
                           'Montant total payé',
-                          '${_totalRecu.toStringAsFixed(2)} \$',
-                          Icons.monetization_on,
+                          '${format.format(_totalRecu)} $devise',
+                          Icons.payments,
                           false,
                           () {},
                         ),

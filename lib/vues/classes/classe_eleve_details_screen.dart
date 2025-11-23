@@ -7,6 +7,7 @@ import '../widgets/facture_recu_widget.dart';
 import 'package:ayanna_school/models/entities/entities.dart';
 import 'package:ayanna_school/services/providers/providers.dart';
 import 'dart:async';
+import '../../services/app_preferences.dart';
 import '../../services/bluetooth_print_service.dart';
 import '../widgets/bluetooth_printer_selector.dart';
 
@@ -28,6 +29,7 @@ class _ClasseEleveDetailsScreenState
     extends ConsumerState<ClasseEleveDetailsScreen> {
   List<FraisDetails> _fraisDetails = [];
   bool _loading = true;
+  String _classeNom = '-'; // Nom de la classe de l'élève
 
   // Service d'impression Bluetooth
   final BluetoothPrintService _bluetoothService = BluetoothPrintService();
@@ -46,77 +48,152 @@ class _ClasseEleveDetailsScreenState
 
   Future<void> _printReceipt(Eleve eleve, FraisDetails fraisDetails) async {
     try {
-      final service = _bluetoothService;
+      // Vérifier d'abord les permissions Bluetooth
+      debugPrint('🔍 Vérification des permissions Bluetooth...');
+      final hasPermissions = await _bluetoothService.checkPermissions();
 
-      final success = await service.printReceipt(
-        schoolName: 'Ayanna School',
-        schoolAddress: '14 Av. Bunduki, Q. Plateau, C. Annexe',
-        schoolPhone: '+243997554905',
-        eleveName: '${eleve.nom} ${eleve.postnom} ${eleve.prenom}',
-        classe: 'Non spécifiée', // Ajustez selon votre modèle de données
+      if (!hasPermissions) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text(
+                'Permissions Bluetooth requises pour l\'impression.\n'
+                'Veuillez accorder les permissions et réessayer.',
+              ),
+              backgroundColor: Colors.orange,
+              duration: Duration(seconds: 4),
+            ),
+          );
+        }
+        return;
+      }
+
+      // Vérifier si une imprimante est connectée
+      final isConnected = await _bluetoothService.isConnected();
+
+      if (!isConnected) {
+        // Afficher le sélecteur d'imprimante
+        await _showPrinterSelector();
+        return;
+      }
+
+      // Préparer les données des paiements
+      final paiements = fraisDetails.historiquePaiements
+          .map(
+            (p) => {
+              'date': DateFormat('dd/MM/yy').format(p.datePaiement),
+              'montant': p.montantPaye.toStringAsFixed(0),
+            },
+          )
+          .toList();
+
+      // Récupérer les informations de l'entreprise depuis la base
+      final entreprises = await ref.read(entreprisesNotifierProvider.future);
+      final entreprise = entreprises.isNotEmpty ? entreprises.first : null;
+
+      // Imprimer avec le service Bluetooth
+      final success = await _bluetoothService.printReceipt(
+        schoolName: entreprise?.nom.toUpperCase() ?? 'AYANNA SCHOOL',
+        schoolAddress:
+            entreprise?.adresse ?? '14 Av. Bunduki, Q. Plateau, C. Annexe',
+        schoolPhone: entreprise?.telephone != null
+            ? 'Tél : ${entreprise!.telephone}'
+            : 'Tél : +243997554905',
+        eleveName: '${eleve.prenomCapitalized} ${eleve.nomPostnomMaj}',
+        classe: _classeNom,
         matricule: eleve.matricule ?? '',
         fraisName: fraisDetails.nomFrais,
-        paiements: fraisDetails.historiquePaiements
-            .map(
-              (p) => {
-                'montant': p.montantPaye,
-                'date': p.datePaiement.toIso8601String(),
-                'mode': 'Espèces',
-              },
-            )
-            .toList(),
+        paiements: paiements,
         montantTotal: fraisDetails.montant,
         totalPaye: fraisDetails.totalPaye,
         resteAPayer: fraisDetails.restePayer,
+        devise: entreprise?.devise,
       );
 
-      if (success) {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Reçu imprimé avec succès'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Échec de l\'impression'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      }
-    } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Erreur d\'impression: $e'),
-            backgroundColor: Colors.red,
+            content: Text(
+              success
+                  ? 'Reçu envoyé à l\'imprimante'
+                  : 'Erreur lors de l\'impression',
+            ),
+            backgroundColor: success ? AyannaColors.successGreen : Colors.red,
           ),
+        );
+      }
+    } catch (e) {
+      debugPrint('Erreur impression: $e');
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Erreur: $e'), backgroundColor: Colors.red),
         );
       }
     }
   }
 
-  void _showPrinterSelector(Eleve eleve, FraisDetails fraisDetails) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return BluetoothPrinterSelector(
-          onPrinterSelected: (deviceId) {
-            Navigator.of(context).pop();
-            _printReceipt(eleve, fraisDetails);
-          },
+  Future<void> _showPrinterSelector() async {
+    // Vérifier les permissions avant d'ouvrir le sélecteur
+    final hasPermissions = await _bluetoothService.checkPermissions();
+
+    if (!hasPermissions) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Permissions Bluetooth requises.\n'
+              'Veuillez accorder les permissions dans les paramètres et réessayer.',
+            ),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 4),
+          ),
         );
-      },
+      }
+      return;
+    }
+
+    await showDialog(
+      context: context,
+      builder: (context) => Dialog(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 500, maxHeight: 600),
+          child: BluetoothPrinterSelector(
+            onPrinterSelected: (macAddress) {
+              Navigator.of(context).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(
+                  content: Text(
+                    'Imprimante connectée! Vous pouvez maintenant imprimer.',
+                  ),
+                  backgroundColor: AyannaColors.successGreen,
+                ),
+              );
+            },
+          ),
+        ),
+      ),
     );
   }
 
   Future<void> _fetchEleveDetails() async {
     try {
+      // Charger le nom de la classe de l'élève
+      if (widget.eleve.classeId != null) {
+        final classes = await ref.read(classesNotifierProvider.future);
+        final classe = classes.firstWhere(
+          (c) => c.id == widget.eleve.classeId,
+          orElse: () => Classe(
+            nom: '-',
+            niveau: '-',
+            anneeScolaireId: 0,
+            dateCreation: DateTime.now(),
+            dateModification: DateTime.now(),
+            updatedAt: DateTime.now(),
+          ),
+        );
+        _classeNom = classe.nom;
+      }
+
       // Get all frais scolaires
       final allFrais = await ref.read(fraisScolairesNotifierProvider.future);
 
@@ -265,6 +342,20 @@ class _ClasseEleveDetailsScreenState
   }
 
   Widget _buildFraisCard(FraisDetails fraisDetail) {
+    // Determine enterprise currency for this card (fallback to AppPreferences)
+    String devise = AppPreferences().devise;
+    try {
+      final entreprisesAsync = ref.watch(entreprisesNotifierProvider);
+      if (entreprisesAsync.hasValue) {
+        final list = entreprisesAsync.value!;
+        if (list.isNotEmpty &&
+            list.first.devise != null &&
+            list.first.devise!.isNotEmpty) {
+          devise = list.first.devise!;
+        }
+      }
+    } catch (_) {}
+
     final frais = fraisDetail.frais;
     final isEnOrdre = fraisDetail.isEnOrdre;
     final isPartiellementPaye = fraisDetail.isPartiellementPaye;
@@ -287,252 +378,161 @@ class _ClasseEleveDetailsScreenState
       statusText = 'Pas en ordre';
     }
 
-    return StatefulBuilder(
-      builder: (context, setState) {
-        bool showRecu = false;
-        return Card(
-          color: AyannaColors.white,
-          elevation: 2,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-          margin: const EdgeInsets.only(bottom: 12),
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+    return Card(
+      color: AyannaColors.white,
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+      margin: const EdgeInsets.only(bottom: 12),
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        frais.nom,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(
-                              fontWeight: FontWeight.w600,
-                              color: AyannaColors.orange,
-                            ),
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: statusColor.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Icon(statusIcon, size: 16, color: statusColor),
-                          const SizedBox(width: 4),
-                          Text(
-                            statusText,
-                            style: TextStyle(color: statusColor, fontSize: 12),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildFinanceInfo(
-                        'Montant total',
-                        frais.montant.toStringAsFixed(0),
-                        Icons.attach_money,
-                      ),
-                    ),
-                    Expanded(
-                      child: _buildFinanceInfo(
-                        'Payé',
-                        fraisDetail.montantPaye.toStringAsFixed(0),
-                        Icons.payments,
-                      ),
-                    ),
-                    Expanded(
-                      child: _buildFinanceInfo(
-                        'Reste',
-                        fraisDetail.resteAPayer.toStringAsFixed(0),
-                        Icons.pending_actions,
-                      ),
-                    ),
-                  ],
-                ),
-                if (fraisDetail.historiquePaiements.isNotEmpty) ...[
-                  const SizedBox(height: 12),
-                  const Divider(),
-                  const SizedBox(height: 8),
-                  Text(
-                    'Historique des paiements',
-                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                Expanded(
+                  child: Text(
+                    frais.nom,
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
+                      color: AyannaColors.orange,
                     ),
                   ),
-                  const SizedBox(height: 8),
-                  ...fraisDetail.historiquePaiements.map(
-                    (paiement) => _buildPaiementHistoryItem(paiement),
-                  ),
-                ],
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    if (fraisDetail.montantPaye > 0)
-                      ElevatedButton.icon(
-                        icon: const Icon(Icons.receipt_long),
-                        label: const Text('Facture'),
-                        onPressed: () {
-                          setState(() {
-                            showRecu = true;
-                          });
-                        },
-                      ),
-                    if (showRecu) const SizedBox(width: 8),
-                    if (showRecu)
-                      ElevatedButton.icon(
-                        icon: const Icon(Icons.print),
-                        label: const Text('Imprimer'),
-                        onPressed: () {
-                          print(
-                            '🖨️ [ClasseEleveDetails] Bouton Imprimer cliqué',
-                          );
-                          _showPrinterSelector(widget.eleve, fraisDetail);
-
-                          // await Printing.layoutPdf(
-                          //   onLayout: (format) async {
-                          //     final doc = pw.Document();
-                          //     doc.addPage(
-                          //       pw.Page(
-                          //         build: (pw.Context context) {
-                          //           return pw.Column(
-                          //             crossAxisAlignment:
-                          //                 pw.CrossAxisAlignment.start,
-                          //             children: [
-                          //               pw.Text(
-                          //                 'Généré par Ayanna School - ${DateTime.now()}',
-                          //               ),
-                          //               pw.Text('Default School'),
-                          //               pw.Text(
-                          //                 '14 Av. Bunduki, Q. Plateau, C. Annexe',
-                          //               ),
-                          //               pw.Text('Tél : +243997554905'),
-                          //               pw.Text('Email : comtact@school.com'),
-                          //               pw.Divider(),
-                          //               pw.Text(
-                          //                 'REÇU FRAIS',
-                          //                 style: pw.TextStyle(
-                          //                   fontSize: 20,
-                          //                   fontWeight: pw.FontWeight.bold,
-                          //                 ),
-                          //               ),
-                          //               pw.Text(
-                          //                 'Élève : ${widget.eleve.prenom} ${widget.eleve.nom}',
-                          //               ),
-                          //               pw.Text(
-                          //                 'Classe : ${widget.eleve.classeNom ?? "-"}',
-                          //               ),
-                          //               pw.Text('Frais : ${frais.nom}'),
-                          //               pw.Text('Paiements :'),
-                          //               pw.Table.fromTextArray(
-                          //                 headers: [
-                          //                   'Date',
-                          //                   'Montant',
-                          //                   'Caissier',
-                          //                 ],
-                          //                 data: fraisDetail.historiquePaiements
-                          //                     .map(
-                          //                       (p) => [
-                          //                         p.datePaiement,
-                          //                         p.montantPaye
-                          //                             .toStringAsFixed(0),
-                          //                         'Admin',
-                          //                       ],
-                          //                     )
-                          //                     .toList(),
-                          //               ),
-                          //               pw.Text(
-                          //                 'Total payé : ${fraisDetail.montantPaye.toInt()} Fc',
-                          //               ),
-                          //               pw.Text(
-                          //                 'Reste : ${fraisDetail.resteAPayer.toInt()} Fc',
-                          //               ),
-                          //               pw.Text('Statut : $statusText'),
-                          //               pw.SizedBox(height: 16),
-                          //               pw.Text(
-                          //                 'Merci pour votre paiement.',
-                          //                 style: pw.TextStyle(
-                          //                   fontStyle: pw.FontStyle.italic,
-                          //                 ),
-                          //               ),
-                          //             ],
-                          //           );
-                          //         },
-                          //       ),
-                          //     );
-                          //     return doc.save();
-                          //   },
-                          // );
-
-                          setState(() {
-                            showRecu = false;
-                          });
-                        },
-                      ),
-                  ],
                 ),
-                if (showRecu)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 8.0),
-                    child: FactureRecuWidget(
-                      eleve: '${widget.eleve.prenom} ${widget.eleve.nom}',
-                      classe: widget.eleve.classeNom ?? '-',
-                      frais: frais.nom,
-                      paiements: fraisDetail.historiquePaiements
-                          .map(
-                            (p) => {
-                              'date': DateFormat(
-                                'dd/MM/yyyy',
-                              ).format(p.datePaiement),
-                              'montant': p.montantPaye.toStringAsFixed(0),
-                              'caissier': 'Admin',
-                            },
-                          )
-                          .toList(),
-                      totalPaye: fraisDetail.montantPaye.toInt(),
-                      reste: fraisDetail.resteAPayer.toInt(),
-                      statut: statusText,
-                    ),
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
                   ),
-                if (!isEnOrdre) ...[
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () => _showPaiementDialog(fraisDetail),
-                      icon: const Icon(Icons.payment),
-                      label: Text(
-                        isPartiellementPaye
-                            ? 'Compléter le paiement'
-                            : 'Effectuer un paiement',
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AyannaColors.orange,
-                        foregroundColor: AyannaColors.white,
-                        textStyle: const TextStyle(fontWeight: FontWeight.bold),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                    ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                ],
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Icon(statusIcon, size: 16, color: statusColor),
+                      const SizedBox(width: 4),
+                      Text(
+                        statusText,
+                        style: TextStyle(color: statusColor, fontSize: 12),
+                      ),
+                    ],
+                  ),
+                ),
               ],
             ),
-          ),
-        );
-      },
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: _buildFinanceInfo(
+                    'Montant total',
+                    '${frais.montant.toStringAsFixed(0)} $devise',
+                    Icons.account_balance_wallet,
+                  ),
+                ),
+                Expanded(
+                  child: _buildFinanceInfo(
+                    'Payé',
+                    '${fraisDetail.montantPaye.toStringAsFixed(0)} $devise',
+                    Icons.payments,
+                  ),
+                ),
+                Expanded(
+                  child: _buildFinanceInfo(
+                    'Reste',
+                    '${fraisDetail.resteAPayer.toStringAsFixed(0)} $devise',
+                    Icons.pending_actions,
+                  ),
+                ),
+              ],
+            ),
+            if (fraisDetail.historiquePaiements.isNotEmpty) ...[
+              const SizedBox(height: 12),
+              const Divider(),
+              const SizedBox(height: 8),
+              Text(
+                'Historique des paiements',
+                style: Theme.of(
+                  context,
+                ).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w600),
+              ),
+              const SizedBox(height: 8),
+              ...fraisDetail.historiquePaiements.map(
+                (paiement) => _buildPaiementHistoryItem(paiement),
+              ),
+            ],
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                if (fraisDetail.montantPaye > 0)
+                  ElevatedButton.icon(
+                    icon: fraisDetail.showRecu
+                        ? const Icon(Icons.print)
+                        : const Icon(Icons.receipt_long),
+                    label: Text(fraisDetail.showRecu ? 'Imprimer' : 'Facture'),
+                    onPressed: () async {
+                      if (!fraisDetail.showRecu) {
+                        setState(() {
+                          fraisDetail.showRecu = true;
+                        });
+                      } else {
+                        await _printReceipt(widget.eleve, fraisDetail);
+                      }
+                    },
+                  ),
+              ],
+            ),
+            if (fraisDetail.showRecu)
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: FactureRecuWidget(
+                  eleve: '${widget.eleve.prenom} ${widget.eleve.nom}',
+                  classe: _classeNom,
+                  frais: frais.nom,
+                  paiements: fraisDetail.historiquePaiements
+                      .map(
+                        (p) => {
+                          'date': DateFormat(
+                            'dd/MM/yyyy',
+                          ).format(p.datePaiement),
+                          'montant': p.montantPaye.toStringAsFixed(0),
+                          'caissier': 'Admin',
+                        },
+                      )
+                      .toList(),
+                  totalPaye: fraisDetail.montantPaye.toInt(),
+                  reste: fraisDetail.resteAPayer.toInt(),
+                  statut: statusText,
+                ),
+              ),
+            if (!isEnOrdre) ...[
+              const SizedBox(height: 16),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => _showPaiementDialog(fraisDetail),
+                  icon: const Icon(Icons.payment),
+                  label: Text(
+                    isPartiellementPaye
+                        ? 'Compléter le paiement'
+                        : 'Effectuer un paiement',
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AyannaColors.orange,
+                    foregroundColor: AyannaColors.white,
+                    textStyle: const TextStyle(fontWeight: FontWeight.bold),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
     );
   }
 
@@ -603,7 +603,7 @@ class _ClasseEleveDetailsScreenState
                 decoration: const InputDecoration(
                   labelText: 'Montant à payer',
                   border: OutlineInputBorder(),
-                  prefixIcon: Icon(Icons.attach_money),
+                  prefixIcon: Icon(Icons.payments),
                 ),
               ),
             ],
@@ -640,43 +640,39 @@ class _ClasseEleveDetailsScreenState
                   final authState = await ref.read(authNotifierProvider.future);
                   final userId = authState.userId;
 
-                  // Create new payment
-                  final now = DateTime.now();
-                  final nouveauPaiement = PaiementFrais(
-                    id: null,
-                    serverId: null,
-                    isSync: false,
-                    eleveId: widget.eleve.id!,
-                    fraisScolaireId: fraisDetail.fraisId,
-                    montantPaye: montant,
-                    datePaiement: now,
-                    userId: userId,
-                    resteAPayer: montantRestant - montant,
-                    statut: (montantRestant - montant) <= 0
-                        ? 'Payé'
-                        : 'Partiellement payé',
-                    dateCreation: now,
-                    dateModification: now,
-                    updatedAt: now,
+                  // Enregistrer le paiement avec écritures comptables automatiques
+                  print(
+                    '💳 Enregistrement paiement avec écritures comptables...',
                   );
-
-                  // Add payment using the provider
                   await ref
                       .read(paiementsFraisNotifierProvider.notifier)
-                      .addPaiementFrais(nouveauPaiement);
+                      .enregistrerPaiementAvecEcritures(
+                        eleveId: widget.eleve.id!,
+                        fraisId: fraisDetail.fraisId,
+                        montant: montant,
+                        userId: userId,
+                      );
 
                   Navigator.of(context).pop();
-                  _fetchEleveDetails(); // Recharger les données
+                  await _fetchEleveDetails();
 
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Paiement enregistré avec succès'),
-                    ),
-                  );
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Paiement enregistré avec succès'),
+                        backgroundColor: Colors.green,
+                      ),
+                    );
+                  }
                 } catch (e) {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text('Erreur: $e')));
+                  if (mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Erreur: $e'),
+                        backgroundColor: Colors.red,
+                      ),
+                    );
+                  }
                 }
               },
               child: const Text('Confirmer'),
@@ -700,6 +696,16 @@ class FactureReceiptWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Attempt to get entreprise devise for receipt
+    String devise = AppPreferences().devise;
+    try {
+      final container = ProviderScope.containerOf(context);
+      final entreprisesAsync = container.read(entreprisesNotifierProvider);
+      if (entreprisesAsync.hasValue) {
+        final list = entreprisesAsync.value!;
+        if (list.isNotEmpty) devise = list.first.devise ?? devise;
+      }
+    } catch (_) {}
     // Format date simple SANS locale lourde
     final now = DateTime.now();
     final dateStr =
@@ -844,7 +850,7 @@ class FactureReceiptWidget extends StatelessWidget {
                     style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold),
                   ),
                   Text(
-                    '${fraisDetails.montantPaye.toStringAsFixed(0)} FC',
+                    '${fraisDetails.montantPaye.toStringAsFixed(0)} $devise',
                     style: const TextStyle(
                       fontSize: 9,
                       fontWeight: FontWeight.bold,
@@ -861,7 +867,7 @@ class FactureReceiptWidget extends StatelessWidget {
                     style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold),
                   ),
                   Text(
-                    '${fraisDetails.resteAPayer.toStringAsFixed(0)} FC',
+                    '${fraisDetails.resteAPayer.toStringAsFixed(0)} $devise',
                     style: const TextStyle(
                       fontSize: 9,
                       fontWeight: FontWeight.bold,

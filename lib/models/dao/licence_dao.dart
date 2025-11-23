@@ -15,8 +15,10 @@ abstract class LicenceDao {
   @Query('SELECT * FROM licence WHERE cle = :cle')
   Future<Licence?> getLicenceByCle(String cle);
 
-  @Query('SELECT * FROM licence WHERE entreprise_id = :entrepriseId')
-  Future<List<Licence>> getLicencesByEntreprise(int entrepriseId);
+  @Query(
+    'SELECT * FROM licence WHERE entreprise_id = :entrepriseId ORDER BY server_id DESC LIMIT 1',
+  )
+  Future<Licence?> getLicencesByEntreprise(int entrepriseId);
 
   @Query(
     'SELECT * FROM licence WHERE type = :type AND entreprise_id = :entrepriseId',
@@ -54,7 +56,7 @@ abstract class LicenceDao {
 
   @Query('DELETE FROM licence')
   Future<void> deleteAllLicences();
-  
+
   @Query('DELETE FROM licence WHERE entreprise_id = :entrepriseId')
   Future<void> deleteLicencesByEntreprise(int entrepriseId);
 

@@ -11,14 +11,14 @@ Licence _$LicenceFromJson(Map<String, dynamic> json) => Licence(
       serverId: (json['id'] as num?)?.toInt(),
       cle: json['cle'] as String,
       type: json['type'] as String,
-      dateActivation: DateTime.parse(json['date_activation'] as String),
-      dateExpiration: DateTime.parse(json['date_expiration'] as String),
+      dateActivation: parseDateTime(json['date_activation']),
+      dateExpiration: parseDateTime(json['date_expiration']),
       signature: json['signature'] as String,
       active: parseBool(json['actif']),
       entrepriseId: (json['entreprise_id'] as num?)?.toInt(),
-      dateCreation: DateTime.parse(json['date_creation'] as String),
-      dateModification: DateTime.parse(json['date_modification'] as String),
-      updatedAt: DateTime.parse(json['updated_at'] as String),
+      dateCreation: parseDateTime(json['date_creation']),
+      dateModification: parseDateTime(json['date_modification']),
+      updatedAt: parseDateTime(json['updated_at']),
     );
 
 Map<String, dynamic> _$LicenceToJson(Licence instance) {

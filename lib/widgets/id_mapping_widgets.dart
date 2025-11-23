@@ -195,7 +195,7 @@ class IdMappingResultWidget extends StatelessWidget {
       case 'annees_scolaires':
         return Icons.calendar_today;
       case 'frais_scolaires':
-        return Icons.attach_money;
+        return Icons.payments;
       case 'frais_classes':
         return Icons.class_;
       case 'paiements':

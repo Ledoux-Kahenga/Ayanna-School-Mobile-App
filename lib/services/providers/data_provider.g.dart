@@ -160,7 +160,7 @@ final fraisScolairesNotifierProvider = AutoDisposeAsyncNotifierProvider<
 typedef _$FraisScolairesNotifier
     = AutoDisposeAsyncNotifier<List<FraisScolaire>>;
 String _$paiementsFraisNotifierHash() =>
-    r'e965bc691e94fd0f90369b096b887e9124bb433a';
+    r'3a21d3b316a0dbb8c7492119b27a8c9574ac8bac';
 
 /// Provider pour la liste des paiements de frais
 ///
@@ -369,7 +369,7 @@ final comptesComptablesNotifierProvider = AutoDisposeAsyncNotifierProvider<
 typedef _$ComptesComptablesNotifier
     = AutoDisposeAsyncNotifier<List<CompteComptable>>;
 String _$comptesConfigsNotifierHash() =>
-    r'27ae068749f97888ef64f738bd715a5b81b76dbd';
+    r'06d5aa17970605fddf12ddc332d74e8a9c763e5b';
 
 /// Provider pour la liste des configurations de comptes
 ///
@@ -389,7 +389,7 @@ final comptesConfigsNotifierProvider = AutoDisposeAsyncNotifierProvider<
 typedef _$ComptesConfigsNotifier
     = AutoDisposeAsyncNotifier<List<ComptesConfig>>;
 String _$ecrituresComptablesNotifierHash() =>
-    r'806fa91c293ede16cd98bdc604e0f72bcda88ca1';
+    r'a55cae01cdbf27b5e117e5e66b396ca37a48b377';
 
 /// Provider pour la liste des écritures comptables
 ///
@@ -409,7 +409,7 @@ final ecrituresComptablesNotifierProvider = AutoDisposeAsyncNotifierProvider<
 typedef _$EcrituresComptablesNotifier
     = AutoDisposeAsyncNotifier<List<EcritureComptable>>;
 String _$journauxComptablesNotifierHash() =>
-    r'4fa2b5136f157173572c7558db86e5c95a5d4ad8';
+    r'777905af72609f75e6913113ed0636bab1d58e33';
 
 /// Provider pour la liste des journaux comptables
 ///

@@ -22,6 +22,7 @@ import 'package:ayanna_school/models/entities/journal_comptable.dart';
 import 'package:ayanna_school/models/entities/depense.dart';
 import 'package:ayanna_school/models/entities/ecriture_comptable.dart';
 import 'package:connectivity_plus/connectivity_plus.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import 'package:ayanna_school/services/providers/data_provider.dart';
 import 'package:ayanna_school/services/providers/shared_preferences_provider.dart';
@@ -1491,6 +1492,10 @@ class SyncStateNotifier extends _$SyncStateNotifier {
       print('📥 [SYNC] Étape 2: Download des changements serveur');
       await performFullSync(userEmail);
 
+      // 3. Marquer que le premier lancement est terminé (après sync réussie)
+      print('✅ [SYNC] Étape 3: Mise à jour du flag premier lancement');
+      await _markFirstLaunchComplete();
+
       print('✅ [SYNC] Synchronisation bidirectionnelle terminée');
     } catch (e) {
       print('❌ [SYNC] Erreur synchronisation bidirectionnelle: $e');
@@ -1499,6 +1504,22 @@ class SyncStateNotifier extends _$SyncStateNotifier {
         error: 'Erreur sync bidirectionnelle: $e',
       );
       rethrow;
+    }
+  }
+
+  /// Marque que le premier lancement est terminé
+  Future<void> _markFirstLaunchComplete() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final isFirstLaunch = prefs.getBool('is_first_launch') ?? true;
+
+      if (isFirstLaunch) {
+        await prefs.setBool('is_first_launch', false);
+        print('🏁 [SYNC] Flag premier lancement mis à false');
+      }
+    } catch (e) {
+      print('⚠️ [SYNC] Erreur mise à jour flag premier lancement: $e');
+      // Ne pas propager l'erreur, ce n'est pas critique
     }
   }
 

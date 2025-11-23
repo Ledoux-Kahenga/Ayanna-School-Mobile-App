@@ -33,18 +33,29 @@ class _DepenseSortiePageState extends ConsumerState<DepenseSortiePage> {
     _fetchSoldeCaisse(); // Charger le solde au démarrage
   }
 
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Rafraîchir le solde à chaque fois que la page devient visible
+    _fetchSoldeCaisse();
+  }
+
   Future<void> _fetchSoldeCaisse() async {
+    print('🔄 Début _fetchSoldeCaisse...');
     try {
       final solde = await ref
           .read(journauxComptablesNotifierProvider.notifier)
           .getSoldeCaisse();
+      print('✅ Solde récupéré: $solde');
       if (mounted) {
         setState(() {
           _soldeCaisse = solde;
           _soldeLoading = false;
         });
+        print('✅ État mis à jour avec solde: $_soldeCaisse');
       }
     } catch (e) {
+      print('❌ Erreur _fetchSoldeCaisse: $e');
       if (mounted) {
         setState(() {
           _soldeLoading = false;
@@ -61,25 +72,61 @@ class _DepenseSortiePageState extends ConsumerState<DepenseSortiePage> {
       // 1. Get the amount to be spent
       final double montantDepense = double.parse(_montantController.text);
 
-      // 2. Refresh the cash balance before the transaction
-      await _fetchSoldeCaisse();
-
-      // 3. Check if the cash balance is sufficient
-      if (_soldeCaisse < montantDepense) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text(
-              'Le montant de la dépense est supérieur au solde de la caisse.',
-            ),
-            backgroundColor: Colors.orange,
-          ),
-        );
-        return; // Stop the execution here if the balance is insufficient
-      }
-
+      // 2. Afficher un loader pendant la vérification
       setState(() {
         _isLoading = true;
       });
+
+      try {
+        // 3. Refresh the cash balance before the transaction
+        print('🔍 Vérification du solde avant dépense...');
+        final soldeActuel = await ref
+            .read(journauxComptablesNotifierProvider.notifier)
+            .getSoldeCaisse();
+
+        print('💰 Solde caisse actuel: $soldeActuel');
+        print('💸 Montant de la dépense: $montantDepense');
+
+        // 4. Check if the cash balance is sufficient
+        if (soldeActuel < montantDepense) {
+          final manquant = montantDepense - soldeActuel;
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(
+                  'Solde insuffisant en caisse !\n'
+                  'Disponible : ${NumberFormat("#,##0", "fr_FR").format(soldeActuel)} ${AppPreferences().devise}\n'
+                  'Demandé : ${NumberFormat("#,##0", "fr_FR").format(montantDepense)} ${AppPreferences().devise}\n'
+                  'Manquant : ${NumberFormat("#,##0", "fr_FR").format(manquant)} ${AppPreferences().devise}',
+                ),
+                backgroundColor: Colors.red,
+                duration: const Duration(seconds: 5),
+              ),
+            );
+            setState(() {
+              _isLoading = false;
+            });
+          }
+          return; // Stop the execution here if the balance is insufficient
+        }
+
+        print('✅ Solde suffisant, enregistrement de la dépense...');
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Erreur vérification solde: $e'),
+              backgroundColor: Colors.red,
+            ),
+          );
+          setState(() {
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+
+      // 5. Proceed with the expense registration
 
       try {
         final authState = await ref.read(authNotifierProvider.future);
@@ -126,6 +173,16 @@ class _DepenseSortiePageState extends ConsumerState<DepenseSortiePage> {
 
   @override
   Widget build(BuildContext context) {
+    // Récupérer la devise depuis la table entreprise si disponible
+    String devise = AppPreferences().devise;
+    try {
+      final entreprisesAsync = ref.watch(entreprisesNotifierProvider);
+      if (entreprisesAsync.hasValue) {
+        final list = entreprisesAsync.value!;
+        if (list.isNotEmpty) devise = list.first.devise ?? devise;
+      }
+    } catch (_) {}
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Nouvelle sortie de caisse'),
@@ -148,17 +205,25 @@ class _DepenseSortiePageState extends ConsumerState<DepenseSortiePage> {
 
                   return comptesAsync.when(
                     data: (comptes) {
-                      if (comptes.isEmpty) {
-                        return const Text("Aucun compte de charge disponible.");
+                      // Filtrer uniquement les comptes de charges (classe 6)
+                      final comptesCharges = comptes.where((compte) {
+                        return compte.numero.startsWith('6');
+                      }).toList();
+
+                      if (comptesCharges.isEmpty) {
+                        return const Text(
+                          "Aucun compte de charge (classe 6) disponible.",
+                        );
                       }
 
                       return DropdownButtonFormField<String>(
                         value: compteSelectionne,
                         decoration: const InputDecoration(
-                          labelText: 'Compte de destination (Charge)',
+                          labelText:
+                              'Compte de destination (Charge - Classe 6)',
                         ),
                         isExpanded: true,
-                        items: comptes.map((compte) {
+                        items: comptesCharges.map((compte) {
                           return DropdownMenuItem<String>(
                             value: compte.id.toString(),
                             child: Text(
@@ -173,7 +238,7 @@ class _DepenseSortiePageState extends ConsumerState<DepenseSortiePage> {
                           });
                         },
                         validator: (value) => value == null
-                            ? 'Veuillez sélectionner un compte'
+                            ? 'Veuillez sélectionner un compte de charge'
                             : null,
                       );
                     },
@@ -198,15 +263,28 @@ class _DepenseSortiePageState extends ConsumerState<DepenseSortiePage> {
               // Champ pour le montant
               TextFormField(
                 controller: _montantController,
-                decoration: const InputDecoration(labelText: 'Montant'),
+                decoration: InputDecoration(
+                  labelText: 'Montant',
+                  suffixText: devise,
+                  helperText: 'Montant de la dépense à effectuer',
+                ),
                 keyboardType: TextInputType.number,
+                onChanged: (value) {
+                  // Rafraîchir l'affichage pour montrer l'avertissement si nécessaire
+                  setState(() {});
+                },
                 validator: (value) {
                   if (value!.isEmpty) return 'Veuillez entrer le montant';
-                  if (double.tryParse(value) == null) {
+                  final montant = double.tryParse(value);
+                  if (montant == null) {
                     return 'Veuillez entrer un nombre valide';
                   }
-                  if (double.parse(value) <= 0) {
+                  if (montant <= 0) {
                     return 'Le montant doit être positif';
+                  }
+                  // Validation supplémentaire : vérifier le solde
+                  if (!_soldeLoading && montant > _soldeCaisse) {
+                    return 'Solde insuffisant (disponible: ${NumberFormat("#,##0", "fr_FR").format(_soldeCaisse)})';
                   }
                   return null;
                 },
@@ -215,14 +293,49 @@ class _DepenseSortiePageState extends ConsumerState<DepenseSortiePage> {
                 padding: const EdgeInsets.only(top: 8.0),
                 child: _soldeLoading
                     ? const Center(child: Text("Chargement du solde..."))
-                    : Text(
-                        'Disponible en caisse : ${NumberFormat("#,##0", "fr_FR").format(_soldeCaisse)} ${AppPreferences().devise}',
-                        style: TextStyle(
-                          color: _soldeCaisse > 0
-                              ? Colors.green.shade800
-                              : Colors.red,
-                          fontStyle: FontStyle.italic,
-                        ),
+                    : Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            'Disponible en caisse : ${NumberFormat("#,##0", "fr_FR").format(_soldeCaisse)} $devise',
+                            style: TextStyle(
+                              color: _soldeCaisse > 0
+                                  ? Colors.green.shade800
+                                  : Colors.red,
+                              fontWeight: FontWeight.w600,
+                              fontSize: 15,
+                            ),
+                          ),
+                          // Afficher un avertissement si le montant saisi dépasse le solde
+                          if (_montantController.text.isNotEmpty &&
+                              double.tryParse(_montantController.text) !=
+                                  null &&
+                              double.parse(_montantController.text) >
+                                  _soldeCaisse)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4.0),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.warning_amber_rounded,
+                                    color: Colors.red,
+                                    size: 16,
+                                  ),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      'Montant supérieur au solde disponible !',
+                                      style: TextStyle(
+                                        color: Colors.red.shade700,
+                                        fontSize: 12,
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                        ],
                       ),
               ),
               const SizedBox(height: 16),

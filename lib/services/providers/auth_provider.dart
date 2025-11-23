@@ -1,3 +1,7 @@
+import 'dart:convert';
+import 'dart:math';
+
+import 'package:crypto/crypto.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:riverpod_annotation/riverpod_annotation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -5,6 +9,7 @@ import '../api/api_client.dart';
 import '../api/utilisateur_service.dart';
 import 'api_client_provider.dart';
 import 'sync_provider_new.dart';
+import 'database_provider.dart';
 
 part 'auth_provider.g.dart';
 
@@ -63,6 +68,7 @@ class AuthNotifier extends _$AuthNotifier {
   static const String _userEmailKey = 'user_email';
   static const String _userNameKey = 'user_name';
   static const String _passwordKey = 'user_password';
+  static const String _requiresPasswordSetupKey = 'requires_password_setup';
   static const String _isFirstLaunchKey = 'is_first_launch';
 
   late UtilisateurService _utilisateurService;
@@ -155,21 +161,26 @@ class AuthNotifier extends _$AuthNotifier {
           );
           print('🔑 [AUTH] Token reçu (longueur: ${token.length})');
 
-          // Sauvegarder dans SharedPreferences avec le mot de passe
-          print('💾 [AUTH] Sauvegarde des données d\'authentification...');
+          // Sauvegarder dans SharedPreferences WITHOUT storing raw password yet
+          // The user must set a local password on first login. Mark that password
+          // setup is required and defer finalizing the 'first launch' flag until
+          // the user has chosen a local password.
+          print(
+            '💾 [AUTH] Sauvegarde des données d\'authentification (sans mot de passe)...',
+          );
           await _saveAuthData(
             token: token,
             userId: userId,
             entrepriseId: entrepriseId,
             email: email,
             userName: userName,
-            password: password,
+            password: null,
           );
 
-          // Marquer que ce n'est plus le premier lancement
+          // Mark that user needs to setup a local password
           final prefs = await SharedPreferences.getInstance();
-          await prefs.setBool(_isFirstLaunchKey, false);
-          print('✅ [AUTH] Premier lancement marqué comme terminé');
+          await prefs.setBool(_requiresPasswordSetupKey, true);
+          print('🔐 [AUTH] L\'utilisateur doit définir un mot de passe local');
 
           // Sauvegarder le token dans l'intercepteur
           print('🔧 [AUTH] Configuration du token dans l\'intercepteur...');
@@ -255,7 +266,25 @@ class AuthNotifier extends _$AuthNotifier {
       );
 
       // Vérifier les identifiants avec les données sauvegardées
-      if (savedEmail == email && savedPassword == password) {
+      bool localMatch = false;
+      if (savedEmail == email && savedPassword != null) {
+        // Support both legacy plain-text saved passwords (no ':') and
+        // our new salted-hash format ('salt:hash'). If plain text is found,
+        // migrate it by hashing and saving the new value.
+        if (savedPassword.contains(':')) {
+          localMatch = _verifyPassword(password, savedPassword);
+        } else {
+          // legacy plain text
+          localMatch = savedPassword == password;
+          if (localMatch) {
+            // migrate to hashed storage
+            final migrated = _hashPassword(password);
+            await prefs.setString(_passwordKey, migrated);
+          }
+        }
+      }
+
+      if (localMatch) {
         print(
           '✅ [AUTH] Authentification locale réussie avec SharedPreferences',
         );
@@ -289,6 +318,43 @@ class AuthNotifier extends _$AuthNotifier {
         print(
           '❌ [AUTH] Identifiants locaux incorrects - Tentative connexion serveur...',
         );
+
+        // If SharedPreferences based check fails, try verifying against local DB
+        try {
+          final db = ref.read(databaseProvider);
+          final user = await db.utilisateurDao.getUtilisateurByEmail(email);
+          if (user != null && user.motDePasseHash.isNotEmpty) {
+            final ok = _verifyPassword(password, user.motDePasseHash);
+            if (ok) {
+              print('✅ [AUTH] Authentification locale réussie avec la DB');
+              // Ensure prefs contain expected data (migrate if needed)
+              if (prefs.getString(_userEmailKey) != email) {
+                await prefs.setString(_userEmailKey, email);
+              }
+              final token = prefs.getString(_tokenKey);
+              final userId = prefs.getInt(_userIdKey) ?? user.id;
+              final entrepriseId =
+                  prefs.getInt(_entrepriseIdKey) ?? user.entrepriseId;
+              if (token != null) await AuthInterceptor.saveToken(token);
+
+              state = AsyncValue.data(
+                AuthState(
+                  isAuthenticated: true,
+                  token: token,
+                  userId: userId,
+                  entrepriseId: entrepriseId,
+                  userEmail: email,
+                ),
+              );
+
+              return true;
+            } else {
+              print('❌ [AUTH] Mot de passe DB incorrect pour $email');
+            }
+          }
+        } catch (e) {
+          print('⚠️ [AUTH] Vérification DB locale échouée: $e');
+        }
 
         // Si l'authentification locale échoue, essayer le serveur avec un message approprié
         final result = await _fallbackServerLogin(email, password);
@@ -651,14 +717,29 @@ class AuthNotifier extends _$AuthNotifier {
   }) async {
     final prefs = await SharedPreferences.getInstance();
 
-    await Future.wait([
-      prefs.setString(_tokenKey, token),
-      if (userId != null) prefs.setInt(_userIdKey, userId),
-      if (entrepriseId != null) prefs.setInt(_entrepriseIdKey, entrepriseId),
-      if (email != null) prefs.setString(_userEmailKey, email),
-      if (userName != null) prefs.setString(_userNameKey, userName),
-      if (password != null) prefs.setString(_passwordKey, password),
-    ]);
+    // Ensure password is stored as a hashed value. If caller provided a
+    // plaintext password, hash it here. If the provided password already
+    // looks like our 'salt:hash' format, store it as-is.
+    String? toStorePassword;
+    if (password != null) {
+      if (password.contains(':')) {
+        toStorePassword = password;
+      } else {
+        toStorePassword = _hashPassword(password);
+      }
+    }
+
+    final futures = <Future<bool>>[];
+    futures.add(prefs.setString(_tokenKey, token));
+    if (userId != null) futures.add(prefs.setInt(_userIdKey, userId));
+    if (entrepriseId != null)
+      futures.add(prefs.setInt(_entrepriseIdKey, entrepriseId));
+    if (email != null) futures.add(prefs.setString(_userEmailKey, email));
+    if (userName != null) futures.add(prefs.setString(_userNameKey, userName));
+    if (toStorePassword != null)
+      futures.add(prefs.setString(_passwordKey, toStorePassword));
+
+    await Future.wait(futures);
   }
 
   /// Nettoyer les données d'authentification
@@ -673,6 +754,7 @@ class AuthNotifier extends _$AuthNotifier {
       prefs.remove(_userNameKey),
       prefs.remove(_passwordKey),
       prefs.remove(_isFirstLaunchKey),
+      prefs.remove(_requiresPasswordSetupKey),
     ]);
   }
 
@@ -730,6 +812,67 @@ class AuthNotifier extends _$AuthNotifier {
           return 'Pas de connexion internet. Vérifiez votre connexion réseau.';
         }
         return 'Erreur de connexion au serveur${statusCode != null ? ' ($statusCode)' : ''}.';
+    }
+  }
+
+  /// Hash a password with a random salt using SHA-256 and return 'salt:hash'
+  String _hashPassword(String password) {
+    final saltBytes = List<int>.generate(
+      16,
+      (_) => Random.secure().nextInt(256),
+    );
+    final salt = base64UrlEncode(saltBytes);
+    final bytes = utf8.encode(salt + password);
+    final digest = sha256.convert(bytes);
+    return '$salt:${digest.toString()}';
+  }
+
+  /// Verify a password against stored 'salt:hash'
+  bool _verifyPassword(String password, String stored) {
+    try {
+      final parts = stored.split(':');
+      if (parts.length != 2) return false;
+      final salt = parts[0];
+      final hash = parts[1];
+      final bytes = utf8.encode(salt + password);
+      final digest = sha256.convert(bytes);
+      return digest.toString() == hash;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Set local password: hash, save to SharedPreferences and update utilisateur table
+  Future<bool> setLocalPassword(String email, String password) async {
+    try {
+      if (password.trim().length < 6) return false;
+
+      final prefs = await SharedPreferences.getInstance();
+      final hashed = _hashPassword(password);
+      await prefs.setString(_passwordKey, hashed);
+      await prefs.setBool(_requiresPasswordSetupKey, false);
+
+      // Also update utilisateur table if record exists
+      try {
+        final db = ref.read(databaseProvider);
+        final user = await db.utilisateurDao.getUtilisateurByEmail(email);
+        if (user != null) {
+          final updated = user.copyWith(motDePasseHash: hashed);
+          await db.utilisateurDao.updateUtilisateur(updated);
+        }
+      } catch (e) {
+        // Non-fatal: local DB update failed, but SharedPreferences has the password
+        print(
+          '⚠️ [AUTH] Mise à jour du mot de passe local dans la DB échouée: $e',
+        );
+      }
+
+      // Mark first launch as complete after password is set
+      await prefs.setBool(_isFirstLaunchKey, false);
+      return true;
+    } catch (e) {
+      print('❌ [AUTH] Erreur lors de la définition du mot de passe local: $e');
+      return false;
     }
   }
 

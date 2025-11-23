@@ -3431,27 +3431,10 @@ class _$LicenceDao extends LicenceDao {
   }
 
   @override
-  Future<List<Licence>> getLicencesByEntreprise(int entrepriseId) async {
-    return _queryAdapter.queryList(
-        'SELECT * FROM licence WHERE entreprise_id = ?1',
-        mapper: (Map<String, Object?> row) => Licence(
-            id: row['id'] as int?,
-            serverId: row['server_id'] as int?,
-            isSync: (row['is_sync'] as int) != 0,
-            cle: row['cle'] as String,
-            type: row['type'] as String,
-            dateActivation:
-                _dateTimeConverter.decode(row['date_activation'] as int),
-            dateExpiration:
-                _dateTimeConverter.decode(row['date_expiration'] as int),
-            signature: row['signature'] as String,
-            active: row['active'] == null ? null : (row['active'] as int) != 0,
-            entrepriseId: row['entreprise_id'] as int?,
-            dateCreation:
-                _dateTimeConverter.decode(row['date_creation'] as int),
-            dateModification:
-                _dateTimeConverter.decode(row['date_modification'] as int),
-            updatedAt: _dateTimeConverter.decode(row['updated_at'] as int)),
+  Future<Licence?> getLicencesByEntreprise(int entrepriseId) async {
+    return _queryAdapter.query(
+        'SELECT * FROM licence WHERE entreprise_id = ?1 ORDER BY server_id DESC LIMIT 1',
+        mapper: (Map<String, Object?> row) => Licence(id: row['id'] as int?, serverId: row['server_id'] as int?, isSync: (row['is_sync'] as int) != 0, cle: row['cle'] as String, type: row['type'] as String, dateActivation: _dateTimeConverter.decode(row['date_activation'] as int), dateExpiration: _dateTimeConverter.decode(row['date_expiration'] as int), signature: row['signature'] as String, active: row['active'] == null ? null : (row['active'] as int) != 0, entrepriseId: row['entreprise_id'] as int?, dateCreation: _dateTimeConverter.decode(row['date_creation'] as int), dateModification: _dateTimeConverter.decode(row['date_modification'] as int), updatedAt: _dateTimeConverter.decode(row['updated_at'] as int)),
         arguments: [entrepriseId]);
   }
 

@@ -222,6 +222,7 @@ class BluetoothPrintService {
     required double montantTotal,
     required double totalPaye,
     required double resteAPayer,
+    String? devise,
   }) async {
     try {
       final connected = await isConnected();
@@ -282,6 +283,7 @@ class BluetoothPrintService {
       );
       bytes += generator.emptyLines(1);
 
+      final usedDevise = devise ?? 'CDF';
       for (final paiement in paiements) {
         bytes += generator.row([
           PosColumn(
@@ -290,7 +292,7 @@ class BluetoothPrintService {
             styles: const PosStyles(align: PosAlign.left),
           ),
           PosColumn(
-            text: '${paiement['montant']} CDF',
+            text: '${paiement['montant']} $usedDevise',
             width: 6,
             styles: const PosStyles(align: PosAlign.right),
           ),
@@ -307,7 +309,7 @@ class BluetoothPrintService {
           styles: const PosStyles(align: PosAlign.left),
         ),
         PosColumn(
-          text: '${montantTotal.toStringAsFixed(0)} CDF',
+          text: '${montantTotal.toStringAsFixed(0)} $usedDevise',
           width: 6,
           styles: const PosStyles(align: PosAlign.right),
         ),
@@ -320,7 +322,7 @@ class BluetoothPrintService {
           styles: const PosStyles(align: PosAlign.left),
         ),
         PosColumn(
-          text: '${totalPaye.toStringAsFixed(0)} CDF',
+          text: '${totalPaye.toStringAsFixed(0)} $usedDevise',
           width: 6,
           styles: const PosStyles(align: PosAlign.right),
         ),
@@ -333,7 +335,7 @@ class BluetoothPrintService {
           styles: const PosStyles(align: PosAlign.left, bold: true),
         ),
         PosColumn(
-          text: '${resteAPayer.toStringAsFixed(0)} CDF',
+          text: '${resteAPayer.toStringAsFixed(0)} $usedDevise',
           width: 6,
           styles: const PosStyles(align: PosAlign.right, bold: true),
         ),

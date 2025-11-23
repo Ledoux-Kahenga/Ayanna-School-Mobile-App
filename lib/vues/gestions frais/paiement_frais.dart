@@ -111,6 +111,7 @@ class _PaiementDesFraisState extends ConsumerState<PaiementDesFrais> {
         montantTotal: fraisDetails.montant,
         totalPaye: fraisDetails.montantPaye,
         resteAPayer: fraisDetails.resteAPayer,
+        devise: entreprise?.devise,
       );
 
       if (mounted) {
@@ -271,15 +272,56 @@ class _PaiementDesFraisState extends ConsumerState<PaiementDesFrais> {
   }
 
   Future<String> formatAmount(double amount) async {
-    final devise = AppPreferences().devise;
-    // Utilise NumberFormat pour un formatage propre
-    final format = NumberFormat("#,##0", "fr_FR");
-    return '${format.format(amount)} $devise';
+    // Par défaut, fallback sur la préférence d'application
+    final defaultDevise = AppPreferences().devise;
+    // Tenter de récupérer la devise de l'entreprise (si disponible)
+    try {
+      final entreprises = await ref.read(entreprisesNotifierProvider.future);
+      final entreprise = entreprises.isNotEmpty ? entreprises.first : null;
+      final devise = entreprise?.devise ?? defaultDevise;
+      // Utilise NumberFormat pour un formatage propre
+      final format = NumberFormat("#,##0", "fr_FR");
+      return '${format.format(amount)} $devise';
+    } catch (e) {
+      final format = NumberFormat("#,##0", "fr_FR");
+      return '${format.format(amount)} $defaultDevise';
+    }
+  }
+
+  /// Rafraîchir les données (pull-to-refresh)
+  Future<void> _refreshData() async {
+    print('🔄 [PaiementFrais] Rafraîchissement des données...');
+
+    try {
+      // Invalider les providers pour forcer le rechargement
+      ref.invalidate(elevesNotifierProvider);
+      ref.invalidate(classesNotifierProvider);
+
+      // Attendre un peu pour que les providers se rechargent
+      await Future.delayed(const Duration(milliseconds: 500));
+
+      // Recharger les noms des classes
+      await _loadClassesNoms();
+
+      print('✅ [PaiementFrais] Rafraîchissement terminé');
+    } catch (e) {
+      print('❌ [PaiementFrais] Erreur lors du rafraîchissement: $e');
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Erreur lors du rafraîchissement: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     int drawerIndex = 0;
+    // no local capture needed; use `ref` from ConsumerState where required
     return WillPopScope(
       onWillPop: () async {
         if (_selectedEleve != null) {
@@ -326,6 +368,12 @@ class _PaiementDesFraisState extends ConsumerState<PaiementDesFrais> {
           ),
           iconTheme: const IconThemeData(color: AyannaColors.white),
           actions: [
+            if (_selectedEleve == null)
+              IconButton(
+                onPressed: _refreshData,
+                icon: const Icon(Icons.refresh),
+                tooltip: 'Rafraîchir',
+              ),
             IconButton(
               onPressed: _showPrinterSelector,
               icon: const Icon(Icons.print),
@@ -430,9 +478,6 @@ class _PaiementDesFraisState extends ConsumerState<PaiementDesFrais> {
                                   }
                                 }
                               });
-                              print(
-                                '🔄 [PaiementFrais] Classes mises à jour: ${_classesNoms.length} classes',
-                              );
                             }
                           });
                         });
@@ -474,86 +519,97 @@ class _PaiementDesFraisState extends ConsumerState<PaiementDesFrais> {
                             });
 
                             if (filtered.isEmpty) {
-                              return const Center(
-                                child: Text('Aucun élève trouvé.'),
+                              return RefreshIndicator(
+                                onRefresh: _refreshData,
+                                child: ListView(
+                                  children: const [
+                                    SizedBox(height: 200),
+                                    Center(child: Text('Aucun élève trouvé.')),
+                                  ],
+                                ),
                               );
                             }
 
-                            return ListView.separated(
-                              itemCount: filtered.length,
-                              separatorBuilder: (_, __) => Divider(
-                                height: 1,
-                                thickness: 0.7,
-                                color: AyannaColors.lightGrey,
-                                indent: 16,
-                                endIndent: 16,
-                              ),
-                              itemBuilder: (context, i) {
-                                final e = filtered[i];
-                                return Card(
-                                  margin: EdgeInsets.zero,
-                                  elevation: 0,
-                                  shape: const RoundedRectangleBorder(),
-                                  color: AyannaColors.white,
-                                  child: ListTile(
-                                    dense: true,
-                                    leading: CircleAvatar(
-                                      radius: 20,
-                                      backgroundColor: AyannaColors.orange
-                                          .withOpacity(0.15),
-                                      child: Text(
-                                        e.prenom.isNotEmpty && e.nom.isNotEmpty
-                                            ? '${e.prenom[0]}${e.nom[0]}'
-                                            : '?',
-                                        style: const TextStyle(
-                                          fontSize: 14,
-                                          fontWeight: FontWeight.bold,
-                                          color: AyannaColors.orange,
+                            return RefreshIndicator(
+                              onRefresh: _refreshData,
+                              color: AyannaColors.orange,
+                              child: ListView.separated(
+                                itemCount: filtered.length,
+                                separatorBuilder: (_, __) => Divider(
+                                  height: 1,
+                                  thickness: 0.7,
+                                  color: AyannaColors.lightGrey,
+                                  indent: 16,
+                                  endIndent: 16,
+                                ),
+                                itemBuilder: (context, i) {
+                                  final e = filtered[i];
+                                  return Card(
+                                    margin: EdgeInsets.zero,
+                                    elevation: 0,
+                                    shape: const RoundedRectangleBorder(),
+                                    color: AyannaColors.white,
+                                    child: ListTile(
+                                      dense: true,
+                                      leading: CircleAvatar(
+                                        radius: 20,
+                                        backgroundColor: AyannaColors.orange
+                                            .withOpacity(0.15),
+                                        child: Text(
+                                          e.prenom.isNotEmpty &&
+                                                  e.nom.isNotEmpty
+                                              ? '${e.prenom[0]}${e.nom[0]}'
+                                              : '?',
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.bold,
+                                            color: AyannaColors.orange,
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                    title: Text(
-                                      '${e.nom.toUpperCase()}${e.postnom != null && e.postnom!.isNotEmpty ? ' ${e.postnom!.toUpperCase()}' : ''} ${e.prenomCapitalized}',
-                                      style: const TextStyle(
-                                        fontSize: 15,
-                                        fontWeight: FontWeight.w500,
-                                        color: AyannaColors.darkGrey,
+                                      title: Text(
+                                        '${e.nom.toUpperCase()}${e.postnom != null && e.postnom!.isNotEmpty ? ' ${e.postnom!.toUpperCase()}' : ''} ${e.prenomCapitalized}',
+                                        style: const TextStyle(
+                                          fontSize: 15,
+                                          fontWeight: FontWeight.w500,
+                                          color: AyannaColors.darkGrey,
+                                        ),
                                       ),
-                                    ),
-                                    subtitle: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        if (e.matricule != null)
+                                      subtitle: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          if (e.matricule != null)
+                                            Text(
+                                              'Mat: ${e.matricule}',
+                                              style: const TextStyle(
+                                                fontSize: 12,
+                                                color: Color(0xFF666666),
+                                                fontWeight: FontWeight.normal,
+                                              ),
+                                            ),
+                                          const SizedBox(height: 2),
                                           Text(
-                                            'Mat: ${e.matricule}',
+                                            'Classe : ${_classesNoms[e.classeId] ?? "-"}',
                                             style: const TextStyle(
-                                              fontSize: 12,
-                                              color: Color(0xFF666666),
-                                              fontWeight: FontWeight.normal,
+                                              fontSize: 13,
+                                              color: AyannaColors.orange,
+                                              fontWeight: FontWeight.bold,
                                             ),
                                           ),
-                                        const SizedBox(height: 2),
-                                        Text(
-                                          'Classe : ${_classesNoms[e.classeId] ?? "-"}',
-                                          style: const TextStyle(
-                                            fontSize: 13,
-                                            color: AyannaColors.orange,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                      ],
+                                        ],
+                                      ),
+                                      trailing: Icon(
+                                        Icons.arrow_forward_ios,
+                                        size: 16,
+                                        color: AyannaColors.orange,
+                                      ),
+                                      shape: const RoundedRectangleBorder(),
+                                      onTap: () => _loadFraisForEleve(e),
                                     ),
-                                    trailing: Icon(
-                                      Icons.arrow_forward_ios,
-                                      size: 16,
-                                      color: AyannaColors.orange,
-                                    ),
-                                    shape: const RoundedRectangleBorder(),
-                                    onTap: () => _loadFraisForEleve(e),
-                                  ),
-                                );
-                              },
+                                  );
+                                },
+                              ),
                             );
                           },
                           loading: () =>
@@ -781,7 +837,7 @@ class _PaiementDesFraisState extends ConsumerState<PaiementDesFrais> {
                                                         paiementsFraisNotifierProvider
                                                             .notifier,
                                                       )
-                                                      .enregistrerPaiement(
+                                                      .enregistrerPaiementAvecEcritures(
                                                         eleveId:
                                                             _selectedEleve!.id!,
                                                         fraisId: fd.frais.id,
@@ -917,14 +973,22 @@ class _PaiementDesFraisState extends ConsumerState<PaiementDesFrais> {
           ),
           // Data Rows
           ...paiements.map((p) {
+            // Récupérer la devise depuis l'entreprise si possible
+            String devise = AppPreferences().devise;
+            try {
+              final entreprisesAsync = ref.read(entreprisesNotifierProvider);
+              if (entreprisesAsync.hasValue) {
+                final eList = entreprisesAsync.value!;
+                if (eList.isNotEmpty) devise = eList.first.devise ?? devise;
+              }
+            } catch (_) {}
+
             return TableRow(
               children: [
                 _buildTableCell(
                   DateFormat('dd/MM/yyyy').format(p.datePaiement),
                 ),
-                _buildTableCell(
-                  '${p.montantPaye.toStringAsFixed(0)} ${AppPreferences().devise}',
-                ),
+                _buildTableCell('${p.montantPaye.toStringAsFixed(0)} $devise'),
                 _buildTableCell('Admin'),
               ],
             );
@@ -951,7 +1015,7 @@ class _PaiementDesFraisState extends ConsumerState<PaiementDesFrais> {
   }
 }
 
-class FactureReceiptWidgetPaiement extends StatelessWidget {
+class FactureReceiptWidgetPaiement extends ConsumerWidget {
   final entities.Eleve eleve;
   final FraisDetails fraisDetails;
   final String? classeNom;
@@ -964,11 +1028,21 @@ class FactureReceiptWidgetPaiement extends StatelessWidget {
   }) : super(key: key);
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     // Formatage simple sans locale lourde
     final now = DateTime.now();
     final dateStr =
         '${now.day.toString().padLeft(2, '0')}/${now.month.toString().padLeft(2, '0')}/${now.year}';
+
+    // Tenter de récupérer la devise depuis la table entreprise
+    String devise = AppPreferences().devise;
+    try {
+      final entreprisesAsync = ref.read(entreprisesNotifierProvider);
+      if (entreprisesAsync.hasValue) {
+        final list = entreprisesAsync.value!;
+        if (list.isNotEmpty) devise = list.first.devise ?? devise;
+      }
+    } catch (_) {}
 
     return SizedBox(
       width: 384,
@@ -1085,7 +1159,7 @@ class FactureReceiptWidgetPaiement extends StatelessWidget {
                       SizedBox(
                         width: 150,
                         child: Text(
-                          '$montant CDF',
+                          '$montant $devise',
                           style: const TextStyle(fontSize: 7),
                         ),
                       ),
@@ -1114,14 +1188,14 @@ class FactureReceiptWidgetPaiement extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      'Total Paye: ${fraisDetails.montantPaye.toStringAsFixed(0)} CDF',
+                      'Total Paye: ${fraisDetails.montantPaye.toStringAsFixed(0)} $devise',
                       style: const TextStyle(
                         fontSize: 9,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     Text(
-                      'Reste a Payer: ${fraisDetails.resteAPayer.toStringAsFixed(0)} CDF',
+                      'Reste a Payer: ${fraisDetails.resteAPayer.toStringAsFixed(0)} $devise',
                       style: const TextStyle(
                         fontSize: 9,
                         fontWeight: FontWeight.bold,

@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/entities/eleve.dart';
 import '../../models/frais_details.dart';
 import '../../theme/ayanna_theme.dart';
+import '../../services/providers/data_provider.dart';
+import '../../services/app_preferences.dart';
 import '../../services/bluetooth_print_service.dart';
 import 'bluetooth_printer_selector.dart';
 
-class FactureDialog extends StatefulWidget {
+class FactureDialog extends ConsumerStatefulWidget {
   final Eleve eleve;
   final FraisDetails fraisDetails;
 
@@ -16,10 +19,10 @@ class FactureDialog extends StatefulWidget {
   });
 
   @override
-  State<FactureDialog> createState() => _FactureDialogState();
+  ConsumerState<FactureDialog> createState() => _FactureDialogState();
 }
 
-class _FactureDialogState extends State<FactureDialog> {
+class _FactureDialogState extends ConsumerState<FactureDialog> {
   final BluetoothPrintService _bluetoothService = BluetoothPrintService();
 
   @override
@@ -82,6 +85,16 @@ class _FactureDialogState extends State<FactureDialog> {
           )
           .toList();
 
+      // Récupérer la devise de l'entreprise pour l'impression
+      String? devise;
+      try {
+        final entreprisesAsync = ref.read(entreprisesNotifierProvider);
+        if (entreprisesAsync.hasValue) {
+          final list = entreprisesAsync.value!;
+          if (list.isNotEmpty) devise = list.first.devise;
+        }
+      } catch (_) {}
+
       // Imprimer avec le service Bluetooth
       final success = await _bluetoothService.printReceipt(
         schoolName: 'AYANNA SCHOOL',
@@ -96,6 +109,7 @@ class _FactureDialogState extends State<FactureDialog> {
         montantTotal: widget.fraisDetails.montant,
         totalPaye: widget.fraisDetails.montantPaye,
         resteAPayer: widget.fraisDetails.resteAPayer,
+        devise: devise,
       );
 
       if (mounted) {
@@ -124,6 +138,15 @@ class _FactureDialogState extends State<FactureDialog> {
   Widget build(BuildContext context) {
     final eleve = widget.eleve;
     final fraisDetails = widget.fraisDetails;
+    // Récupérer la devise de l'entreprise pour l'affichage
+    String devise = AppPreferences().devise;
+    try {
+      final entreprisesAsync = ref.watch(entreprisesNotifierProvider);
+      if (entreprisesAsync.hasValue) {
+        final list = entreprisesAsync.value!;
+        if (list.isNotEmpty) devise = list.first.devise ?? devise;
+      }
+    } catch (_) {}
 
     return AlertDialog(
       title: Row(
@@ -201,7 +224,7 @@ class _FactureDialogState extends State<FactureDialog> {
               Row(
                 children: [
                   const Icon(
-                    Icons.attach_money,
+                    Icons.payments,
                     color: AyannaColors.successGreen,
                     size: 20,
                   ),
@@ -217,7 +240,7 @@ class _FactureDialogState extends State<FactureDialog> {
                     ),
                   ),
                   Text(
-                    '${fraisDetails.frais.montant.toStringAsFixed(0)} FCFA',
+                    '${fraisDetails.frais.montant.toStringAsFixed(0)} $devise',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       color: AyannaColors.darkGrey,
@@ -241,7 +264,7 @@ class _FactureDialogState extends State<FactureDialog> {
                     ),
                   ),
                   Text(
-                    '${fraisDetails.montantPaye.toStringAsFixed(0)} FCFA',
+                    '${fraisDetails.montantPaye.toStringAsFixed(0)} $devise',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       color: AyannaColors.darkGrey,
@@ -265,7 +288,7 @@ class _FactureDialogState extends State<FactureDialog> {
                     ),
                   ),
                   Text(
-                    '${fraisDetails.resteAPayer.toStringAsFixed(0)} FCFA',
+                    '${fraisDetails.resteAPayer.toStringAsFixed(0)} $devise',
                     style: const TextStyle(
                       fontWeight: FontWeight.bold,
                       color: AyannaColors.darkGrey,
@@ -323,7 +346,6 @@ class _FactureDialogState extends State<FactureDialog> {
 class FactureReceiptWidget extends StatelessWidget {
   final Eleve eleve;
   final FraisDetails fraisDetails;
-
   const FactureReceiptWidget({
     Key? key,
     required this.eleve,
@@ -332,6 +354,19 @@ class FactureReceiptWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Obtain entreprise devise via Provider if available; fallback to AppPreferences
+    String devise = AppPreferences().devise;
+    try {
+      // Use ProviderScope to read synchronously via context
+      final container = ProviderScope.containerOf(context);
+      final entreprisesAsync = container.read(entreprisesNotifierProvider);
+      if (entreprisesAsync.hasValue) {
+        final list = entreprisesAsync.value!;
+        if (list.isNotEmpty) {
+          devise = list.first.devise ?? devise;
+        }
+      }
+    } catch (_) {}
     // Format date simple SANS locale lourde
     final now = DateTime.now();
     final dateStr =
@@ -452,7 +487,7 @@ class FactureReceiptWidget extends StatelessWidget {
                       SizedBox(
                         width: 150,
                         child: Text(
-                          '$montant CDF',
+                          '$montant $devise',
                           style: const TextStyle(fontSize: 7),
                         ),
                       ),
@@ -481,14 +516,14 @@ class FactureReceiptWidget extends StatelessWidget {
                       ),
                     ),
                     Text(
-                      'Total Paye: ${fraisDetails.montantPaye.toStringAsFixed(0)} CDF',
+                      'Total Paye: ${fraisDetails.montantPaye.toStringAsFixed(0)} $devise',
                       style: const TextStyle(
                         fontSize: 9,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                     Text(
-                      'Reste a Payer: ${fraisDetails.resteAPayer.toStringAsFixed(0)} CDF',
+                      'Reste a Payer: ${fraisDetails.resteAPayer.toStringAsFixed(0)} $devise',
                       style: const TextStyle(
                         fontSize: 9,
                         fontWeight: FontWeight.bold,

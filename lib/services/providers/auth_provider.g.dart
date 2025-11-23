@@ -159,7 +159,7 @@ final canWorkOfflineProvider = AutoDisposeFutureProvider<bool>.internal(
 );
 
 typedef CanWorkOfflineRef = AutoDisposeFutureProviderRef<bool>;
-String _$authNotifierHash() => r'65e320a0a4f6dfb11c4eb7c0df2cf57ad67e0b40';
+String _$authNotifierHash() => r'639992e5e16625a941d14c2e49fb5241965dbd0c';
 
 /// Provider pour l'état d'authentification
 ///

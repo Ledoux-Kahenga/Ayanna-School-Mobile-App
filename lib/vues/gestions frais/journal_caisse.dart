@@ -3,8 +3,6 @@ import 'package:ayanna_school/services/app_preferences.dart';
 import 'package:ayanna_school/services/providers/providers.dart';
 import 'package:ayanna_school/vues/gestions%20frais/depense_sortie.dart';
 import 'package:ayanna_school/vues/gestions%20frais/journal_caisse_pdf.dart';
-import 'package:ayanna_school/vues/gestions%20frais/test_paiement_ecritures_page.dart';
-import 'package:ayanna_school/vues/gestions%20frais/verification_comptable_simple.dart';
 import 'package:ayanna_school/vues/widgets/ayanna_drawer.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -188,92 +186,21 @@ class _JournalCaisseState extends ConsumerState<JournalCaisse> {
     }
   }
 
-  // [NOUVEAU] Navigue vers la page de test des paiements avec écritures
-  Future<void> _navigateToTestPaiementPage() async {
-    await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const TestPaiementEcrituresPage(),
-      ),
-    );
-    // Rafraîchir les données au retour pour voir les nouvelles écritures
-    _fetchJournalData();
-  }
-
-  // [NOUVEAU] Navigue vers la page de vérification comptable
-  Future<void> _navigateToVerificationComptable() async {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const VerificationComptablePage(),
-      ),
-    );
-  }
-
-  // [DEBUG] Méthode pour débugger les données du journal
-  Future<void> _debugJournalData() async {
-    try {
-      print('🔍 DEBUG - Vérification complète des données du journal');
-
-      final journalDao = ref.read(journalComptableDaoProvider);
-
-      // Récupérer TOUTES les entrées du journal
-      final allEntries = await journalDao.getAllJournauxComptables();
-      print('  - Total entrées dans la base: ${allEntries.length}');
-
-      if (allEntries.isNotEmpty) {
-        print('  - Entrées récentes:');
-        for (int i = 0; i < allEntries.length && i < 5; i++) {
-          final entry = allEntries[i];
-          print(
-            '    ${i + 1}. ${entry.libelle} - ${entry.montant} CDF (${entry.dateOperation})',
-          );
-        }
-      }
-
-      // Vérifier spécifiquement pour aujourd'hui
-      final today = DateTime.now();
-      final todayEntries = allEntries.where((entry) {
-        final entryDate = entry.dateOperation;
-        return entryDate.year == today.year &&
-            entryDate.month == today.month &&
-            entryDate.day == today.day;
-      }).toList();
-
-      print(
-        '  - Entrées pour aujourd\'hui (${today.day}/${today.month}/${today.year}): ${todayEntries.length}',
-      );
-
-      if (todayEntries.isNotEmpty) {
-        for (final entry in todayEntries) {
-          print('    -> ${entry.libelle} - ${entry.montant} CDF');
-        }
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Debug terminé. Total: ${allEntries.length} entrées. Aujourd\'hui: ${todayEntries.length}',
-          ),
-          backgroundColor: Colors.blue,
-        ),
-      );
-    } catch (e) {
-      print('❌ Erreur lors du debug: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erreur debug: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
+    // Récupérer la devise depuis la table entreprise si disponible
+    String devise = AppPreferences().devise;
+    try {
+      final entreprisesAsync = ref.watch(entreprisesNotifierProvider);
+      if (entreprisesAsync.hasValue) {
+        final list = entreprisesAsync.value!;
+        if (list.isNotEmpty) devise = list.first.devise ?? devise;
+      }
+    } catch (_) {}
+
     final currencyFormat = NumberFormat.currency(
       locale: 'fr_FR',
-      symbol: AppPreferences().devise,
+      symbol: devise,
       decimalDigits: 0,
     );
     final dateFormat = DateFormat('EEEE, d MMMM yyyy', 'fr_FR');
@@ -291,21 +218,6 @@ class _JournalCaisseState extends ConsumerState<JournalCaisse> {
         iconTheme: const IconThemeData(color: AyannaColors.white),
         elevation: 2,
         actions: [
-          IconButton(
-            tooltip: 'Debug Journal (Console)',
-            icon: const Icon(Icons.bug_report),
-            onPressed: _debugJournalData,
-          ),
-          IconButton(
-            tooltip: 'Test Paiement + Écritures',
-            icon: const Icon(Icons.receipt_long),
-            onPressed: _navigateToTestPaiementPage,
-          ),
-          IconButton(
-            tooltip: 'Vérification Comptable (Débit=Crédit)',
-            icon: const Icon(Icons.balance),
-            onPressed: _navigateToVerificationComptable,
-          ),
           IconButton(
             tooltip: 'Nouvelle sortie de caisse',
             icon: const Icon(Icons.add_circle_outline),
@@ -424,19 +336,7 @@ class _JournalCaisseState extends ConsumerState<JournalCaisse> {
             icon: const Icon(Icons.calendar_today),
             label: Text(dateFormat.format(_selectedDate)),
           ),
-          ElevatedButton(
-            onPressed: () {
-              setState(() {
-                _selectedDate = DateTime.now();
-              });
-              _fetchJournalData();
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.green,
-              foregroundColor: Colors.white,
-            ),
-            child: const Text('Aujourd\'hui'),
-          ),
+          // 'Aujourd'hui' button removed as requested
           DropdownButton<String>(
             value: _selectedFilter,
             items: ['Tous', 'Entrée', 'Sortie']

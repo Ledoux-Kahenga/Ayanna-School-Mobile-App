@@ -37,11 +37,11 @@ class Licence {
   String type;
 
   @ColumnInfo(name: 'date_activation')
-  @JsonKey(name: 'date_activation')
+  @JsonKey(name: 'date_activation', fromJson: parseDateTime)
   DateTime dateActivation;
 
   @ColumnInfo(name: 'date_expiration')
-  @JsonKey(name: 'date_expiration')
+  @JsonKey(name: 'date_expiration', fromJson: parseDateTime)
   DateTime dateExpiration;
 
   String signature;
@@ -54,15 +54,15 @@ class Licence {
   int? entrepriseId;
 
   @ColumnInfo(name: 'date_creation')
-  @JsonKey(name: 'date_creation')
+  @JsonKey(name: 'date_creation', fromJson: parseDateTime)
   DateTime dateCreation;
 
   @ColumnInfo(name: 'date_modification')
-  @JsonKey(name: 'date_modification')
+  @JsonKey(name: 'date_modification', fromJson: parseDateTime)
   DateTime dateModification;
 
   @ColumnInfo(name: 'updated_at')
-  @JsonKey(name: 'updated_at')
+  @JsonKey(name: 'updated_at', fromJson: parseDateTime)
   DateTime updatedAt;
 
   Licence({
