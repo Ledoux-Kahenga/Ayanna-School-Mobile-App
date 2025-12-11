@@ -61,16 +61,23 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       final hasLocalPassword = prefs.getString('local_password') != null;
       final savedEmail = prefs.getString('local_email');
       final hasDataLoaded = prefs.getBool('has_data_loaded') ?? false;
+      // Vérifier si l'app a déjà été utilisée (différent du premier lancement)
+      final hasBeenUsedBefore = prefs.getBool('app_has_been_used') ?? false;
 
       setState(() {
-        _isFirstLaunch = !hasLocalPassword;
+        // Si l'app a déjà été utilisée mais qu'il n'y a pas de mot de passe,
+        // c'est une déconnexion, pas un premier lancement
+        _isFirstLaunch = !hasBeenUsedBefore && !hasLocalPassword;
         _hasDataLoaded = hasDataLoaded;
         _isCheckingFirstLaunch = false;
 
         // Déterminer le statut du bouton
         if (_isFirstLaunch) {
-          // Premier démarrage : toujours commencer par l'enregistrement du mot de passe
+          // Premier démarrage absolu : enregistrer un mot de passe
           _buttonStatus = ButtonStatus.enregistrement;
+        } else if (!hasLocalPassword) {
+          // L'app a été utilisée mais l'utilisateur est déconnecté : connexion
+          _buttonStatus = ButtonStatus.connexion;
         } else if (!hasDataLoaded) {
           _buttonStatus = ButtonStatus.chargementDonnees;
         } else {
@@ -85,6 +92,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       });
 
       print('🔍 [AUTH] Premier démarrage: $_isFirstLaunch');
+      print('🔍 [AUTH] App déjà utilisée: $hasBeenUsedBefore');
       print('🔍 [AUTH] Données chargées: $hasDataLoaded');
       print('🔍 [AUTH] Statut du bouton: $_buttonStatus');
     } catch (e) {
@@ -92,7 +100,7 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       setState(() {
         _isFirstLaunch = true;
         _hasDataLoaded = false;
-        _buttonStatus = ButtonStatus.chargementDonnees;
+        _buttonStatus = ButtonStatus.enregistrement;
         _isCheckingFirstLaunch = false;
       });
     }
@@ -597,6 +605,8 @@ class _AuthScreenState extends ConsumerState<AuthScreen> {
       final prefs = await ref.read(sharedPreferencesProvider.future);
       await prefs.setString('local_email', email);
       await prefs.setString('local_password', password);
+      // Marquer que l'app a été utilisée pour différencier du premier lancement absolu
+      await prefs.setBool('app_has_been_used', true);
 
       print('✅ Mot de passe local enregistré');
 

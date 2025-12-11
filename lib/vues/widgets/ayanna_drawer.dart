@@ -281,6 +281,9 @@ class AyannaDrawer extends ConsumerWidget {
   /// Effectue la déconnexion locale complète (base de données + SharedPreferences)
   Future<void> _performLogout(BuildContext context, WidgetRef ref) async {
     BuildContext? loadingDialogContext;
+    
+    // Capturer le context AVANT toute opération async pour Phoenix.rebirth
+    final navigatorContext = Navigator.of(context).context;
 
     try {
       // Afficher un indicateur de chargement simple
@@ -305,16 +308,23 @@ class AyannaDrawer extends ConsumerWidget {
         },
       );
 
-      print('� [LOGOUT] Fermeture de la session en cours...');
+      print('🔒 [LOGOUT] Fermeture de la session en cours...');
+
+      // Invalider les providers AVANT le logout pour éviter "ref disposed"
+      print('🔄 [LOGOUT] Invalidation des providers...');
+      ref.invalidate(authNotifierProvider);
+      ref.invalidate(elevesNotifierProvider);
+      ref.invalidate(classesNotifierProvider);
+      ref.invalidate(fraisScolairesNotifierProvider);
+      ref.invalidate(paiementsFraisNotifierProvider);
+      print('✅ [LOGOUT] Providers invalidés');
 
       // Appeler le provider d'authentification pour effectuer la déconnexion
       await ref.read(authNotifierProvider.notifier).logout();
 
       print('✅ [LOGOUT] Session fermée, tokens locaux supprimés');
-    } catch (e) {
-      print('❌ [LOGOUT] Erreur lors de la fermeture de session: $e');
-    } finally {
-      // Toujours fermer l'indicateur de chargement
+
+      // Fermer le dialog de chargement
       try {
         if (loadingDialogContext != null && loadingDialogContext!.mounted) {
           Navigator.of(loadingDialogContext!).pop();
@@ -327,29 +337,24 @@ class AyannaDrawer extends ConsumerWidget {
       // Attendre un peu pour s'assurer que le dialog est fermé
       await Future.delayed(const Duration(milliseconds: 300));
 
-      // Invalider les providers critiques (auth + caches) pour actualisation
-      print('🔄 [LOGOUT] Invalidation des providers pour actualisation...');
-      try {
-        ref.invalidate(authNotifierProvider);
-        ref.invalidate(elevesNotifierProvider);
-        ref.invalidate(classesNotifierProvider);
-        ref.invalidate(fraisScolairesNotifierProvider);
-        ref.invalidate(paiementsFraisNotifierProvider);
-        print('✅ [LOGOUT] Providers invalidés - état réinitialisé');
-      } catch (e) {
-        print('⚠️ [LOGOUT] Erreur invalidation providers (ignorée): $e');
-      }
-
-      // Redémarrer l'application pour revenir à l'écran d'authentification
-      if (context.mounted) {
+      // Redémarrer l'application avec le context capturé
+      if (navigatorContext.mounted) {
         print(
           '🔥 [RESTART] Redémarrage complet de l\'application avec Phoenix...',
         );
-        Phoenix.rebirth(context);
+        Phoenix.rebirth(navigatorContext);
         print('✅ [RESTART] Application redémarrée');
       } else {
         print('❌ [RESTART] Context non monté, impossible de redémarrer');
       }
+    } catch (e) {
+      print('❌ [LOGOUT] Erreur lors de la fermeture de session: $e');
+      // Fermer le dialog en cas d'erreur
+      try {
+        if (loadingDialogContext != null && loadingDialogContext!.mounted) {
+          Navigator.of(loadingDialogContext!).pop();
+        }
+      } catch (_) {}
     }
   }
 

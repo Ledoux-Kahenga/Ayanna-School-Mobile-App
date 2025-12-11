@@ -30,9 +30,10 @@ android {
         versionName = flutter.versionName
         multiDexEnabled = true
         
-        ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
-        }
+        // Commenté pour permettre --split-per-abi
+        // ndk {
+        //     abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+        // }
     }
 
     buildTypes {

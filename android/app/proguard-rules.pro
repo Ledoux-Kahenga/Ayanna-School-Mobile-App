@@ -22,6 +22,10 @@
 -keep class io.flutter.** { *; }
 -keep class io.flutter.plugins.** { *; }
 
+# Keep Google Play Core (pour les splits APK et features dynamiques)
+-keep class com.google.android.play.core.** { *; }
+-dontwarn com.google.android.play.core.**
+
 # Keep MultiDex
 -keep class androidx.multidex.** { *; }
 -dontwarn androidx.multidex.**
